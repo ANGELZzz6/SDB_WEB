@@ -1,0 +1,167 @@
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { T, ADMIN_NAV } from '../lib/adminTokens';
+
+interface AdminLayoutProps {
+  children: ReactNode;
+  searchPlaceholder?: string;
+  topBarRight?: ReactNode;
+}
+
+export default function AdminLayout({ children, searchPlaceholder = 'Buscar...', topBarRight }: AdminLayoutProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [search, setSearch] = useState('');
+
+  // Determine user role and permissions
+  const rawUser = localStorage.getItem('adminUser');
+  const user = rawUser ? JSON.parse(rawUser) : null;
+  const isAdmin = user?.role === 'admin';
+  const userPermissions: Record<string, boolean> = user?.permissions ?? {};
+
+  const filteredNav = ADMIN_NAV.filter(item => {
+    if (item.adminOnly && !isAdmin) return false; // admins see all
+    if (!isAdmin) {
+      // empleadas: show only if permissions[key] === true
+      return userPermissions[item.key] !== false;
+    }
+    return true;
+  });
+
+  return (
+    <div style={{ fontFamily: T.fontBody, backgroundColor: T.surface, color: T.onSurface, minHeight: '100vh', display: 'flex' }}>
+      <style>{`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::selection { background: #ffd9de; color: #944555; }
+        input { outline: none; }
+        input::placeholder { color: ${T.outlineVariant}; }
+        .admin-nav-item {
+          display: flex; align-items: center; gap: 14px;
+          padding: 12px 16px; border-radius: 10px; border: none;
+          cursor: pointer; width: 100%; text-align: left;
+          font-family: 'Noto Serif', serif; font-size: 17px;
+          letter-spacing: 0.01em; transition: background-color 0.2s, color 0.2s;
+        }
+        .admin-nav-item.active {
+          background: rgba(255,255,255,0.6);
+          color: #944555; font-weight: 600;
+        }
+        .admin-nav-item.inactive {
+          background: transparent; color: #534245;
+        }
+        .admin-nav-item.inactive:hover {
+          background: #f8f3f0; color: #944555;
+        }
+        @media (max-width: 768px) {
+          .admin-sidebar { display: none !important; }
+          .admin-main { margin-left: 0 !important; }
+          .admin-topbar { left: 0 !important; }
+        }
+      `}</style>
+
+      {/* ── SIDEBAR ── */}
+      <aside className="admin-sidebar" style={{
+        width: '256px', minHeight: '100vh', position: 'fixed', left: 0, top: 0,
+        backgroundColor: T.surface, display: 'flex', flexDirection: 'column',
+        paddingTop: '32px', paddingBottom: '32px', zIndex: 50,
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '0 24px', marginBottom: '48px' }}>
+          <h1
+            onClick={() => navigate('/')}
+            style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer' }}
+          >
+            Beauty Salon
+          </h1>
+          <p style={{ fontFamily: T.fontHeadline, fontSize: '13px', letterSpacing: '0.04em', color: `${T.onSurfaceVariant}70`, marginTop: '4px' }}>
+            Admin Dashboard
+          </p>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', padding: '0 12px' }}>
+          {filteredNav.map(({ icon, label, path }) => {
+            const isActive =
+              path === '/admin'
+                ? location.pathname === '/admin'
+                : location.pathname.startsWith(path);
+            return (
+              <button
+                key={path}
+                onClick={() => navigate(path)}
+                className={`admin-nav-item ${isActive ? 'active' : 'inactive'}`}
+              >
+                <span style={{ fontSize: '18px', lineHeight: 1 }}>{icon}</span>
+                {label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Admin profile */}
+        <div style={{ padding: '0 24px', marginTop: 'auto', paddingTop: '16px', borderTop: `1px solid ${T.surfaceContainer}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src="https://i.pravatar.cc/80?img=9"
+              alt="Admin"
+              style={{ width: '38px', height: '38px', borderRadius: '9999px', objectFit: 'cover', border: `2px solid ${T.primaryFixed}` }}
+            />
+            <div>
+              <p style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurface }}>{user?.nombre || 'Administradora'}</p>
+              <p style={{ fontFamily: T.fontBody, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: `${T.onSurfaceVariant}70` }}>{user?.role === 'empleada' ? 'Especialista' : 'Beauty Salon'}</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── TOP BAR ── */}
+      <header className="admin-topbar" style={{
+        position: 'fixed', top: 0, right: 0, left: '256px', height: '72px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 32px', zIndex: 40,
+        backgroundColor: 'rgba(255,255,255,0.80)',
+        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: `1px solid ${T.outlineVariant}20`,
+      }}>
+        {/* Search */}
+        <div style={{
+          backgroundColor: T.surfaceContainerLow, borderRadius: '9999px',
+          padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '10px',
+          maxWidth: '380px', width: '100%',
+        }}>
+          <span style={{ fontSize: '16px' }}>🔍</span>
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ backgroundColor: 'transparent', border: 'none', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurface, width: '100%' }}
+          />
+        </div>
+
+        {/* Right side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {topBarRight}
+          <button
+            style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.onSurfaceVariant, padding: '4px' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = T.primary)}
+            onMouseLeave={(e) => (e.currentTarget.style.color = T.onSurfaceVariant)}
+          >
+            🔔
+            <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', borderRadius: '9999px', backgroundColor: T.primary, border: '2px solid white' }} />
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: `1px solid ${T.outlineVariant}30` }}>
+            <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 500, color: T.onSurface }}>{user?.nombre || 'Admin'}</span>
+            <img src={user?.foto || "https://i.pravatar.cc/80?img=9"} alt="User" style={{ width: '36px', height: '36px', borderRadius: '9999px', objectFit: 'cover' }} />
+          </div>
+        </div>
+      </header>
+
+      {/* ── CONTENT ── */}
+      <main className="admin-main" style={{ marginLeft: '256px', paddingTop: '72px', minHeight: '100vh', flex: 1 }}>
+        {children}
+      </main>
+    </div>
+  );
+}

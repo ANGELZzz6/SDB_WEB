@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-header {
+            background: rgba(253, 248, 245, 0.7);
+            backdrop-filter: blur(12px);
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #FDF8F5;
+        }
+        h1, h2, h3, .font-serif {
+            font-family: 'Noto Serif', serif;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#f2edea",
+              "on-tertiary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed": "#ffdad9",
+              "tertiary-fixed-dim": "#ecbbba",
+              "on-tertiary-fixed-variant": "#603d3e",
+              "on-secondary-fixed-variant": "#623f1b",
+              "secondary-fixed": "#ffdcbf",
+              "secondary-fixed-dim": "#f0bd8f",
+              "on-error-container": "#93000a",
+              "on-primary": "#ffffff",
+              "outline-variant": "#d9c1c3",
+              "on-tertiary-fixed": "#2f1314",
+              "primary-container": "#e8899a",
+              "secondary": "#7d5630",
+              "secondary-container": "#ffca9b",
+              "inverse-primary": "#ffb2be",
+              "on-primary-fixed-variant": "#772e3e",
+              "tertiary": "#7b5455",
+              "primary-fixed": "#ffd9de",
+              "surface-container-highest": "#e6e2df",
+              "on-tertiary-container": "#523132",
+              "surface-variant": "#e6e2df",
+              "on-secondary-fixed": "#2d1600",
+              "inverse-surface": "#32302e",
+              "surface-bright": "#fdf8f5",
+              "on-primary-container": "#682233",
+              "surface": "#fdf8f5",
+              "on-error": "#ffffff",
+              "inverse-on-surface": "#f5f0ed",
+              "primary": "#944555",
+              "surface-dim": "#ded9d6",
+              "on-background": "#1c1b1a",
+              "on-primary-fixed": "#3e0215",
+              "surface-tint": "#944555",
+              "error": "#ba1a1a",
+              "background": "#fdf8f5",
+              "on-secondary": "#ffffff",
+              "on-surface": "#1c1b1a",
+              "primary-fixed-dim": "#ffb2be",
+              "outline": "#867274",
+              "on-surface-variant": "#534245",
+              "surface-container-high": "#ece7e4",
+              "surface-container-low": "#f8f3f0",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#7a532e",
+              "tertiary-container": "#c79999"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Plus Jakarta Sans"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+</head>
+<body class="text-on-surface">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-[#FDF8F5]/70 dark:bg-zinc-900/70 backdrop-blur-md">
+<div class="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-serif italic text-[#944555] dark:text-[#E8899A]">L'Élixir Salon</div>
+<div class="hidden md:flex gap-12 items-center">
+<a class="font-serif text-lg tracking-tight text-[#534245] dark:text-zinc-400 hover:text-[#944555] transition-colors duration-300" href="#">Servicios</a>
+<a class="font-serif text-lg tracking-tight text-[#944555] font-semibold border-b border-[#944555]/20 hover:text-[#944555] transition-colors duration-300" href="#">Especialistas</a>
+<a class="font-serif text-lg tracking-tight text-[#534245] dark:text-zinc-400 hover:text-[#944555] transition-colors duration-300" href="#">Galería</a>
+<button class="bg-primary text-on-primary px-8 py-2.5 rounded-full font-label text-sm uppercase tracking-widest hover:opacity-90 transition-opacity active:scale-95 duration-200">
+                    Agendar Cita
+                </button>
+</div>
+<!-- Mobile Menu Icon -->
+<button class="md:hidden text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</nav>
+<main class="pt-32 pb-24 px-6 md:px-12 max-w-7xl mx-auto">
+<!-- Header Section -->
+<header class="mb-20 text-center max-w-2xl mx-auto">
+<span class="text-primary font-label text-xs uppercase tracking-[0.3em] mb-4 block">Nuestro Equipo</span>
+<h1 class="text-5xl font-serif text-on-surface leading-tight mb-6">Manos que Transforman</h1>
+<p class="text-on-surface-variant font-body leading-relaxed">Cada tratamiento en L'Élixir es ejecutado por artistas apasionadas que entienden que la belleza es un ritual personal y único.</p>
+</header>
+<!-- Specialists Bento Grid / Asymmetric Layout -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24 items-start">
+<!-- Specialist 1 -->
+<div class="relative group">
+<!-- Soft Rose Accent Background -->
+<div class="absolute -inset-4 bg-primary-fixed/20 rounded-[2rem] -z-10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+<div class="bg-surface-container-lowest p-8 md:p-12 rounded-[2rem] border-b-2 border-primary-fixed">
+<div class="flex flex-col items-center md:items-start md:flex-row gap-8 mb-10">
+<div class="relative">
+<div class="w-32 h-32 rounded-full overflow-hidden border-4 border-surface-container shadow-sm">
+<img alt="Lucía Méndez" class="w-full h-full object-cover" data-alt="Close-up portrait of an elegant woman with styled dark hair, professional studio lighting, warm skin tones, and a serene expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmibBElq0L3wjU6B2kWtJFWsLZU0TGsAOmI1RabsDfQSs_qFey9Ymt28CQ90ftex5DyIBMZsDpA2IfWFGt7dZPoNCeMIQJ2qrOv_Jf1iBAkbW9urh-lSkXMyhiMCs-3_noL6eQigWo5iq3QSGE86JZrBQ2gX7qufJT_qD38QmZea-VUsvJRqXTf7lrDeJ_z8lSEiXU3kAbf1y-U42j5-IAwcO8KvBrL7ykb7nfm6K7gNYsCqr6IPcamWMKPxz9WbdSXY4GJiRp5-27"/>
+</div>
+<div class="absolute bottom-0 right-0 bg-primary-container p-2 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-on-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div class="text-center md:text-left pt-2">
+<h2 class="text-3xl font-serif text-primary mb-2">Lucía Méndez</h2>
+<p class="text-on-secondary-container font-medium italic text-lg">Experta en Colorimetría y Cabello</p>
+<div class="mt-4 flex gap-4 justify-center md:justify-start">
+<span class="material-symbols-outlined text-primary text-xl">auto_awesome</span>
+<span class="material-symbols-outlined text-primary text-xl">content_cut</span>
+</div>
+</div>
+</div>
+<div class="space-y-6">
+<h3 class="font-label text-xs uppercase tracking-widest text-on-surface-variant border-b border-outline-variant/20 pb-2">Servicios Destacados</h3>
+<ul class="space-y-4">
+<li class="flex justify-between items-center group/item">
+<span class="text-on-surface font-body">Balayage de Autor</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+<li class="flex justify-between items-center">
+<span class="text-on-surface font-body">Diseño de Corte Editorial</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+<li class="flex justify-between items-center">
+<span class="text-on-surface font-body">Tratamientos de Hidratación Profunda</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+<li class="flex justify-between items-center">
+<span class="text-on-surface font-body">Coloración Orgánica</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Specialist 2 -->
+<div class="relative group md:mt-16">
+<!-- Soft Rose Accent Background -->
+<div class="absolute -inset-4 bg-primary-fixed/20 rounded-[2rem] -z-10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+<div class="bg-surface-container-lowest p-8 md:p-12 rounded-[2rem] border-b-2 border-primary-fixed">
+<div class="flex flex-col items-center md:items-start md:flex-row gap-8 mb-10">
+<div class="relative">
+<div class="w-32 h-32 rounded-full overflow-hidden border-4 border-surface-container shadow-sm">
+<img alt="Elena Rossi" class="w-full h-full object-cover" data-alt="Portrait of a sophisticated woman with soft makeup, golden hour lighting, minimalist background, radiating calm and expertise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB98CqqT5xNbrtYNhu5m40jLAOQ0kBZFeYGu3k2g5VgSr6qGcBDhvGz09dpVF6MQg5LpkMjd3KfdISAbxLf0S53o5czl7wKRHTgAEc4zHLtL-nYNy0WzUF301P5thlsPU-Ft3UgHpB8WNZwoVlCKYfkZNnQFW_AieLrkKjcg_0BYX4wd98W3QqzHJQvp_-tcnOc0zgewP0vWatB6nlxfqzOqWRvimvotrxR6oskRhUyq1N9LL3ZuoDBigPjcpCRO2ICSESF2EItfIcW"/>
+</div>
+<div class="absolute bottom-0 right-0 bg-primary-container p-2 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-on-primary-container text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div class="text-center md:text-left pt-2">
+<h2 class="text-3xl font-serif text-primary mb-2">Elena Rossi</h2>
+<p class="text-on-secondary-container font-medium italic text-lg">Especialista en Nail Art y Mirada</p>
+<div class="mt-4 flex gap-4 justify-center md:justify-start">
+<span class="material-symbols-outlined text-primary text-xl">spa</span>
+<span class="material-symbols-outlined text-primary text-xl">face_3</span>
+</div>
+</div>
+</div>
+<div class="space-y-6">
+<h3 class="font-label text-xs uppercase tracking-widest text-on-surface-variant border-b border-outline-variant/20 pb-2">Servicios Destacados</h3>
+<ul class="space-y-4">
+<li class="flex justify-between items-center">
+<span class="text-on-surface font-body">Manicura Rusa &amp; GelX</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+<li class="flex justify-between items-center">
+<span class="text-on-surface font-body">Lifting de Pestañas con Queratina</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+<li class="flex justify-between items-center">
+<span class="text-on-surface font-body">Diseño y Laminado de Cejas</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+<li class="flex justify-between items-center">
+<span class="text-on-surface font-body">Nail Art Minimalista</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim"></span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Concierge (Persistent Booking Bar) -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-lg">
+<div class="bg-[#FFFFFF]/80 backdrop-blur-xl border border-primary-fixed/30 rounded-full py-3 px-6 shadow-[0_20px_40px_rgba(62,2,21,0.06)] flex justify-between items-center">
+<div class="flex -space-x-3">
+<div class="w-8 h-8 rounded-full border-2 border-white overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Small thumbnail avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2TND7JnWt3Jm8x5flC1J16t0GD54_XA5FUCQPmmUTUZCSUxB_ojagvWKTTK2EYwr-8u5xwCBascbQg0wZ2279uBbw6RvqpPPh6QNXixpGf3Un6g5q6ZJmLmKxnLmeHjFL74EbCvrkFAY3llVdIvncII6oUOEmAyRsLJy-rqX2s2dflV4pk4hzt-qs9KCftIQxmwNIJH-hsAocRj2_pTb22AZ8StMdxLHKTl3ruqrzW6W4FqJ0aN2t81uelfzBEcYz1ZXHM4_R4bKr"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-white overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Small thumbnail avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCfPwKn5VK65y2ROy9dDQuz4n6IOOxkxD8zizfo_cxxPM36CaXM3cjx7ecwSM2k6df7Bpv2geKQ4lNVH-7HGxAxaZFKM-Zxov4_wY1YRL3EgoRGlXW4PVAk7W32EVCLnRTlhDLBKrgQ4i8_ccIjMJFmQsLyPG-Z9prNHm49ZOpl206oI8xI4VO7054471HI1dD0vOWQq6V7de2P3_wCTBHO3pJG4vdYMKgPxVRkaoevUun2ar5GFC1OxQjSqZydwCShx_oM1h8fycz"/>
+</div>
+</div>
+<p class="text-sm font-body text-primary font-medium">¿Lista para brillar?</p>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-label text-xs uppercase tracking-widest hover:scale-105 transition-transform">
+                    Reservar Ahora
+                </button>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full pt-16 pb-8 bg-[#F2EDEA] dark:bg-zinc-950 flex flex-col items-center gap-8 px-4">
+<div class="font-serif italic text-lg text-[#944555] dark:text-[#E8899A]">L'Élixir Salon de Belleza</div>
+<div class="flex gap-8 flex-wrap justify-center">
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">Instagram</a>
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">WhatsApp</a>
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">Contacto</a>
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">Privacidad</a>
+</div>
+<p class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 text-center">
+            © 2024 L'Élixir Salon de Belleza. El Arte de Cuidarte.
+        </p>
+</footer>
+</body></html>

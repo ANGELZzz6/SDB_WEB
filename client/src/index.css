@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+/* ============================================
+   BEAUTY SALON — Design System
+   Paleta: Rosa + Cafés + Crema
+   Tipografía: Playfair Display + Lato
+   ============================================ */
+
+@theme {
+  /* Tipografías */
+  --font-display: 'Playfair Display', serif;
+  --font-body:    'Lato', sans-serif;
+
+  /* Paleta de color */
+  --color-rose:         #F4A7B9;
+  --color-rose-dark:    #E8849A;
+  --color-brown-light:  #C4956A;
+  --color-brown-dark:   #8B6356;
+  --color-cream:        #FDF8F5;
+
+  /* Aliases internos */
+  --color-primary:      #F4A7B9;
+  --color-primary-dark: #E8849A;
+  --color-cafe-light:   #C4956A;
+  --color-cafe-dark:    #8B6356;
+  --color-cream-dark:   #F5EDE6;
+}
+
+/* ── Reset ─────────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: #4A4A4A;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
+}
+
+::selection {
+  background-color: #F4A7B9;
+  color: #fff;
+}

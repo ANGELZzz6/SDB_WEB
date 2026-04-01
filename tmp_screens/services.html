@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#f2edea",
+              "on-tertiary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed": "#ffdad9",
+              "tertiary-fixed-dim": "#ecbbba",
+              "on-tertiary-fixed-variant": "#603d3e",
+              "on-secondary-fixed-variant": "#623f1b",
+              "secondary-fixed": "#ffdcbf",
+              "secondary-fixed-dim": "#f0bd8f",
+              "on-error-container": "#93000a",
+              "on-primary": "#ffffff",
+              "outline-variant": "#d9c1c3",
+              "on-tertiary-fixed": "#2f1314",
+              "primary-container": "#e8899a",
+              "secondary": "#7d5630",
+              "secondary-container": "#ffca9b",
+              "inverse-primary": "#ffb2be",
+              "on-primary-fixed-variant": "#772e3e",
+              "tertiary": "#7b5455",
+              "primary-fixed": "#ffd9de",
+              "surface-container-highest": "#e6e2df",
+              "on-tertiary-container": "#523132",
+              "surface-variant": "#e6e2df",
+              "on-secondary-fixed": "#2d1600",
+              "inverse-surface": "#32302e",
+              "surface-bright": "#fdf8f5",
+              "on-primary-container": "#682233",
+              "surface": "#fdf8f5",
+              "on-error": "#ffffff",
+              "inverse-on-surface": "#f5f0ed",
+              "primary": "#944555",
+              "surface-dim": "#ded9d6",
+              "on-background": "#1c1b1a",
+              "on-primary-fixed": "#3e0215",
+              "surface-tint": "#944555",
+              "error": "#ba1a1a",
+              "background": "#fdf8f5",
+              "on-secondary": "#ffffff",
+              "on-surface": "#1c1b1a",
+              "primary-fixed-dim": "#ffb2be",
+              "outline": "#867274",
+              "on-surface-variant": "#534245",
+              "surface-container-high": "#ece7e4",
+              "surface-container-low": "#f8f3f0",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#7a532e",
+              "tertiary-container": "#c79999"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif", "serif"],
+              "body": ["Plus Jakarta Sans", "sans-serif"],
+              "label": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-nav {
+        background: rgba(253, 248, 245, 0.7);
+        backdrop-filter: blur(12px);
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- TopNavBar Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 glass-nav">
+<div class="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-serif italic text-[#944555] dark:text-[#E8899A]">L'Élixir Salon</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-[#944555] font-semibold border-b border-[#944555]/20 font-serif text-lg tracking-tight hover:text-[#944555] transition-colors duration-300" href="#">Servicios</a>
+<a class="text-[#534245] dark:text-zinc-400 font-serif text-lg tracking-tight hover:text-[#944555] transition-colors duration-300" href="#">Especialistas</a>
+<a class="text-[#534245] dark:text-zinc-400 font-serif text-lg tracking-tight hover:text-[#944555] transition-colors duration-300" href="#">Galería</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-label text-sm uppercase tracking-widest hover:opacity-90 transition-all scale-95 duration-200">
+                Agendar Cita
+            </button>
+</div>
+</nav>
+<main class="pt-32 pb-24 px-6 max-w-7xl mx-auto">
+<!-- Editorial Header Section -->
+<header class="mb-20 text-center space-y-4">
+<span class="font-label text-xs uppercase tracking-[0.3em] text-primary">Nuestras Experiencias</span>
+<h1 class="font-headline text-5xl md:text-6xl text-on-surface-variant leading-tight">Rituales de Belleza</h1>
+<div class="w-24 h-px bg-outline-variant/30 mx-auto mt-8"></div>
+</header>
+<!-- Services Bento-Inspired Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card 1: Tinte -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)] border border-transparent hover:border-primary-fixed/20">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="palette">palette</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Colorimetría</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Tinte</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Personalización cromática con pigmentos orgánicos para un brillo multidimensional.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Desde</span>
+<span class="font-medium text-primary">$85.000</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">120 min</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Manicure -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)]">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="back_hand">back_hand</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Manos</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Manicure</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Cuidado integral de cutículas y esmaltado de alta gama con acabado espejo.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Inversión</span>
+<span class="font-medium text-primary">$35.000</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">45 min</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Pedicure -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)]">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="footprint">footprint</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Pies</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Pedicure</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Tratamiento relajante con exfoliación botánica y atención clínica detallada.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Inversión</span>
+<span class="font-medium text-primary">$45.000</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">60 min</span>
+</div>
+</div>
+</div>
+<!-- Card 4: Cepillado -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)]">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="air">air</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Styling</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Cepillado</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Acabado profesional con volumen y sedosidad duradera para cualquier ocasión.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Desde</span>
+<span class="font-medium text-primary">$25.000</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">40 min</span>
+</div>
+</div>
+</div>
+<!-- Card 5: Depilación -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)]">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="cleaning_services">cleaning_services</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Corporal</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Depilación</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Técnicas suaves con cera de baja temperatura para una piel de seda.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Inversión</span>
+<span class="font-medium text-primary">Consultar</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">Varia</span>
+</div>
+</div>
+</div>
+<!-- Card 6: Diseño de Cejas -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)]">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="face">face</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Mirada</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Diseño de Cejas</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Arquitectura facial personalizada para enmarcar tu expresión natural.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Inversión</span>
+<span class="font-medium text-primary">$40.000</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">30 min</span>
+</div>
+</div>
+</div>
+<!-- Card 7: Pestañas -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)]">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Mirada</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Pestañas</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Extensiones pelo a pelo o lifting para una mirada impactante y natural.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Desde</span>
+<span class="font-medium text-primary">$120.000</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">90 min</span>
+</div>
+</div>
+</div>
+<!-- Card 8: Uñas Softgel -->
+<div class="group bg-surface-container-lowest rounded-xl p-8 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_20px_40px_rgba(62,2,21,0.06)]">
+<div class="mb-6 flex justify-between items-start">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-primary group-hover:bg-primary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="spa">spa</span>
+</div>
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant/60">Tecnología</span>
+</div>
+<h3 class="font-headline text-2xl text-[#3D2B1F] mb-2">Uñas Softgel</h3>
+<p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Extensión ultra ligera y flexible con acabado impecable y larga duración.</p>
+<div class="flex items-center justify-between mt-auto pt-4">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-tighter text-on-surface-variant/50">Desde</span>
+<span class="font-medium text-primary">$95.000</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+<span class="text-xs">100 min</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Editorial Image Integration for Breath -->
+<div class="mt-24 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+<div class="relative aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-high">
+<img alt="Beauty Salon Atmosphere" class="w-full h-full object-cover grayscale-[20%] hover:grayscale-0 transition-all duration-1000" data-alt="luxury beauty salon interior with soft lighting warm tones minimalist decor and plush seating editorial style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWSi9dNbrDXvhgz2ticue7PZOAEK-w_VpaCuNNzyPuX_kd6ftAoZJbPe5QE_x42QWCcN1y69nrXSriNHMf_exWcuZ87ZfUpm1EK1vnvlG4V77iU-ifReBMNE-fuDQW31UmkwLQSZW6RbihxnkI82fuh0VOzRCLar-9IDM824gPyoYdPg4FQAJIvJhwB8dGNzSDgT_h5neIBskDy8btQOIcx2gBktiBSgzgiOvYmidtm1vI-CEVuTH2IaVyqA6hbLiA20Xbo7jHVd9Q"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface/40 to-transparent"></div>
+</div>
+<div class="space-y-8 pl-0 md:pl-12">
+<span class="font-label text-xs uppercase tracking-widest text-primary">Nuestro Compromiso</span>
+<h2 class="font-headline text-4xl leading-snug text-on-surface-variant">Donde el arte se encuentra con el cuidado personal.</h2>
+<p class="text-on-surface-variant/80 font-body text-lg leading-relaxed">
+                    En L'Élixir, cada servicio es una coreografía diseñada para resaltar tu esencia única. Utilizamos exclusivamente productos de origen ético y tecnología de vanguardia para asegurar resultados que trascienden el tiempo.
+                </p>
+<div class="pt-4">
+<a class="inline-flex items-center gap-4 text-primary font-medium hover:gap-6 transition-all group" href="#">
+                        Conoce a nuestro equipo
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="arrow_right_alt">arrow_right_alt</span>
+</a>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Shell -->
+<footer class="w-full pt-16 pb-8 bg-[#F2EDEA] dark:bg-zinc-950 flex flex-col items-center gap-8 px-4">
+<div class="font-serif italic text-lg text-[#944555] dark:text-[#E8899A]">L'Élixir Salon de Belleza</div>
+<div class="flex gap-12 font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500">
+<a class="hover:opacity-70 transition-opacity" href="#">Instagram</a>
+<a class="hover:opacity-70 transition-opacity" href="#">WhatsApp</a>
+<a class="hover:opacity-70 transition-opacity" href="#">Contacto</a>
+<a class="hover:opacity-70 transition-opacity" href="#">Privacidad</a>
+</div>
+<div class="text-[#534245] dark:text-zinc-500 font-sans text-[10px] uppercase tracking-widest text-center">
+            © 2024 L'Élixir Salon de Belleza. El Arte de Cuidarte.
+        </div>
+</footer>
+<!-- Floating Concierge (Persistent Booking Bar) -->
+<div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-lg">
+<div class="bg-white/70 backdrop-blur-xl border border-white/20 rounded-full px-8 py-4 shadow-[0_20px_40px_rgba(62,2,21,0.08)] flex justify-between items-center">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase tracking-widest text-on-surface-variant/60">¿Lista para brillar?</span>
+<span class="font-medium text-sm">Reserva tu experiencia hoy</span>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-label text-xs uppercase tracking-widest hover:shadow-lg transition-all">
+                Agendar
+            </button>
+</div>
+</div>
+</body></html>

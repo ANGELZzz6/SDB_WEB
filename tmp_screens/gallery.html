@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container": "#f2edea",
+              "on-tertiary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed": "#ffdad9",
+              "tertiary-fixed-dim": "#ecbbba",
+              "on-tertiary-fixed-variant": "#603d3e",
+              "on-secondary-fixed-variant": "#623f1b",
+              "secondary-fixed": "#ffdcbf",
+              "secondary-fixed-dim": "#f0bd8f",
+              "on-error-container": "#93000a",
+              "on-primary": "#ffffff",
+              "outline-variant": "#d9c1c3",
+              "on-tertiary-fixed": "#2f1314",
+              "primary-container": "#e8899a",
+              "secondary": "#7d5630",
+              "secondary-container": "#ffca9b",
+              "inverse-primary": "#ffb2be",
+              "on-primary-fixed-variant": "#772e3e",
+              "tertiary": "#7b5455",
+              "primary-fixed": "#ffd9de",
+              "surface-container-highest": "#e6e2df",
+              "on-tertiary-container": "#523132",
+              "surface-variant": "#e6e2df",
+              "on-secondary-fixed": "#2d1600",
+              "inverse-surface": "#32302e",
+              "surface-bright": "#fdf8f5",
+              "on-primary-container": "#682233",
+              "surface": "#fdf8f5",
+              "on-error": "#ffffff",
+              "inverse-on-surface": "#f5f0ed",
+              "primary": "#944555",
+              "surface-dim": "#ded9d6",
+              "on-background": "#1c1b1a",
+              "on-primary-fixed": "#3e0215",
+              "surface-tint": "#944555",
+              "error": "#ba1a1a",
+              "background": "#fdf8f5",
+              "on-secondary": "#ffffff",
+              "on-surface": "#1c1b1a",
+              "primary-fixed-dim": "#ffb2be",
+              "outline": "#867274",
+              "on-surface-variant": "#534245",
+              "surface-container-high": "#ece7e4",
+              "surface-container-low": "#f8f3f0",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#7a532e",
+              "tertiary-container": "#c79999"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif"],
+              "body": ["Plus Jakarta Sans"],
+              "label": ["Plus Jakarta Sans"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .masonry-grid {
+            column-count: 1;
+            column-gap: 2rem;
+        }
+        @media (min-width: 768px) {
+            .masonry-grid { column-count: 2; }
+        }
+        @media (min-width: 1024px) {
+            .masonry-grid { column-count: 3; }
+        }
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#FDF8F5]/70 backdrop-blur-md">
+<div class="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto">
+<div class="text-2xl font-serif italic text-[#944555] dark:text-[#E8899A]">L'Élixir Salon</div>
+<div class="hidden md:flex gap-12 items-center">
+<a class="font-serif text-lg tracking-tight text-[#534245] hover:text-[#944555] transition-colors duration-300" href="#">Servicios</a>
+<a class="font-serif text-lg tracking-tight text-[#534245] hover:text-[#944555] transition-colors duration-300" href="#">Especialistas</a>
+<a class="font-serif text-lg tracking-tight text-[#944555] font-semibold border-b border-[#944555]/20 transition-colors duration-300" href="#">Galería</a>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-label text-sm uppercase tracking-widest hover:scale-95 transition-transform duration-200">
+                Agendar Cita
+            </button>
+</div>
+</nav>
+<main class="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+<!-- Editorial Header -->
+<header class="mb-16 md:mb-24 text-center">
+<h1 class="font-headline text-5xl md:text-7xl text-primary mb-6 leading-tight">Portafolio de <span class="italic">Belleza</span></h1>
+<p class="font-body text-on-surface-variant max-w-2xl mx-auto text-lg leading-relaxed">
+                Cada detalle es una obra de arte. Explora nuestra selección de transformaciones diseñadas para resaltar tu esencia natural con la elegancia de L'Élixir.
+            </p>
+</header>
+<!-- Gallery Filters -->
+<div class="flex flex-wrap justify-center gap-3 mb-16">
+<button class="px-8 py-2 rounded-full bg-primary-container text-on-primary-container font-label text-xs uppercase tracking-widest transition-all duration-300">Todas</button>
+<button class="px-8 py-2 rounded-full bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary font-label text-xs uppercase tracking-widest transition-all duration-300">Uñas</button>
+<button class="px-8 py-2 rounded-full bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary font-label text-xs uppercase tracking-widest transition-all duration-300">Cejas</button>
+<button class="px-8 py-2 rounded-full bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary font-label text-xs uppercase tracking-widest transition-all duration-300">Pestañas</button>
+<button class="px-8 py-2 rounded-full bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary font-label text-xs uppercase tracking-widest transition-all duration-300">Cabello</button>
+<button class="px-8 py-2 rounded-full bg-surface-container text-on-surface-variant hover:bg-primary-fixed hover:text-primary font-label text-xs uppercase tracking-widest transition-all duration-300">Pedicura</button>
+</div>
+<!-- Masonry Gallery -->
+<div class="masonry-grid">
+<!-- Item 1 -->
+<div class="masonry-item group relative overflow-hidden rounded-xl bg-surface-container-low transition-all duration-500">
+<img class="w-full h-auto object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105" data-alt="close-up of elegant minimalist nude manicure with subtle gold foil accents on a soft linen background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAeF2ORME3cRrd3tKhELwUvDPQJMn4CSRko5c3mw6_cAVmCpK0olSbuEIgMb8Nvsjhbmyhe2PiA7qeSJLfsdm4wQPQTl0zoKklK-7yHx0iGGMDPgr-vAItQJzITFRq0ziBPTh6HQesAXl0zx6_22RorvYB1PVKuamV9ffaMfIslS3cA8djoA1V6iGxPaK35N17x7uebTldlLY7az52keGiRxREwqMIU8adH1rdpFBljWrNQ3DE2gwQSLCEYAr7sy97lFAlFwqYw3Nls"/>
+<div class="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all duration-500 flex items-center justify-center">
+<span class="font-headline text-3xl text-on-primary italic transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Uñas Sculpt</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="masonry-item group relative overflow-hidden rounded-xl bg-surface-container-low transition-all duration-500">
+<img class="w-full h-auto object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105" data-alt="dramatic close-up of perfectly groomed eyebrows and long dark eyelashes with soft editorial lighting and skin texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHr1ly2bdJYM3d-mOoPt4MQlw-Zqx8WwN-0EVghwpk2pXbh7fNDkYJekd2FGw8j6twZ9mGfj01M2BG1oxf-7hwqicRd7S4ZCjlOLA28MkqYpD9hAkiVDcMiRRzl3PwXPzQEQRraAUqKMja1gQ1bQX5k5XtW9DknX3PvC0tGtRKm4q_sWNiHdudf-NGGqzixst8Ny6iweV5CBvoxU7mlw199Ga79c_xfXnGfKP1SLiqGZT_reHXHPK8Pg5qMyC_0yC8DnD1_Oy5IqPp"/>
+<div class="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all duration-500 flex items-center justify-center">
+<span class="font-headline text-3xl text-on-primary italic transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Cejas HD</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="masonry-item group relative overflow-hidden rounded-xl bg-surface-container-low transition-all duration-500">
+<img class="w-full h-auto object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105" data-alt="back view of long silky wavy hair with honey blonde highlights in a professional salon setting with warm lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQJGQ8YlpWFBZEFmR7gGRjj40ljtwGgfFoktIKO2xRZJvSSIXx88RCG7jJcrvLXMA86XGuRZouyvSDpPTdTOGUqDzZfy8NcPeZcUh6hjm2l3Hcv0w78NEklAiEwHdFw8EAfJezkOfPnsCthYAHgduvOUxWXrKNk5590JeTQvNh97KKV-SjV6YnfPNg2RZePP-PWOIueGqj37ZBwNEMJowh74JFTf8Pgja4T01w4W79xYEKURv6Xn3zy5vzhtZQqtvkP8wIwk5n5kQP"/>
+<div class="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all duration-500 flex items-center justify-center">
+<span class="font-headline text-3xl text-on-primary italic transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Balayage Royal</span>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="masonry-item group relative overflow-hidden rounded-xl bg-surface-container-low transition-all duration-500">
+<img class="w-full h-auto object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105" data-alt="luxury pedicure detail with soft pink polish on feet resting on a white marble surface with rose petals" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGd2y_9zTccUh_Vw9vrfZh9DGV0TBiwcJqpI4KycIudOtuBeHqaMC1b7RQrp1ZLDfebfB-T1FnGeoAcEX21m-MYiKXcBlAUfn6g_zrkofNUNBZUKoiSj5LrRNfyDLoqIG7GtSQYGyx9h6lbhw3PYO_Hj-C20OO_DkBFl6vGRGhvJKA-K40tC3FGTUeBurc-b0CDFtENEA4--w6QFL-SEWPVPvVogzoX9CN8aD31SdNQP1G-LU35k0zMnRvI9YitKujY0d0ajayFupA"/>
+<div class="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all duration-500 flex items-center justify-center">
+<span class="font-headline text-3xl text-on-primary italic transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Spa Pedicura</span>
+</div>
+</div>
+<!-- Item 5 -->
+<div class="masonry-item group relative overflow-hidden rounded-xl bg-surface-container-low transition-all duration-500">
+<img class="w-full h-auto object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105" data-alt="artistic macro shot of eyelash extensions being applied with precision in a bright professional studio environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpr9hQOzjCmPMu6cG4T0yaLeKxha7wsqv-xmbHdT_bz2z1rsmV9MQghjIbywjNixA3AWww0IcUAsR9yhJH4N65AOX4y2XG5dJvagsvBqFj3POFxmLPp91o-E294ga8R12TfwSCjKX-VlryebifJOnIdMOniUOJ3CCZuykZKZbuQmkNaJAaclgWTnn4lnaD1xyv-cJEs3tscKvwXqR5omW_QzvdD3_ybCUDQ8D-hFWyRqKcix7ceta0QbHewCSpfc8vuIeSVTHW6nFC"/>
+<div class="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all duration-500 flex items-center justify-center">
+<span class="font-headline text-3xl text-on-primary italic transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Lash Lifting</span>
+</div>
+</div>
+<!-- Item 6 -->
+<div class="masonry-item group relative overflow-hidden rounded-xl bg-surface-container-low transition-all duration-500">
+<img class="w-full h-auto object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105" data-alt="top view of intricate nail art with deep red and burgundy shades on a minimalist wooden background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9dQ3j53leQQ9cJ3lYiNpDD63qJ9QtzwqLm3pvHF1Jj_o2qdJzGVMAhF_UNIIElS1Ls6TFwaLBIU1vngqrNZv_HE2ae9zC6cjs3r8HzlM8kvNRDdedSlDqMXCfp5HNBhpSCEx-pzFVWgUzyTMWV9-jBIh1z7_olb_2skQjFIsseq6U6UsBQ9yximDsPiuPRSiyx5yZBugIDjXirD9m7l8n6t1QTr0-C5pYDM5WyFicdD_fPT2WCGoC6DRrGC_0yAYaUZQmG9r49Jtg"/>
+<div class="absolute inset-0 bg-primary/40 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-all duration-500 flex items-center justify-center">
+<span class="font-headline text-3xl text-on-primary italic transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">Manicura Elixir</span>
+</div>
+</div>
+</div>
+<!-- CTA Section -->
+<section class="mt-32 p-12 bg-surface-container-low rounded-3xl text-center">
+<h2 class="font-headline text-3xl text-primary mb-6">¿Lista para tu propia transformación?</h2>
+<p class="font-body text-on-surface-variant mb-10 max-w-xl mx-auto">
+                Nuestros especialistas están listos para crear un look personalizado que hable de ti.
+            </p>
+<button class="bg-primary text-on-primary px-10 py-4 rounded-full font-label text-sm uppercase tracking-widest hover:bg-on-primary-fixed-variant transition-colors duration-300 shadow-xl shadow-primary/10">
+                Agendar una Consulta
+            </button>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full pt-16 pb-8 bg-[#F2EDEA] dark:bg-zinc-950">
+<div class="flex flex-col items-center gap-8 px-4">
+<div class="font-serif italic text-lg text-[#944555] dark:text-[#E8899A]">L'Élixir Salon de Belleza</div>
+<div class="flex gap-8">
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">Instagram</a>
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">WhatsApp</a>
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">Contacto</a>
+<a class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 hover:opacity-70 transition-opacity" href="#">Privacidad</a>
+</div>
+<p class="font-sans text-xs uppercase tracking-widest text-[#534245] dark:text-zinc-500 opacity-60">
+                © 2024 L'Élixir Salon de Belleza. El Arte de Cuidarte.
+            </p>
+</div>
+</footer>
+</body></html>

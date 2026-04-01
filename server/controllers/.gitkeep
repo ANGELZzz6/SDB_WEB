@@ -1,0 +1,13 @@
+// Placeholder para futuros controllers
+// Los controllers se implementarán módulo por módulo
+
+// Patrón a seguir:
+// exports.getAll = async (req, res, next) => { try { ... } catch(e) { next(e) } }
+
+// Módulos planificados:
+// - employeesController.js
+// - servicesController.js
+// - appointmentsController.js
+// - blockedSlotsController.js
+// - settingsController.js
+// - authController.js
