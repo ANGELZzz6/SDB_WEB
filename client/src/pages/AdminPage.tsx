@@ -1,33 +1,36 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
-import { appointmentService } from '../services/api';
+import { appointmentService, employeeService, availabilityService } from '../services/api';
+import type { Employee } from '../types';
 
 /* ─────────────────────────────────────────────────
    Data
 ───────────────────────────────────────────────── */
-type AppStatus = 'Confirmado' | 'En Proceso' | 'Pendiente' | 'Cancelado';
+type AppStatus = 'Confirmada' | 'Completada' | 'Pendiente' | 'Cancelada';
 
 interface UIAppointment {
   id: string; time: string; client: string; clientPhone: string; clientPhoto: string;
-  service: string; serviceIcon: string; specialist: string;
+  service: string; serviceId: string; serviceIcon: string; 
+  specialist: string; specialistId: string;
   duration: string; status: AppStatus;
+  date: string;
 }
 
 const mapStatus = (apiStatus: string): AppStatus => {
   switch(apiStatus) {
-    case 'confirmed': return 'Confirmado';
-    case 'completed': return 'En Proceso'; // Using as 'Done/In process' visual
-    case 'cancelled': return 'Cancelado';
+    case 'confirmed': return 'Confirmada';
+    case 'completed': return 'Completada';
+    case 'cancelled': return 'Cancelada';
     default: return 'Pendiente';
   }
 }
 
 const STATUS_STYLES: Record<AppStatus, { bg: string; color: string }> = {
-  'Confirmado': { bg: `rgba(148,69,85,0.1)`, color: T.primary },
-  'En Proceso': { bg: T.surfaceContainerHighest, color: T.onSurfaceVariant },
+  'Confirmada': { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e' },
+  'Completada': { bg: 'rgba(107, 114, 128, 0.1)', color: '#6b7280' },
   'Pendiente':  { bg: 'rgba(240,189,143,0.3)', color: '#623f1b' },
-  'Cancelado':  { bg: 'rgba(186,26,26,0.08)',  color: '#ba1a1a' },
+  'Cancelada':  { bg: 'rgba(186,26,26,0.08)',  color: '#ba1a1a' },
 };
 
 /* ─────────────────────────────────────────────────
@@ -57,6 +60,18 @@ export default function AdminPage() {
     setTimeout(() => setNotification(null), 3500);
   };
 
+  // Reagendar Modal state
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<UIAppointment | null>(null);
+  const [reschForm, setReschForm] = useState({ date: '', timeSlot: '', employeeId: '', reason: '' });
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+
+  const formatISO = (d: Date | string) => {
+    if (typeof d === 'string') return d.split('T')[0];
+    return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  };
+
   const mapAppt = (a: any, index: number): UIAppointment => ({
     id: a._id,
     time: a.timeSlot,
@@ -64,10 +79,13 @@ export default function AdminPage() {
     clientPhone: a.clientPhone || '',
     clientPhoto: `https://i.pravatar.cc/100?img=${(index % 70) + 1}`,
     service: a.service?.nombre || 'General',
+    serviceId: a.service?._id || '',
     serviceIcon: '✨',
     specialist: a.employee?.nombre || 'Admin',
+    specialistId: a.employee?._id || '',
     duration: a.service?.duracion ? `${a.service.duracion}m` : '30m',
     status: mapStatus(a.status),
+    date: a.date
   });
 
   useEffect(() => {
@@ -78,18 +96,34 @@ export default function AdminPage() {
         const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
         const fetchParams: any = { date: dateStr };
-        if (isEmpleada) fetchParams.employeeId = user?._id || user?.id;
+        if (isEmpleada) fetchParams.employeeId = user?.id;
 
-        // Fetch today's appointments + stats. Admin also fetches all pending
+        // Fetch today's appointments + stats. Both admin and specialists fetch pending for their scope
         const promises: Promise<any>[] = [
           appointmentService.getAll(fetchParams),
           appointmentService.getStats(),
+          appointmentService.getAll({ status: 'pending', ...(isEmpleada ? { employeeId: user?.id } : {}) })
         ];
-        if (!isEmpleada) {
-          promises.push(appointmentService.getAll({ status: 'pending' }));
+
+        const [apptsRes, statsRes, pendingRes, empsRes] = await Promise.all(promises.concat(employeeService.getAll()));
+
+        if (empsRes?.success && empsRes?.data) {
+          setAllEmployees(empsRes.data);
         }
 
-        const [apptsRes, statsRes, pendingRes] = await Promise.all(promises);
+        // Filter stats for empleada
+        if (isEmpleada && apptsRes.success && apptsRes.data) {
+          const empleadaAppts = apptsRes.data;
+          const pending = empleadaAppts.filter((a: any) => a.status === 'pending').length;
+          const completed = empleadaAppts.filter((a: any) => a.status === 'completed').length;
+          const cancelled = empleadaAppts.filter((a: any) => a.status === 'cancelled').length;
+          setStats({
+            today: empleadaAppts.length,
+            pending,
+            completed,
+            cancelled,
+          });
+        }
 
         if (apptsRes.success && apptsRes.data) {
           const mapped = apptsRes.data.map(mapAppt);
@@ -97,11 +131,11 @@ export default function AdminPage() {
           setAppointments(mapped);
         }
 
-        if (statsRes.success && statsRes.data) {
-          const { monthlyStats, todayCount } = statsRes.data;
-          const pendingCount = monthlyStats?.find((s: any) => s._id === 'pending')?.count || 0;
-          const completedCount = monthlyStats?.find((s: any) => s._id === 'completed')?.count || 0;
-          const cancelledCount = monthlyStats?.find((s: any) => s._id === 'cancelled')?.count || 0;
+        if (!isEmpleada && statsRes.success && statsRes.data) {
+          const { globalStats, todayCount } = statsRes.data;
+          const pendingCount = globalStats?.find((s: any) => s._id === 'pending')?.count || 0;
+          const completedCount = globalStats?.find((s: any) => s._id === 'completed')?.count || 0;
+          const cancelledCount = globalStats?.find((s: any) => s._id === 'cancelled')?.count || 0;
           setStats({
             today: todayCount || 0,
             pending: pendingCount,
@@ -110,7 +144,7 @@ export default function AdminPage() {
           });
         }
 
-        if (!isEmpleada && pendingRes?.success && pendingRes?.data) {
+        if (pendingRes?.success && pendingRes?.data) {
           setPendingAppointments(pendingRes.data.map(mapAppt));
         }
 
@@ -129,10 +163,14 @@ export default function AdminPage() {
       if (res.success) {
         setPendingAppointments(prev => prev.filter(a => a.id !== id));
         setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: mapStatus(newStatus) } : a));
-        setStats(prev => ({
-          ...prev,
-          pending: Math.max(0, prev.pending - 1),
-        }));
+        
+        // Actualizar stats locales
+        if (newStatus === 'confirmed') {
+          setStats(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1) }));
+        } else {
+          setStats(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1), cancelled: prev.cancelled + 1 }));
+        }
+        
         showNotif(newStatus === 'confirmed' ? '✅ Cita confirmada' : '❌ Cita rechazada', newStatus === 'confirmed' ? 'ok' : 'err');
       }
     } catch (error) {
@@ -141,7 +179,69 @@ export default function AdminPage() {
     }
   };
 
-  const confirmedCount = appointments.filter((a) => a.status === 'Confirmado').length;
+  const openReschedule = (appt: UIAppointment) => {
+    setRescheduleTarget(appt);
+    setReschForm({
+      date: formatISO(appt.date),
+      timeSlot: appt.time,
+      employeeId: appt.specialistId,
+      reason: ''
+    });
+    setAvailableSlots([]);
+    setShowRescheduleModal(true);
+  };
+
+  useEffect(() => {
+    if (showRescheduleModal && reschForm.date && reschForm.employeeId && rescheduleTarget) {
+      availabilityService.getSlots(
+        reschForm.employeeId, 
+        rescheduleTarget.serviceId, 
+        reschForm.date
+      ).then(res => setAvailableSlots(res.data || []));
+    }
+  }, [reschForm.date, reschForm.employeeId, rescheduleTarget, showRescheduleModal]);
+
+  const handleConfirmReschedule = async () => {
+    if (!rescheduleTarget) return;
+    try {
+      const res = await appointmentService.reschedule(rescheduleTarget.id, {
+        date: reschForm.date,
+        timeSlot: reschForm.timeSlot,
+        employeeId: reschForm.employeeId,
+        reason: reschForm.reason
+      } as any);
+      
+      if (res.success) {
+        setShowRescheduleModal(false);
+        // Actualizar la lista de pendientes localmente
+        setPendingAppointments(prev => prev.map(a => 
+          a.id === rescheduleTarget.id 
+            ? { ...a, date: reschForm.date, time: reschForm.timeSlot, specialistId: reschForm.employeeId, specialist: allEmployees.find(e => e._id === reschForm.employeeId)?.nombre || a.specialist }
+            : a
+        ));
+        showNotif('✅ Cita reagendada exitosamente (sigue pendiente)');
+      }
+    } catch (e: any) {
+      showNotif(e.message || 'Error reagendando', 'err');
+    }
+  };
+
+  const handleComplete = async (id: string) => {
+    try {
+      const res = await appointmentService.complete(id);
+      if (res.success) {
+        setAppointments(prev => prev.map(a => 
+          a.id === id ? { ...a, status: 'Completada' } : a
+        ));
+        showNotif('✅ Cita marcada como completada', 'ok');
+      }
+    } catch (error) {
+      console.error('Error completing appointment', error);
+      showNotif('Error al completar la cita', 'err');
+    }
+  };
+
+  const confirmedCount = appointments.filter((a) => a.status === 'Confirmada').length;
 
   const filtered = appointments.filter((a) =>
     search === '' ||
@@ -224,8 +324,8 @@ export default function AdminPage() {
           ))}
         </section>
 
-        {/* ── Pending Appointments (Prominent Summary) — Admin Only ── */}
-        {!isEmpleada && pendingAppointments.length > 0 && (
+        {/* ── Pending Appointments (Prominent Summary) ── */}
+        {pendingAppointments.length > 0 && (
           <section style={{ marginBottom: '56px', backgroundColor: '#fff8e1', padding: '24px', borderRadius: '16px', border: '1px solid #ffe082' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#5d4037', marginBottom: '20px' }}>
               ⏳ Citas Pendientes de Confirmación ({pendingAppointments.length})
@@ -245,6 +345,14 @@ export default function AdminPage() {
                       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                     >
                       ✓ Confirmar
+                    </button>
+                    <button
+                      onClick={() => openReschedule(appt)}
+                      style={{ flex: 1, padding: '10px', backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, border: 'none', borderRadius: '9999px', cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '13px', transition: 'opacity 0.2s' }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                    >
+                      🕒 Reagendar
                     </button>
                     <button
                       onClick={() => handleAction(appt.id, 'cancelled')}
@@ -300,17 +408,16 @@ export default function AdminPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {filtered.map((appt) => {
                 const statusStyle = STATUS_STYLES[appt.status];
-                const isInProcess = appt.status === 'En Proceso';
                 return (
                   <div key={appt.id} className="appt-card" style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
                     <div style={{ width: '56px', paddingTop: '20px', textAlign: 'right', flexShrink: 0 }}>
                       <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: `${T.onSurfaceVariant}55`, letterSpacing: '0.05em' }}>{appt.time}</span>
                     </div>
-                    <div style={{ flex: 1, padding: '20px 24px', backgroundColor: isInProcess ? T.surfaceContainerLow : T.surfaceContainerLowest, borderRadius: '14px', borderLeft: `4px solid ${isInProcess ? T.secondaryFixedDim : T.primary}`, boxShadow: `0 16px 40px rgba(62,2,21,${isInProcess ? '0.02' : '0.04'})`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isInProcess ? 0.85 : 1, gap: '16px' }}>
+                    <div style={{ flex: 1, padding: '20px 24px', backgroundColor: appt.status === 'Completada' ? T.surfaceContainerLow : T.surfaceContainerLowest, borderRadius: '14px', borderLeft: `4px solid ${appt.status === 'Completada' ? T.surfaceContainerHighest : T.primary}`, boxShadow: `0 16px 40px rgba(62,2,21,${appt.status === 'Completada' ? '0.02' : '0.04'})`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: appt.status === 'Completada' ? 0.85 : 1, gap: '16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: 0 }}>
                         <div style={{ position: 'relative', flexShrink: 0 }}>
-                          <img src={appt.clientPhoto} alt={appt.client} style={{ width: '48px', height: '48px', borderRadius: '9999px', objectFit: 'cover', filter: isInProcess ? 'grayscale(60%)' : 'none' }} />
-                          {!isInProcess && <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '14px', height: '14px', backgroundColor: '#22c55e', border: '2px solid white', borderRadius: '9999px' }} />}
+                          <img src={appt.clientPhoto} alt={appt.client} style={{ width: '48px', height: '48px', borderRadius: '9999px', objectFit: 'cover', filter: appt.status === 'Completada' ? 'grayscale(60%)' : 'none' }} />
+                          {appt.status !== 'Completada' && <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '14px', height: '14px', backgroundColor: '#22c55e', border: '2px solid white', borderRadius: '9999px' }} />}
                         </div>
                         <div style={{ minWidth: 0 }}>
                           <h4 style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{appt.client}</h4>
@@ -322,15 +429,33 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexShrink: 0 }}>
-                        <div style={{ textAlign: 'right', opacity: isInProcess ? 0.6 : 1 }}>
+                        <div style={{ textAlign: 'right', opacity: appt.status === 'Completada' ? 0.6 : 1 }}>
                           <p style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}70`, marginBottom: '2px' }}>Duración</p>
                           <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface }}>{appt.duration}</p>
                         </div>
                         <span style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '6px 14px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.onSurfaceVariant, padding: '4px 8px', borderRadius: '8px', transition: 'color 0.2s' }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = T.primary)}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = T.onSurfaceVariant)}
-                        >⋮</button>
+                        {appt.status === 'Confirmada' && (
+                          <button
+                            onClick={() => handleComplete(appt.id)}
+                            style={{
+                              fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700,
+                              textTransform: 'uppercase', letterSpacing: '0.1em',
+                              backgroundColor: '#22c55e', color: '#fff',
+                              padding: '8px 16px', borderRadius: '9999px', border: 'none',
+                              cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#16a34a';
+                              e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#22c55e';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                          >
+                            ✓ Completar
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -367,6 +492,86 @@ export default function AdminPage() {
           onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >Actualizar</button>
       </div>
+
+      
+      {/* RESCHEDULE MODAL */}
+      {showRescheduleModal && rescheduleTarget && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', opacity: 1, backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '420px', padding: '40px', borderRadius: '24px', boxShadow: '0 24px 80px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '28px', color: T.primary, marginBottom: '8px' }}>Reagendar Cita</h3>
+            <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '24px' }}>
+              Cambia la fecha o profesional para <strong>{rescheduleTarget.client}</strong>.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Especialista:</label>
+                <select
+                  value={reschForm.employeeId}
+                  onChange={e => setReschForm({...reschForm, employeeId: e.target.value, timeSlot: ''})}
+                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, cursor: 'pointer' }}
+                >
+                  <option value="">Selecciona especialista...</option>
+                  {allEmployees.filter(e => e.isActive).map(e => (
+                    <option key={e._id} value={e._id}>{e.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Nueva Fecha:</label>
+                <input 
+                  type="date" 
+                  value={reschForm.date} 
+                  onChange={e => setReschForm({...reschForm, date: e.target.value, timeSlot: ''})} 
+                  min={formatISO(new Date())} 
+                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Nueva Hora:</label>
+                <select
+                  value={reschForm.timeSlot}
+                  onChange={e => setReschForm({...reschForm, timeSlot: e.target.value})}
+                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, cursor: 'pointer' }}
+                >
+                  <option value="">Selecciona hora...</option>
+                  {availableSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                {availableSlots.length === 0 && reschForm.date && <p style={{ fontSize: '11px', color: T.error, marginTop: '6px', fontWeight: 600 }}>No hay disponibilidad en esta fecha</p>}
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Motivo:</label>
+                <textarea 
+                  rows={2} 
+                  value={reschForm.reason} 
+                  onChange={e => setReschForm({...reschForm, reason: e.target.value})} 
+                  placeholder="Ej: Cambio solicitado por el cliente..." 
+                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, resize: 'none', fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest }} 
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
+              <button 
+                onClick={() => setShowRescheduleModal(false)} 
+                style={{ flex: 1, padding: '16px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleConfirmReschedule} 
+                disabled={!reschForm.timeSlot}
+                style={{ flex: 1, padding: '16px', backgroundColor: reschForm.timeSlot ? T.primary : T.outlineVariant, color: 'white', border: 'none', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', opacity: reschForm.timeSlot ? 1 : 0.6 }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

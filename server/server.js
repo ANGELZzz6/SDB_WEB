@@ -46,10 +46,12 @@ app.use(helmet())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 
-// Logs solo en desarrollo
+// Logs desactivados por petición del usuario para limpiar terminal
+/*
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'))
 }
+*/
 
 // ==============================
 // Rutas de la API
@@ -61,6 +63,8 @@ app.use('/api/blocked-slots',require('./routes/blockedSlots'))
 app.use('/api/settings',     require('./routes/settings'))
 app.use('/api/gallery',      require('./routes/gallery'))
 app.use('/api/auth',         require('./routes/auth'))
+app.use('/api/clients',      require('./routes/clients'))
+app.use('/api/settlements',  require('./routes/settlementRoutes'))
 
 // Health check
 app.get('/api/health', (req, res) => {

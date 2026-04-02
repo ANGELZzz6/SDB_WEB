@@ -1,11 +1,13 @@
 const jwt = require('jsonwebtoken')
+const mongoose = require('mongoose')
+const Employee = require('../models/Employee')
 
 /**
  * Middleware de autenticación JWT
  * Verifica el token en el header Authorization: Bearer <token>
- * Disponible en req.user = { id, role }
+ * Disponible en req.user = { id, role, isObjectId, permissions }
  */
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
 
@@ -19,10 +21,28 @@ const authMiddleware = (req, res, next) => {
     const token = authHeader.split(' ')[1]
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
-    req.user = {
-      id:   decoded.id,
-      role: decoded.role, // 'admin' | 'empleada'
+    let permissions = {}
+
+    // Si es empleada, cargamos sus permisos dinámicos desde la DB
+    if (decoded.role === 'empleada' && mongoose.Types.ObjectId.isValid(decoded.id)) {
+      const user = await Employee.findById(decoded.id).select('permissions isActive')
+      if (!user || !user.isActive) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuario no encontrado o inactivo',
+        })
+      }
+      permissions = user.permissions || {}
     }
+
+    req.user = {
+      id: decoded.id,
+      role: decoded.role, // 'admin' | 'empleada'
+      isObjectId: mongoose.Types.ObjectId.isValid(decoded.id),
+      permissions
+    }
+
+    console.log('👤 AUTH USER:', req.user)
 
     next()
   } catch (error) {
@@ -58,8 +78,9 @@ const optionalAuth = (req, res, next) => {
       const token = authHeader.split(' ')[1]
       const decoded = jwt.verify(token, process.env.JWT_SECRET)
       req.user = {
-        id:   decoded.id,
+        id: decoded.id,
         role: decoded.role,
+        isObjectId: mongoose.Types.ObjectId.isValid(decoded.id)
       }
     }
   } catch (error) {

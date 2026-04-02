@@ -26,6 +26,10 @@ export default function AdminLogin() {
       const resp = await authService.login({ identifier, password, role });
       if (resp.success && resp.data?.token) {
         localStorage.setItem('token', resp.data.token);
+        // Store full user data immediately so permissions are available on first load
+        if (resp.data.user) {
+          localStorage.setItem('adminUser', JSON.stringify(resp.data.user));
+        }
         navigate('/admin'); // Redirect a protected area
       }
     } catch (err: any) {

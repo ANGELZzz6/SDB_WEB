@@ -1,8 +1,11 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { employeeService } from '../services/api';
+import type { Employee } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 const T = {
   fontHeadline: "'Noto Serif', serif",
   fontBody: "'Plus Jakarta Sans', sans-serif",
@@ -31,43 +34,13 @@ const wrap: React.CSSProperties = {
 };
 
 /* ─────────────────────────────────────────────────
-   Specialist Data
-───────────────────────────────────────────────── */
-const SPECIALISTS = [
-  {
-    name: 'Gena',
-    role: 'Experta en Colorimetría y Cabello',
-    photo: 'https://i.pravatar.cc/300?img=1',
-    services: [
-      'Tinte & Colorimetría Avanzada',
-      'Cepillado Profesional & Keratinas',
-      'Manicure & Pedicura',
-      'Diseño y Depilación de Cejas',
-    ],
-    specialties: ['Color', 'Estilo', 'Cejas'],
-  },
-  {
-    name: 'Michell',
-    role: 'Especialista en Nail Art y Mirada',
-    photo: 'https://i.pravatar.cc/300?img=5',
-    services: [
-      'Extensión de Pestañas (Clásico · Híbrido · Volumen)',
-      'Uñas Softgel & Nail Art',
-      'Diseño y Laminado de Cejas',
-      'Depilación Corporal Completa',
-    ],
-    specialties: ['Pestañas', 'Uñas', 'Depilación'],
-  },
-];
-
-/* ─────────────────────────────────────────────────
    Shared Navbar
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigate>; location: ReturnType<typeof useLocation> }) {
   const links = [
     { label: 'Servicios', path: '/servicios' },
     { label: 'Especialistas', path: '/especialistas' },
-    { label: 'Galería', path: '/galeria' },
+    { label: 'Galería', path: '/#galeria' },
   ];
   return (
     <nav style={{
@@ -83,8 +56,9 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
         <div className="nav-links" style={{ alignItems: 'center', gap: '40px' }}>
           {links.map(({ label, path }) => {
             const active = location.pathname === path;
+            const isHashLink = path.startsWith('/#');
             return (
-              <button key={label} onClick={() => navigate(path)} style={{
+              <button key={label} onClick={() => isHashLink ? (window.location.href = path) : navigate(path)} style={{
                 fontFamily: T.fontHeadline, fontSize: '16px', letterSpacing: '-0.02em',
                 color: active ? T.primary : T.onSurfaceVariant,
                 fontWeight: active ? 600 : 400,
@@ -118,7 +92,7 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
 
 /* ─────────────────────────────────────────────────
    Shared Footer
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 function Footer() {
   return (
     <footer style={{ backgroundColor: T.surfaceContainer, paddingTop: '64px', paddingBottom: '32px' }}>
@@ -143,10 +117,21 @@ function Footer() {
 
 /* ─────────────────────────────────────────────────
    SPECIALISTS PAGE
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 export default function SpecialistsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    employeeService.getAll().then(res => {
+      if (res.success && res.data) {
+        setEmployees(res.data.filter((e:any) => e.isActive));
+      }
+      setLoading(false);
+    });
+  }, []);
 
   return (
     <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, overflowX: 'hidden' }}>
@@ -167,7 +152,7 @@ export default function SpecialistsPage() {
             gap: 96px;
             align-items: start;
           }
-          .specialist-card:nth-child(2) {
+          .specialist-card:nth-child(even) {
             margin-top: 64px;
           }
         }
@@ -242,84 +227,99 @@ export default function SpecialistsPage() {
 
           {/* ── Specialists Grid ── */}
           <div className="specialists-grid">
-            {SPECIALISTS.map(({ name, role, photo, services, specialties }) => (
-              <div key={name} className="specialist-card">
+            {loading ? (
+              <p style={{ gridColumn: '1 / -1', textAlign: 'center', fontFamily: T.fontBody, color: T.onSurfaceVariant }}>Cargando especialistas...</p>
+            ) : employees.length > 0 ? (
+              employees.map((emp) => (
+                <div key={emp._id} className="specialist-card">
 
-                {/* Card header: photo + name */}
-                <div className="specialist-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '28px', marginBottom: '36px' }}>
-                  {/* Photo */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div style={{ width: '112px', height: '112px', borderRadius: '9999px', overflow: 'hidden', border: `4px solid ${T.surfaceContainer}`, boxShadow: '0 4px 16px rgba(148,69,85,0.12)' }}>
-                      <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  {/* Card header: photo + name */}
+                  <div className="specialist-header" style={{ display: 'flex', alignItems: 'flex-start', gap: '28px', marginBottom: '36px' }}>
+                    {/* Photo */}
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div style={{ width: '112px', height: '112px', borderRadius: '9999px', overflow: 'hidden', border: `4px solid ${T.surfaceContainer}`, boxShadow: '0 4px 16px rgba(148,69,85,0.12)' }}>
+                        <img src={emp.foto || "https://i.pravatar.cc/300?img=1"} alt={emp.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </div>
+                      {/* Verified badge */}
+                      <div style={{
+                        position: 'absolute', bottom: 0, right: 0,
+                        width: '28px', height: '28px', borderRadius: '9999px',
+                        backgroundColor: T.primaryContainer,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(148,69,85,0.25)',
+                        fontSize: '14px',
+                      }}>
+                        ✓
+                      </div>
                     </div>
-                    {/* Verified badge */}
-                    <div style={{
-                      position: 'absolute', bottom: 0, right: 0,
-                      width: '28px', height: '28px', borderRadius: '9999px',
-                      backgroundColor: T.primaryContainer,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 2px 8px rgba(148,69,85,0.25)',
-                      fontSize: '14px',
-                    }}>
-                      ✓
+
+                    {/* Name + role block */}
+                    <div className="name-block" style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '8px' }}>
+                      <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '32px', color: T.primary, letterSpacing: '-0.02em', fontWeight: 700, margin: 0 }}>
+                        {emp.nombre}
+                      </h2>
+                      <p style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 500, fontStyle: 'italic', color: T.onSecondaryContainer, margin: 0 }}>
+                        Expert Artist
+                      </p>
+                      {/* Specialty pills */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                        {(emp.especialidades || []).slice(0, 3).map((s) => (
+                          <span key={s} style={{
+                            fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700,
+                            textTransform: 'uppercase', letterSpacing: '0.1em',
+                            backgroundColor: T.primaryFixed, color: T.primary,
+                            padding: '4px 12px', borderRadius: '9999px',
+                          }}>{s}</span>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Name + role block */}
-                  <div className="name-block" style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '8px' }}>
-                    <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '32px', color: T.primary, letterSpacing: '-0.02em', fontWeight: 700, margin: 0 }}>
-                      {name}
-                    </h2>
-                    <p style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 500, fontStyle: 'italic', color: T.onSecondaryContainer, margin: 0 }}>
-                      {role}
-                    </p>
-                    {/* Specialty pills */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                      {specialties.map((s) => (
-                        <span key={s} style={{
-                          fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700,
-                          textTransform: 'uppercase', letterSpacing: '0.1em',
-                          backgroundColor: T.primaryFixed, color: T.primary,
-                          padding: '4px 12px', borderRadius: '9999px',
-                        }}>{s}</span>
-                      ))}
-                    </div>
+                  {/* Services list */}
+                  <div>
+                    <h3 style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: `${T.onSurfaceVariant}80`, marginBottom: '8px', paddingBottom: '10px', borderBottom: `1px solid ${T.outlineVariant}25` }}>
+                      Servicios Destacados
+                    </h3>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0', minHeight: '120px' }}>
+                      {emp.servicios && emp.servicios.length > 0 ? (emp.servicios as any).map((s: any) => (
+                        <li key={s._id} className="service-row">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: T.primaryFixedDim, flexShrink: 0 }} />
+                            <span style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface }}>{s.nombre}</span>
+                          </div>
+                          <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '14px', color: T.primary, fontWeight: 700 }}>
+                            ${(s.precio || 0).toLocaleString()}
+                          </span>
+                        </li>
+                      )) : (
+                        <li style={{ padding: '20px', textAlign: 'center', color: T.onSurfaceVariant, opacity: 0.5, fontStyle: 'italic', fontSize: '14px' }}>
+                          Sin servicios específicos asignados.
+                        </li>
+                      )}
+                    </ul>
                   </div>
-                </div>
 
-                {/* Services list */}
-                <div>
-                  <h3 style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: `${T.onSurfaceVariant}80`, marginBottom: '8px', paddingBottom: '10px', borderBottom: `1px solid ${T.outlineVariant}25` }}>
-                    Servicios Destacados
-                  </h3>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0' }}>
-                    {services.map((s) => (
-                      <li key={s} className="service-row">
-                        <span style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface }}>{s}</span>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: T.primaryFixedDim, flexShrink: 0, display: 'inline-block' }} />
-                      </li>
-                    ))}
-                  </ul>
+                  {/* Book button */}
+                  <button
+                    onClick={() => navigate('/chatbot')}
+                    style={{
+                      width: '100%', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.12em',
+                      backgroundColor: T.primary, color: '#FFFFFF',
+                      padding: '16px 0', borderRadius: '9999px', border: 'none',
+                      cursor: 'pointer', transition: 'all 0.3s',
+                      boxShadow: '0 8px 24px rgba(148,69,85,0.20)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#772e3e'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(148,69,85,0.30)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = T.primary; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(148,69,85,0.20)'; }}
+                  >
+                    Agendar con {emp.nombre}
+                  </button>
                 </div>
-
-                {/* Book button */}
-                <button
-                  onClick={() => navigate('/chatbot')}
-                  style={{
-                    width: '100%', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.12em',
-                    backgroundColor: T.primary, color: '#FFFFFF',
-                    padding: '16px 0', borderRadius: '9999px', border: 'none',
-                    cursor: 'pointer', transition: 'all 0.3s',
-                    boxShadow: '0 8px 24px rgba(148,69,85,0.20)',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#772e3e'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 32px rgba(148,69,85,0.30)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = T.primary; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(148,69,85,0.20)'; }}
-                >
-                  Agendar con {name}
-                </button>
-              </div>
-            ))}
+              ))
+            ) : (
+                <p style={{ gridColumn: '1 / -1', textAlign: 'center', fontFamily: T.fontBody, color: T.onSurfaceVariant }}>Próximamente conocerás a nuestro equipo.</p>
+            )}
           </div>
 
         </div>
@@ -339,8 +339,8 @@ export default function SpecialistsPage() {
         }}>
           {/* Avatar stack */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
-            {SPECIALISTS.map(({ photo, name }, i) => (
-              <img key={name} src={photo} alt={name}
+            {employees.slice(0, 3).map((emp, i) => (
+              <img key={emp._id} src={emp.foto || "https://i.pravatar.cc/300?img=1"} alt={emp.nombre}
                 style={{ width: '32px', height: '32px', borderRadius: '9999px', objectFit: 'cover', border: '2px solid #FFFFFF', marginLeft: i > 0 ? '-10px' : 0 }}
               />
             ))}

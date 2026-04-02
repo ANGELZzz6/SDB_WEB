@@ -43,6 +43,7 @@ export default function ChatbotPage() {
   const [loadingServices, setLoadingServices] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [blockMessage, setBlockMessage] = useState('');
 
   // Wizard States
   const [step, setStep] = useState(1);
@@ -97,10 +98,14 @@ export default function ChatbotPage() {
   useEffect(() => {
     if (step === 4 && employeeId && serviceId && date) {
       setLoadingSlots(true);
+      setBlockMessage('');
       availabilityService.getSlots(employeeId, serviceId, date)
         .then(res => {
           if (res.success && res.data) {
             setAvailableSlots(res.data);
+            if (res.data.length === 0 && res.message) {
+              setBlockMessage(res.message);
+            }
           }
         })
         .finally(() => setLoadingSlots(false));
@@ -351,7 +356,7 @@ export default function ChatbotPage() {
             ) : availableSlots.length === 0 ? (
               <div style={{ textAlign: 'center' }}>
                 <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.error, marginBottom: '24px' }}>
-                  No hay horarios disponibles para este día, por favor selecciona otra fecha.
+                  {blockMessage ? `Este día no está disponible: ${blockMessage}` : 'No hay horarios disponibles para este día, por favor selecciona otra fecha.'}
                 </p>
                 <button 
                   onClick={() => setStep(3)}
@@ -625,10 +630,12 @@ function Calendar({ onSelect, maxDaysInAdvance }: { onSelect: (dateISO: string) 
         
         {daysArr.map((d, i) => {
           if (!d) return <div key={i} />;
-          const isPast = d.getTime() < today.getTime();
+          const hoyBogota = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+          const dStr = toISOLocal(d);
+          const isPast = dStr < hoyBogota;
           const isTooFar = d.getTime() > maxDate.getTime();
           const disabled = isPast || isTooFar;
-          const isToday = d.getTime() === today.getTime();
+          const isToday = dStr === hoyBogota;
 
           return (
             <button

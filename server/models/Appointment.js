@@ -2,8 +2,11 @@ const mongoose = require('mongoose')
 
 const appointmentSchema = new mongoose.Schema({
   clientName:  { type: String, required: true, trim: true },
-  clientPhone: { type: String, required: true, trim: true },
+  clientPhone: { type: String, required: true, trim: true, index: true },
   clientEmail: { type: String, trim: true, lowercase: true }, // opcional
+  priceSnapshot: { type: Number, default: 0 }, // Precio al agendar
+  finalPrice:    { type: Number },              // Cobro real final
+  settled:       { type: Boolean, default: false }, // ¿Ya liquidada a la empleada?
 
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
   service:  { type: mongoose.Schema.Types.ObjectId, ref: 'Service',  required: true },
@@ -32,8 +35,9 @@ const appointmentSchema = new mongoose.Schema({
   timestamps: true,
 })
 
-// Índice para consultas frecuentes: citas de una empleada en una fecha
+// Índices para consultas frecuentes: citas de una empleada en una fecha
 appointmentSchema.index({ employee: 1, date: 1 })
 appointmentSchema.index({ date: 1, status: 1 })
+appointmentSchema.index({ clientPhone: 1, date: -1 })
 
 module.exports = mongoose.model('Appointment', appointmentSchema)

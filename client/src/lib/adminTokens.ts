@@ -32,10 +32,11 @@ export const T = {
 export const ADMIN_NAV = [
   { icon: '⭐', label: 'Resumen',        path: '/admin',               key: 'citas' },
   { icon: '📅', label: 'Calendario',     path: '/admin/calendario',    key: 'calendario' },
-  { icon: '✂️', label: 'Servicios',      path: '/admin/servicios',     key: 'servicios',     adminOnly: true },
-  { icon: '👩‍🎨', label: 'Especialistas', path: '/admin/especialistas', key: 'especialistas', adminOnly: true },
-  { icon: '👥', label: 'Clientes',       path: '/admin/clientes',      key: 'clientes',      adminOnly: true },
-  { icon: '🖼️', label: 'Galería',        path: '/admin/galeria',       key: 'galeria',       adminOnly: true },
-  { icon: '🔐', label: 'Accesos',        path: '/admin/accesos',       key: 'accesos',       adminOnly: true },
-  { icon: '⚙️', label: 'Configuración', path: '/admin/configuracion', key: 'configuracion', adminOnly: true },
+  { icon: '✂️', label: 'Servicios',      path: '/admin/servicios',     key: 'servicios' },
+  { icon: '👩‍🎨', label: 'Especialistas', path: '/admin/especialistas', key: 'especialistas' },
+  { icon: '👥', label: 'Clientes',       path: '/admin/clientes',      key: 'clientes' },
+  { icon: '💰', label: 'Liquidaciones',  path: '/admin/liquidaciones', key: 'liquidaciones' },
+  { icon: '🖼️', label: 'Galería',        path: '/admin/galeria',       key: 'galeria' },
+  { icon: '🔐', label: 'Accesos',        path: '/admin/accesos',       key: 'accesos' },
+  { icon: '⚙️', label: 'Configuración', path: '/admin/configuracion', key: 'configuracion' },
 ];

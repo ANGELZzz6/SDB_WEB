@@ -61,13 +61,14 @@ const getAvailability = async (req, res, next) => {
     const { bufferBetweenAppointments, maxDaysInAdvance, businessHours } = settings
 
     // ── 3. Validar que la fecha esté dentro del rango permitido ─────────────
-    const today = dateOnly(new Date())
-    const target = dateOnly(targetDate)
-    const diffDays = Math.floor((target - today) / (1000 * 60 * 60 * 24))
+    const hoyBogota = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+    const targetStr = date.slice(0, 10)
 
-    if (diffDays < 0) {
+    if (targetStr < hoyBogota) {
       return res.status(400).json({ success: false, message: 'No se puede agendar en fechas pasadas' })
     }
+
+    const diffDays = Math.floor((new Date(targetStr) - new Date(hoyBogota)) / (1000 * 60 * 60 * 24))
     if (diffDays > maxDaysInAdvance) {
       return res.status(400).json({
         success: false,
@@ -81,6 +82,16 @@ const getAvailability = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Empleada no encontrada o inactiva' })
     }
 
+    // 🔴 FEATURE: ¿Disponible Hoy? (Solo aplica si fecha === hoyBogota)
+    if (targetStr === hoyBogota && employee.disponibleHoy === false) {
+      return res.json({
+        success: true,
+        data: [],
+        message: 'La especialista ha marcado que no está disponible hoy.',
+        bloqueado: true
+      })
+    }
+
     // ── 5. Cargar servicio para obtener duración ─────────────────────────────
     const service = await Service.findById(serviceId)
     if (!service || !service.isActive) {
@@ -88,7 +99,7 @@ const getAvailability = async (req, res, next) => {
     }
 
     // ── 6. Determinar horario disponible para ese día ────────────────────────
-    const dayName = DAY_MAP[target.getUTCDay()] // lunes, martes, etc.
+    const dayName = DAY_MAP[targetDate.getUTCDay()] // lunes, martes, etc.
     const daySchedule = employee.horarioPersonalizado?.[dayName]
 
     // Si el día no está activo para la empleada → no disponible
@@ -109,7 +120,10 @@ const getAvailability = async (req, res, next) => {
 
     // ── 7. Verificar si hay bloqueo de día completo ──────────────────────────
     const fullDayBlocks = await BlockedSlot.find({
-      employee: { $in: [employeeId, 'all'] },
+      $or: [
+        { employee: { $in: [employeeId, 'all'] } },
+        { isGlobal: true }
+      ],
       isFullDay: true,
       date: {
         $gte: dateOnly(targetDate),
@@ -118,16 +132,21 @@ const getAvailability = async (req, res, next) => {
     })
 
     if (fullDayBlocks.length > 0) {
+      const reason = fullDayBlocks[0].reason || 'Este día no está disponible por mantenimiento o festivo.';
       return res.json({
         success: true,
         data: [],
-        message: 'Día bloqueado',
+        message: reason,
+        bloqueado: true
       })
     }
 
     // ── 8. Cargar slots bloqueados por hora para ese día ─────────────────────
     const hourBlocks = await BlockedSlot.find({
-      employee: { $in: [employeeId, 'all'] },
+      $or: [
+        { employee: { $in: [employeeId, 'all'] } },
+        { isGlobal: true }
+      ],
       isFullDay: false,
       date: {
         $gte: dateOnly(targetDate),
@@ -172,11 +191,24 @@ const getAvailability = async (req, res, next) => {
       )
       if (overlaps) continue
 
-      // ¿Si es hoy, el slot ya pasó?
-      if (diffDays === 0) {
-        const now = new Date()
-        const nowMinutes = now.getHours() * 60 + now.getMinutes()
-        if (slotStart <= nowMinutes) continue
+      // ── 11. Filtrar slots pasados solo si es HOY en Bogotá ──────────────────
+      // Obtenemos la fecha actual en America/Bogota (en-CA devuelve YYYY-MM-DD)
+      const nowBogota = new Intl.DateTimeFormat('en-CA', { 
+        timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' 
+      }).format(new Date());
+      
+      const isToday = date === nowBogota;
+      
+      if (isToday) {
+        // Obtenemos HH:mm actual en Bogotá
+        const timeStr = new Intl.DateTimeFormat('en-US', { 
+          timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false 
+        }).format(new Date());
+        
+        const [h, m] = timeStr.split(':').map(Number);
+        const nowMinutes = h * 60 + m;
+        
+        if (slotStart <= nowMinutes) continue;
       }
 
       slots.push(minutesToTime(slotStart))

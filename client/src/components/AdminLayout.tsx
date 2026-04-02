@@ -7,12 +7,23 @@ interface AdminLayoutProps {
   children: ReactNode;
   searchPlaceholder?: string;
   topBarRight?: ReactNode;
+  searchValue?: string;
+  onSearchChange?: (val: string) => void;
 }
 
-export default function AdminLayout({ children, searchPlaceholder = 'Buscar...', topBarRight }: AdminLayoutProps) {
+export default function AdminLayout({ 
+  children, 
+  searchPlaceholder = 'Buscar...', 
+  topBarRight,
+  searchValue,
+  onSearchChange
+}: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [search, setSearch] = useState('');
+  const [internalSearch, setInternalSearch] = useState('');
+
+  const search = searchValue !== undefined ? searchValue : internalSearch;
+  const setSearch = onSearchChange || setInternalSearch;
 
   // Determine user role and permissions
   const rawUser = localStorage.getItem('adminUser');
@@ -20,14 +31,20 @@ export default function AdminLayout({ children, searchPlaceholder = 'Buscar...',
   const isAdmin = user?.role === 'admin';
   const userPermissions: Record<string, boolean> = user?.permissions ?? {};
 
+  // Keys always visible to specialists (can't be removed by admin)
+  const ALWAYS_VISIBLE = new Set(['citas', 'calendario']);
+
   const filteredNav = ADMIN_NAV.filter(item => {
-    if (item.adminOnly && !isAdmin) return false; // admins see all
-    if (!isAdmin) {
-      // empleadas: show only if permissions[key] === true
-      return userPermissions[item.key] !== false;
-    }
-    return true;
+    if (isAdmin) return true; // admin sees everything
+    if (ALWAYS_VISIBLE.has(item.key)) return true; // specialists always see dashboard + calendar
+    return userPermissions[item.key] === true; // other sections require explicit permission
   });
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('adminUser');
+    navigate('/admin/login');
+  };
 
   return (
     <div style={{ fontFamily: T.fontBody, backgroundColor: T.surface, color: T.onSurface, minHeight: '100vh', display: 'flex' }}>
@@ -57,6 +74,19 @@ export default function AdminLayout({ children, searchPlaceholder = 'Buscar...',
           .admin-sidebar { display: none !important; }
           .admin-main { margin-left: 0 !important; }
           .admin-topbar { left: 0 !important; }
+        }
+        .logout-btn {
+          display: flex; align-items: center; gap: 8px;
+          background: none; border: 1px solid ${T.outlineVariant}40;
+          padding: 8px 16px; border-radius: 9999px;
+          font-family: ${T.fontBody}; font-size: 13px; font-weight: 600;
+          color: ${T.onSurfaceVariant}; cursor: pointer;
+          transition: all 0.2s;
+        }
+        .logout-btn:hover {
+          background-color: ${T.errorContainer};
+          color: ${T.error};
+          border-color: ${T.error}40;
         }
       `}</style>
 
@@ -100,16 +130,21 @@ export default function AdminLayout({ children, searchPlaceholder = 'Buscar...',
         </nav>
 
         {/* Admin profile */}
-        <div style={{ padding: '0 24px', marginTop: 'auto', paddingTop: '16px', borderTop: `1px solid ${T.surfaceContainer}` }}>
+        <div 
+          onClick={() => navigate('/admin/perfil')}
+          style={{ padding: '16px 24px', marginTop: 'auto', borderTop: `1px solid ${T.surfaceContainer}`, cursor: 'pointer', transition: 'background-color 0.2s' }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainerLow)}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img
-              src="https://i.pravatar.cc/80?img=9"
+              src={user?.foto || "https://i.pravatar.cc/80?img=9"}
               alt="Admin"
               style={{ width: '38px', height: '38px', borderRadius: '9999px', objectFit: 'cover', border: `2px solid ${T.primaryFixed}` }}
             />
             <div>
               <p style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurface }}>{user?.nombre || 'Administradora'}</p>
-              <p style={{ fontFamily: T.fontBody, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: `${T.onSurfaceVariant}70` }}>{user?.role === 'empleada' ? 'Especialista' : 'Beauty Salon'}</p>
+              <p style={{ fontFamily: T.fontBody, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: `${T.onSurfaceVariant}70` }}>{user?.role === 'empleada' ? 'Especialista' : 'Admin'}</p>
             </div>
           </div>
         </div>
@@ -140,9 +175,14 @@ export default function AdminLayout({ children, searchPlaceholder = 'Buscar...',
           />
         </div>
 
-        {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {topBarRight}
+          
+          <button onClick={handleLogout} className="logout-btn">
+             <span>🚪</span>
+             Cerrar Sesión
+          </button>
+
           <button
             style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.onSurfaceVariant, padding: '4px' }}
             onMouseEnter={(e) => (e.currentTarget.style.color = T.primary)}
@@ -151,7 +191,10 @@ export default function AdminLayout({ children, searchPlaceholder = 'Buscar...',
             🔔
             <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', borderRadius: '9999px', backgroundColor: T.primary, border: '2px solid white' }} />
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: `1px solid ${T.outlineVariant}30` }}>
+          <div 
+            onClick={() => navigate('/admin/perfil')}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: `1px solid ${T.outlineVariant}30`, cursor: 'pointer' }}
+          >
             <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 500, color: T.onSurface }}>{user?.nombre || 'Admin'}</span>
             <img src={user?.foto || "https://i.pravatar.cc/80?img=9"} alt="User" style={{ width: '36px', height: '36px', borderRadius: '9999px', objectFit: 'cover' }} />
           </div>

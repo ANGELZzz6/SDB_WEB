@@ -97,10 +97,13 @@ const login = async (req, res, next) => {
       data: {
         token,
         user: {
-          id:     employee._id,
-          role:   'empleada',
-          nombre: employee.nombre,
-          foto:   employee.foto,
+          id:          employee._id,
+          role:        'empleada',
+          nombre:      employee.nombre,
+          email:       employee.email,
+          foto:        employee.foto,
+          disponibleHoy: employee.disponibleHoy,
+          permissions: employee.permissions || {},
         },
       },
     })
@@ -116,7 +119,7 @@ const me = async (req, res, next) => {
     if (req.user.role === 'admin') {
       return res.json({
         success: true,
-        data: { id: 'admin', role: 'admin', nombre: 'Administrador' },
+        data: { id: 'admin', role: 'admin', nombre: 'Administrador', email: process.env.ADMIN_EMAIL || '' },
       })
     }
 
@@ -131,10 +134,13 @@ const me = async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        id:     employee._id,
-        role:   'empleada',
-        nombre: employee.nombre,
-        foto:   employee.foto,
+        id:          employee._id,
+        role:        'empleada',
+        nombre:      employee.nombre,
+        email:       employee.email,
+        foto:        employee.foto,
+        disponibleHoy: employee.disponibleHoy,
+        permissions: employee.permissions || {},
       },
     })
   } catch (error) {

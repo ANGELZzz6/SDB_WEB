@@ -14,6 +14,7 @@ export default function AdminServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -147,9 +148,16 @@ export default function AdminServicesPage() {
     return formatter.format(svc.precio || 0).replace(',00', '');
   };
 
+  const filteredServices = services.filter(svc => 
+    svc.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    svc.descripcion.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <AdminLayout
-      searchPlaceholder="Buscar servicios..."
+      searchPlaceholder="Buscar por nombre o descripción..."
+      searchValue={search}
+      onSearchChange={setSearch}
       topBarRight={
         <button
           onClick={() => openModal()}
@@ -202,7 +210,7 @@ export default function AdminServicesPage() {
           </div>
         ) : (
           <div className="svc-grid">
-            {services.map((svc) => (
+            {filteredServices.map((svc) => (
               <div key={svc._id} className="svc-card" style={{
                 backgroundColor: T.surfaceContainerLowest, borderRadius: '16px',
                 padding: '24px', boxShadow: '0 12px 32px rgba(62,2,21,0.04)',
@@ -263,6 +271,13 @@ export default function AdminServicesPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {!loading && filteredServices.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '64px', color: T.onSurfaceVariant }}>
+            <p style={{ fontFamily: T.fontBody, fontSize: '16px' }}>
+              {search ? 'Sin resultados para la búsqueda.' : 'No hay servicios registrados.'}
+            </p>
           </div>
         )}
       </div>

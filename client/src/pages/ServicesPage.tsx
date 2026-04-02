@@ -1,9 +1,12 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { serviceService } from '../services/api';
+import type { Service } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 const T = {
   fontHeadline: "'Noto Serif', serif",
   fontBody: "'Plus Jakarta Sans', sans-serif",
@@ -23,86 +26,8 @@ const T = {
 };
 
 /* ─────────────────────────────────────────────────
-   Service Data
-───────────────────────────────────────────────── */
-const SERVICES = [
-  {
-    emoji: '🎨',
-    category: 'Colorimetría',
-    title: 'Tinte de Cabello',
-    desc: 'Personalización cromática con pigmentos orgánicos para un brillo multidimensional duradero.',
-    price: '$85.000',
-    duration: '120 min',
-    specialist: 'Gena',
-  },
-  {
-    emoji: '💅',
-    category: 'Manos',
-    title: 'Manicure',
-    desc: 'Cuidado integral de cutículas y esmaltado de alta gama con acabado espejo y larga duración.',
-    price: '$35.000',
-    duration: '45 min',
-    specialist: 'Gena · Michell',
-  },
-  {
-    emoji: '🦶',
-    category: 'Pies',
-    title: 'Pedicura',
-    desc: 'Tratamiento relajante con exfoliación botánica y atención clínica detallada para tus pies.',
-    price: '$45.000',
-    duration: '60 min',
-    specialist: 'Gena · Michell',
-  },
-  {
-    emoji: '✨',
-    category: 'Styling',
-    title: 'Cepillado Profesional',
-    desc: 'Acabado profesional con volumen y sedosidad duradera. Keratinas y alisados disponibles.',
-    price: '$25.000',
-    duration: '40 min',
-    specialist: 'Gena',
-  },
-  {
-    emoji: '🌿',
-    category: 'Corporal',
-    title: 'Depilación',
-    desc: 'Técnicas suaves con cera de baja temperatura para una piel de seda. Rostro y cuerpo completo.',
-    price: 'Consultar',
-    duration: 'Varía',
-    specialist: 'Michell',
-  },
-  {
-    emoji: '🌟',
-    category: 'Mirada',
-    title: 'Diseño de Cejas',
-    desc: 'Arquitectura facial personalizada con hilo e iluminación para enmarcar tu expresión natural.',
-    price: '$40.000',
-    duration: '30 min',
-    specialist: 'Gena · Michell',
-  },
-  {
-    emoji: '👁️',
-    category: 'Mirada',
-    title: 'Extensión de Pestañas',
-    desc: 'Extensiones pelo a pelo o lifting para una mirada impactante, natural y sin esfuerzo diario.',
-    price: '$120.000',
-    duration: '90 min',
-    specialist: 'Michell',
-  },
-  {
-    emoji: '💎',
-    category: 'Tecnología',
-    title: 'Uñas Softgel',
-    desc: 'Extensión ultra ligera y flexible con diseños artísticos de acabado impecable y larga duración.',
-    price: '$95.000',
-    duration: '100 min',
-    specialist: 'Michell',
-  },
-];
-
-/* ─────────────────────────────────────────────────
    Shared container style
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 const wrap: React.CSSProperties = {
   maxWidth: '1280px',
   margin: '0 auto',
@@ -114,15 +39,38 @@ const wrap: React.CSSProperties = {
 
 /* ─────────────────────────────────────────────────
    SERVICES PAGE
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 export default function ServicesPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    serviceService.getAll().then(res => {
+      if (res.success && res.data) {
+        setServices(res.data.filter((s:any) => s.isActive));
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const renderPriceInfo = (svc: any) => {
+    const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' });
+    const pType = svc.precioTipo || 'fijo';
+    if (pType === 'consultar') return 'Consultar';
+    if (pType === 'rango') {
+      const pDesde = svc.precioDesde ? formatter.format(svc.precioDesde).replace(',00', '') : '';
+      const pHasta = svc.precioHasta ? formatter.format(svc.precioHasta).replace(',00', '') : '';
+      return `${pDesde} - ${pHasta}`;
+    }
+    return formatter.format(svc.precio || 0).replace(',00', '');
+  };
 
   const navLinks = [
     { label: 'Servicios', path: '/servicios' },
     { label: 'Especialistas', path: '/#especialistas' },
-    { label: 'Galería', path: '/#galería' },
+    { label: 'Galería', path: '/#galeria' },
   ];
 
   return (
@@ -216,11 +164,12 @@ export default function ServicesPage() {
           <div className="nav-links" style={{ alignItems: 'center', gap: '32px' }}>
             {navLinks.map(({ label, path }) => {
               const isActive = location.pathname === path;
+              const isHashLink = path.startsWith('/#');
               return (
                 <a
                   key={label}
-                  href={path.startsWith('/#') ? path : undefined}
-                  onClick={!path.startsWith('/#') ? (e) => { e.preventDefault(); navigate(path); } : undefined}
+                  href={isHashLink ? path : undefined}
+                  onClick={!isHashLink ? (e) => { e.preventDefault(); navigate(path); } : undefined}
                   style={{
                     fontFamily: T.fontHeadline,
                     fontSize: '16px',
@@ -288,110 +237,116 @@ export default function ServicesPage() {
 
           {/* ── Services Bento Grid ── */}
           <div className="services-grid">
-            {SERVICES.map(({ emoji, category, title, desc, price, duration, specialist }) => (
-              <div key={title} className="service-card">
+            {loading ? (
+              <p style={{ gridColumn: '1 / -1', textAlign: 'center', fontFamily: T.fontBody, color: T.onSurfaceVariant }}>Cargando experiencias...</p>
+            ) : services.length > 0 ? (
+              services.map((svc) => (
+                <div key={svc._id} className="service-card">
 
-                {/* Card top row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-                  <div
-                    className="icon-circle"
-                    style={{
-                      width: '48px', height: '48px', borderRadius: '9999px',
-                      backgroundColor: T.surfaceContainer,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '22px', transition: 'background-color 0.3s',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {emoji}
-                  </div>
-                  <span style={{
-                    fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.18em',
-                    color: `${T.onSurfaceVariant}80`,
-                  }}>
-                    {category}
-                  </span>
-                </div>
-
-                {/* Title */}
-                <h3 style={{
-                  fontFamily: T.fontHeadline, fontStyle: 'italic',
-                  fontSize: '24px', color: '#3D2B1F',
-                  marginBottom: '8px', letterSpacing: '-0.01em',
-                }}>
-                  {title}
-                </h3>
-
-                {/* Description */}
-                <p style={{
-                  fontFamily: T.fontBody, fontSize: '14px',
-                  color: T.onSurfaceVariant, lineHeight: 1.75,
-                  marginBottom: '24px', flex: 1,
-                }}>
-                  {desc}
-                </p>
-
-                {/* Specialist tag */}
-                <p style={{
-                  fontFamily: T.fontBody, fontSize: '11px', fontWeight: 600,
-                  color: T.primaryContainer, marginBottom: '16px',
-                  textTransform: 'uppercase', letterSpacing: '0.08em',
-                }}>
-                  con {specialist}
-                </p>
-
-                {/* Divider */}
-                <div style={{ height: '1px', backgroundColor: `${T.outlineVariant}30`, marginBottom: '16px' }} />
-
-                {/* Price + Duration */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
+                  {/* Card top row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                    <div
+                      className="icon-circle"
+                      style={{
+                        width: '48px', height: '48px', borderRadius: '9999px',
+                        backgroundColor: T.surfaceContainer,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '22px', transition: 'background-color 0.3s',
+                        flexShrink: 0,
+                      }}
+                    >
+                      ✨
+                    </div>
                     <span style={{
                       fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700,
-                      textTransform: 'uppercase', letterSpacing: '0.1em',
-                      color: `${T.onSurfaceVariant}60`, display: 'block',
+                      textTransform: 'uppercase', letterSpacing: '0.18em',
+                      color: `${T.onSurfaceVariant}80`,
                     }}>
-                      {price === 'Consultar' ? 'Precio' : 'Desde'}
-                    </span>
-                    <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 600, color: T.primary }}>
-                      {price}
+                      Beauty Experince
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: `${T.onSurfaceVariant}70` }}>
-                    <Clock style={{ width: '14px', height: '14px' }} />
-                    <span style={{ fontFamily: T.fontBody, fontSize: '13px' }}>{duration}</span>
+                  {/* Title */}
+                  <h3 style={{
+                    fontFamily: T.fontHeadline, fontStyle: 'italic',
+                    fontSize: '24px', color: '#3D2B1F',
+                    marginBottom: '8px', letterSpacing: '-0.01em',
+                  }}>
+                    {svc.nombre}
+                  </h3>
+
+                  {/* Description */}
+                  <p style={{
+                    fontFamily: T.fontBody, fontSize: '14px',
+                    color: T.onSurfaceVariant, lineHeight: 1.75,
+                    marginBottom: '24px', flex: 1,
+                  }}>
+                    {svc.descripcion}
+                  </p>
+
+                  {/* Specialist tag */}
+                  <p style={{
+                    fontFamily: T.fontBody, fontSize: '11px', fontWeight: 600,
+                    color: T.primaryContainer, marginBottom: '16px',
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                  }}>
+                    con {svc.empleadas && svc.empleadas.length > 0 ? (svc.empleadas as any).map((e:any) => e.nombre).join(' · ') : 'Nuestro Equipo'}
+                  </p>
+
+                  {/* Divider */}
+                  <div style={{ height: '1px', backgroundColor: `${T.outlineVariant}30`, marginBottom: '16px' }} />
+
+                  {/* Price + Duration */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <span style={{
+                        fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.1em',
+                        color: `${T.onSurfaceVariant}60`, display: 'block',
+                      }}>
+                        {svc.precioTipo === 'consultar' ? 'Precio' : 'Desde'}
+                      </span>
+                      <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 600, color: T.primary }}>
+                        {renderPriceInfo(svc)}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: `${T.onSurfaceVariant}70` }}>
+                      <Clock style={{ width: '14px', height: '14px' }} />
+                      <span style={{ fontFamily: T.fontBody, fontSize: '13px' }}>{svc.duracion} min</span>
+                    </div>
                   </div>
+
+                  {/* Book button */}
+                  <button
+                    onClick={() => navigate('/chatbot')}
+                    style={{
+                      marginTop: '20px', width: '100%',
+                      fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.1em',
+                      backgroundColor: 'transparent', color: T.primary,
+                      border: `1px solid ${T.primaryFixed}`,
+                      padding: '11px 0', borderRadius: '9999px', cursor: 'pointer',
+                      transition: 'all 0.3s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = T.primary;
+                      e.currentTarget.style.borderColor = T.primary;
+                      e.currentTarget.style.color = '#FFFFFF';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.borderColor = T.primaryFixed;
+                      e.currentTarget.style.color = T.primary;
+                    }}
+                  >
+                    Reservar
+                  </button>
                 </div>
-
-                {/* Book button */}
-                <button
-                  onClick={() => navigate('/chatbot')}
-                  style={{
-                    marginTop: '20px', width: '100%',
-                    fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.1em',
-                    backgroundColor: 'transparent', color: T.primary,
-                    border: `1px solid ${T.primaryFixed}`,
-                    padding: '11px 0', borderRadius: '9999px', cursor: 'pointer',
-                    transition: 'all 0.3s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = T.primary;
-                    e.currentTarget.style.borderColor = T.primary;
-                    e.currentTarget.style.color = '#FFFFFF';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.borderColor = T.primaryFixed;
-                    e.currentTarget.style.color = T.primary;
-                  }}
-                >
-                  Reservar
-                </button>
-              </div>
-            ))}
+              ))
+            ) : (
+                <p style={{ gridColumn: '1 / -1', textAlign: 'center', fontFamily: T.fontBody, color: T.onSurfaceVariant }}>No hay servicios disponibles actualmente.</p>
+            )}
           </div>
 
           {/* ── Editorial Image Section ── */}

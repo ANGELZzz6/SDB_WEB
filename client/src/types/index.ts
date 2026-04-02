@@ -9,6 +9,7 @@ export interface Employee {
   descripcion: string
   especialidades: string[]
   servicios: Service[] | string[]
+  comisionPorcentaje: number
   horarioPersonalizado: {
     lunes: DaySchedule
     martes: DaySchedule
@@ -48,6 +49,9 @@ export interface Appointment {
   clientEmail?: string
   employee: Employee | string
   service: Service | string
+  priceSnapshot: number
+  finalPrice?: number
+  settled: boolean
   date: string  // ISO date string
   timeSlot: string   // "HH:MM"
   endTime: string    // "HH:MM"

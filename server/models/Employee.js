@@ -13,14 +13,15 @@ const employeeSchema = new mongoose.Schema({
   descripcion:  { type: String, default: '' },
   especialidades: [{ type: String }],
   servicios:    [{ type: mongoose.Schema.Types.ObjectId, ref: 'Service' }],
+  comisionPorcentaje: { type: Number, default: 0 }, // % que gana la especialista
   horarioPersonalizado: {
     lunes:     { type: dayScheduleSchema, default: () => ({}) },
     martes:    { type: dayScheduleSchema, default: () => ({}) },
     miercoles: { type: dayScheduleSchema, default: () => ({}) },
     jueves:    { type: dayScheduleSchema, default: () => ({}) },
     viernes:   { type: dayScheduleSchema, default: () => ({}) },
-    sabado:    { type: dayScheduleSchema, default: () => ({ activo: false }) },
-    domingo:   { type: dayScheduleSchema, default: () => ({ activo: false }) },
+    sabado:    { type: dayScheduleSchema, default: () => ({}) },
+    domingo:   { type: dayScheduleSchema, default: () => ({}) },
   },
   password: { type: String, select: false }, // bcrypt, solo para login de empleada
   permissions: {
@@ -34,8 +35,10 @@ const employeeSchema = new mongoose.Schema({
       accesos:       false,
       galeria:       false,
       configuracion: false,
+      liquidaciones: false,
     }
   },
+  disponibleHoy: { type: Boolean, default: true },
   isActive: { type: Boolean, default: true },
 }, {
   timestamps: true,

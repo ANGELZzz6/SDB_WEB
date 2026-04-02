@@ -115,6 +115,9 @@ export const employeeService = {
   update: (id: string, data: Partial<Employee>) => api.put<ApiResponse<Employee>>(`/employees/${id}`, data),
   deactivate: (id: string) => api.delete<ApiResponse<Employee>>(`/employees/${id}`),
   reactivate: (id: string) => api.patch<ApiResponse<Employee>>(`/employees/${id}/reactivate`, {}),
+  updateAvailability: (id: string, disponibleHoy: boolean) => 
+    api.patch<ApiResponse<Employee>>(`/employees/${id}/disponibilidad`, { disponibleHoy }),
+  updateProfile: (data: any) => api.put<ApiResponse<Employee>>('/employees/profile', data),
 };
 
 export const serviceService = {
@@ -149,6 +152,7 @@ export const appointmentService = {
   updateStatus: (id: string, status: string, notes?: string) => api.put<ApiResponse<Appointment>>(`/appointments/${id}`, { status, notes }),
   cancel: (id: string) => api.delete<ApiResponse<Appointment>>(`/appointments/${id}`),
   reschedule: (id: string, data: { date: string, timeSlot: string, employeeId: string, reason?: string }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/reschedule`, data),
+  complete: (id: string, data?: { finalPrice: number }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/complete`, data || {}),
   getStats: () => api.get<ApiResponse<any>>('/appointments/stats'),
   getClients: () => api.get<ApiResponse<any[]>>('/appointments/clients'),
 };
@@ -185,4 +189,17 @@ export const galleryService = {
   createItem: (data: Partial<GalleryItem>) => api.post<ApiResponse<GalleryItem>>('/gallery/items', data),
   updateItem: (id: string, data: Partial<GalleryItem>) => api.put<ApiResponse<GalleryItem>>(`/gallery/items/${id}`, data),
   deleteItem: (id: string) => api.delete<ApiResponse<null>>(`/gallery/items/${id}`)
+};
+
+export const clientService = {
+  getAll: () => api.get<ApiResponse<any[]>>('/clients'),
+  getOne: (phone: string) => api.get<ApiResponse<any>>(`/clients/${phone}`),
+  delete: (phone: string) => api.delete<ApiResponse<null>>(`/clients/${phone}`),
+};
+
+export const settlementService = {
+  getPending: (specialistId: string) => api.get<ApiResponse<any>>(`/settlements/pending/${specialistId}`),
+  create: (data: any) => api.post<ApiResponse<any>>('/settlements', data),
+  getHistory: (specialistId: string) => api.get<ApiResponse<any[]>>(`/settlements/history/${specialistId}`),
+  getStats: () => api.get<ApiResponse<any>>('/settlements/stats'),
 };

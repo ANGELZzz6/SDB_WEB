@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
-import { appointmentService } from '../services/api';
+import { clientService } from '../services/api';
 
 interface RealClient {
   id: string; // phone
@@ -12,6 +13,7 @@ interface RealClient {
   lastDate: string;
   lastService: string;
   favoriteEmployee: string;
+  isActive?: boolean;
 }
 
 const getTier = (visits: number) => {
@@ -22,33 +24,49 @@ const getTier = (visits: number) => {
 };
 
 export default function AdminClientsPage() {
+  const navigate = useNavigate();
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [clients, setClients] = useState<RealClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        setLoading(true);
-        const res = await appointmentService.getClients();
-        if (res.success && res.data) {
-          setClients(res.data);
-        }
-      } catch (error) {
-        console.error("Error fetching clients:", error);
-      } finally {
-        setLoading(false);
+  const fetchClients = async () => {
+    try {
+      setLoading(true);
+      const res = await clientService.getAll();
+      if (res.success && res.data) {
+        // Ordenar: Activos (true o undefined) primero, Inactivos (false) al final
+        const sorted = [...res.data].sort((a, b) => {
+          const activeA = a.isActive !== false;
+          const activeB = b.isActive !== false;
+          if (activeA === activeB) return 0;
+          return activeA ? -1 : 1;
+        });
+        setClients(sorted);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchClients();
   }, []);
 
-  const filteredClients = clients.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.phone.includes(search) || 
-    c.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleDelete = async () => {
+    alert('No es posible eliminar un cliente. El historial de citas y el LTV deben preservarse por integridad del negocio.');
+  };
+
+  const filteredClients = clients.filter(c => {
+    const matchesSearch = 
+      (c.name || '').toLowerCase().includes(search.toLowerCase()) || 
+      (c.phone || '').includes(search) || 
+      (c.email || '').toLowerCase().includes(search.toLowerCase());
+
+    return matchesSearch;
+  });
 
   const formatLastDate = (dateStr: string) => {
     if (!dateStr) return 'Desconocido';
@@ -65,20 +83,8 @@ export default function AdminClientsPage() {
   return (
     <AdminLayout
       searchPlaceholder="Buscar clientes por nombre, teléfono..."
-      topBarRight={
-        <div style={{
-          backgroundColor: T.surfaceContainerLow, padding: '10px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px'
-        }}>
-          <span>🔍</span>
-          <input
-            type="text"
-            placeholder="Buscar..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ backgroundColor: 'transparent', border: 'none', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurface, width: '200px', outline: 'none' }}
-          />
-        </div>
-      }
+      searchValue={search}
+      onSearchChange={setSearch}
     >
       <div style={{ padding: '40px 48px 80px' }}>
         {/* Header */}
@@ -107,22 +113,22 @@ export default function AdminClientsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: `${T.surfaceContainerLow}80` }}>
-                  {['Cliente', 'Contacto', 'Visitas', 'Última Cita', 'Artista Favorito'].map((h, i) => (
-                    <th key={i} style={{ padding: '14px 24px', fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: T.onSurfaceVariant, textAlign: (i === 2 || i === 3 || i === 4) ? 'center' : 'left' }}>{h}</th>
+                  {['Cliente', 'Contacto', 'Visitas', 'Última Cita', 'Artista Favorito', 'Acciones'].map((h, i) => (
+                    <th key={i} style={{ padding: '14px 24px', fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: T.onSurfaceVariant, textAlign: (i >= 2) ? 'center' : 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '64px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody, fontSize: '14px' }}>
+                    <td colSpan={6} style={{ padding: '64px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody, fontSize: '14px' }}>
                       Cargando historial de clientes...
                     </td>
                   </tr>
                 ) : filteredClients.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '64px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody, fontSize: '14px' }}>
-                      No hay clientes registrados aún.
+                    <td colSpan={6} style={{ padding: '64px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody, fontSize: '14px' }}>
+                      {search ? 'Sin resultados para la búsqueda.' : 'No hay clientes registrados aún.'}
                     </td>
                   </tr>
                 ) : (
@@ -134,7 +140,13 @@ export default function AdminClientsPage() {
                       <tr key={c.id}
                         onMouseEnter={() => setHoveredRow(c.id)}
                         onMouseLeave={() => setHoveredRow(null)}
-                        style={{ backgroundColor: hoveredRow === c.id ? 'rgba(255,217,222,0.3)' : 'transparent', transition: 'background 0.2s', borderTop: `1px solid ${T.surfaceContainerLow}` }}
+                        onClick={() => navigate(`/admin/clientes/${c.phone}`)}
+                        style={{ 
+                          backgroundColor: hoveredRow === c.id ? 'rgba(255,217,222,0.3)' : 'transparent', 
+                          transition: 'background 0.2s', 
+                          borderTop: `1px solid ${T.surfaceContainerLow}`,
+                          cursor: 'pointer'
+                        }}
                       >
                         <td style={{ padding: '18px 24px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -152,15 +164,32 @@ export default function AdminClientsPage() {
                           <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, marginTop: c.email ? '3px' : '0' }}>📞 {c.phone}</p>
                         </td>
                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '9999px', backgroundColor: T.surfaceContainer, fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>{c.visits}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '9999px', backgroundColor: T.surfaceContainer, fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>{c.visits || 0}</span>
                         </td>
                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
-                          <p style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurface }}>{formatLastDate(c.lastDate)}</p>
-                          <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, marginTop: '2px' }}>{c.lastService}</p>
+                          <p style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurface }}>{c.lastDate ? formatLastDate(c.lastDate) : 'S/I'}</p>
+                          <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, marginTop: '2px' }}>{c.lastService || 'Nueva'}</p>
                         </td>
                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
-                           <p style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.primary }}>{c.favoriteEmployee}</p>
+                           <p style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.primary }}>{c.favoriteEmployee || 'S/I'}</p>
                         </td>
+                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete();
+                              }}
+                              style={{ 
+                                border: 'none', background: 'none', cursor: 'not-allowed', 
+                                fontSize: '18px', color: T.error, padding: '8px', 
+                                borderRadius: '50%', transition: 'background-color 0.2s',
+                                opacity: 0.5
+                              }}
+                              title="No es posible eliminar un cliente por integridad de datos"
+                            >
+                               🗑️
+                            </button>
+                         </td>
                       </tr>
                     )
                   })

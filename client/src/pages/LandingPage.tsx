@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { serviceService, galleryService } from '../services/api';
+import { serviceService, galleryService, employeeService } from '../services/api';
+import type { Employee, Service } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 const T = {
   fontHeadline: "'Noto Serif', serif",
   fontBody: "'Plus Jakarta Sans', sans-serif",
@@ -23,7 +24,7 @@ const T = {
 
 /* ─────────────────────────────────────────────────
    Business Data
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 const SERVICES = [
   { icon: '🎨', title: 'Coloración & Tintes', desc: 'Colorimetría profesional, mechas y balayage con productos de alta gama.' },
   { icon: '✂️', title: 'Cepillado Profesional', desc: 'Keratinas, alisados y cepillado para un cabello impecable y brillante.' },
@@ -33,28 +34,9 @@ const SERVICES = [
   { icon: '💎', title: 'Uñas Artísticas', desc: 'Diseños vanguardistas en Softgel de acabado duradero y profesional.' },
 ];
 
-const SPECIALISTS = [
-  {
-    name: 'Gena',
-    role: 'Colorista & Estilista',
-    badge: 'Color · Cejas · Nails',
-    photo: 'https://i.pravatar.cc/400?img=1',
-    services: ['Tinte de cabello', 'Cepillado profesional', 'Manicure & Pedicura', 'Depilación de cejas', 'Diseño de cejas'],
-  },
-  {
-    name: 'Michell',
-    role: 'Lashes & Nails Expert',
-    badge: 'Pestañas · Uñas · Depilación',
-    photo: 'https://i.pravatar.cc/400?img=5',
-    services: ['Extensión de pestañas', 'Depilación completa', 'Manicure semipermanente', 'Pedicura semipermanente', 'Softgel & Diseños'],
-  },
-];
-
-// Eliminadas las URLs hardcodeadas de GALLERY
-
 /* ─────────────────────────────────────────────────
    Reusable Styles
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 const wrap: React.CSSProperties = {
   maxWidth: '1280px',
   margin: '0 auto',
@@ -66,16 +48,22 @@ const wrap: React.CSSProperties = {
 
 /* ─────────────────────────────────────────────────
    LANDING PAGE
-───────────────────────────────────────────────── */
+ ───────────────────────────────────────────────── */
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [gallery, setGallery] = useState<string[]>([]);
 
   useEffect(() => {
     serviceService.getAll().then(res => {
       if (res.success && res.data) {
         setServices(res.data.filter((s:any) => s.isActive).slice(0, 6));
+      }
+    });
+    employeeService.getAll().then(res => {
+      if (res.success && res.data) {
+        setEmployees(res.data.filter((e:any) => e.isActive).slice(0, 2));
       }
     });
     galleryService.getItems().then(res => {
@@ -557,9 +545,9 @@ export default function LandingPage() {
           </div>
 
           <div className="specialists-grid">
-            {SPECIALISTS.map(({ name, role, badge, photo, services }) => (
+            {employees.length > 0 ? employees.map((emp) => (
               <div
-                key={name}
+                key={emp._id}
                 className="specialist-card"
                 style={{
                   backgroundColor: T.surfaceContainerLowest,
@@ -571,8 +559,8 @@ export default function LandingPage() {
                 {/* Image header */}
                 <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden' }}>
                   <img
-                    src={photo}
-                    alt={name}
+                    src={emp.foto || "https://i.pravatar.cc/400?img=1"}
+                    alt={emp.nombre}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.4s' }}
                     onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.04)')}
                     onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -581,8 +569,10 @@ export default function LandingPage() {
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(148,69,85,0.5) 0%, transparent 50%)' }} />
                   {/* Name overlay */}
                   <div style={{ position: 'absolute', bottom: '24px', left: '28px' }}>
-                    <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '32px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.02em' }}>{name}</h3>
-                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>{role}</p>
+                    <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '32px', fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.02em' }}>{emp.nombre}</h3>
+                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
+                      {(emp.especialidades && emp.especialidades.length > 0) ? emp.especialidades.join(' · ') : 'Especialista'}
+                    </p>
                   </div>
                 </div>
 
@@ -595,16 +585,23 @@ export default function LandingPage() {
                     padding: '5px 14px', borderRadius: '9999px',
                     display: 'inline-block', marginBottom: '20px',
                   }}>
-                    {badge}
+                    {(emp.especialidades?.[0]) || 'Beauty Expert'}
                   </span>
 
-                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px' }}>
-                    {services.map((s) => (
-                      <li key={s} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: T.primaryContainer, flexShrink: 0 }} />
-                        {s}
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px', minHeight: '100px' }}>
+                    {emp.servicios && emp.servicios.length > 0 ? (emp.servicios as any).slice(0, 4).map((s: any) => (
+                      <li key={s._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                           <span style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.primary, flexShrink: 0 }} />
+                           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.nombre}</span>
+                        </div>
+                        <span style={{ fontWeight: 700, color: T.primary, flexShrink: 0 }}>${(s.precio || 0).toLocaleString()}</span>
                       </li>
-                    ))}
+                    )) : (
+                      <li style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, opacity: 0.6, fontStyle: 'italic' }}>
+                        Expert Artist con múltiples especialidades.
+                      </li>
+                    )}
                   </ul>
 
                   <button
@@ -620,13 +617,14 @@ export default function LandingPage() {
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = T.primary; e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.color = '#FFFFFF'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = T.outlineVariant; e.currentTarget.style.color = T.onSurface; }}
                   >
-                    Agendar con {name}
+                    Agendar con {emp.nombre}
                   </button>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p style={{ gridColumn: '1 / -1', textAlign: 'center', fontFamily: T.fontBody, color: T.onSurfaceVariant }}>Cargando especialistas...</p>
+            )}
           </div>
-
         </div>
       </section>
 
@@ -634,7 +632,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════
           5. GALERÍA
       ══════════════════════════════ */}
-      <section id="galería" style={{ backgroundColor: T.surfaceContainerLow, paddingTop: '96px', paddingBottom: '96px' }}>
+      <section id="galeria" style={{ backgroundColor: T.surfaceContainerLow, paddingTop: '96px', paddingBottom: '96px' }}>
         <div style={wrap}>
 
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
@@ -787,7 +785,7 @@ export default function LandingPage() {
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#772e3e')}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = T.primary)}
         >
-          Reservar Ahora
+          Agendar ahora
         </button>
       </div>
 

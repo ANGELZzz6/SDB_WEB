@@ -1,8 +1,11 @@
-const Appointment  = require('../models/Appointment')
-const Service      = require('../models/Service')
-const Employee     = require('../models/Employee')
-const Settings     = require('../models/Settings')
+const mongoose = require('mongoose')
+const Appointment = require('../models/Appointment')
+const Service = require('../models/Service')
+const Employee = require('../models/Employee')
+const Settings = require('../models/Settings')
+const Client = require('../models/Client')
 const { getAvailability: _getAvailability, timeToMinutes, minutesToTime, dateOnly } = require('./availabilityController')
+const { normalizePhone } = require('../utils/normalize')
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,7 +42,7 @@ const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, exclude
 
   // Verificar solapamiento con citas existentes
   const slotStart = timeToMinutes(timeSlot)
-  const slotEnd   = slotStart + service.duracion + bufferBetweenAppointments
+  const slotEnd = slotStart + service.duracion + bufferBetweenAppointments
 
   const query = {
     employee: employeeId,
@@ -53,9 +56,9 @@ const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, exclude
   const existing = await Appointment.find(query).populate('service', 'duracion')
 
   for (const appt of existing) {
-    const apptStart    = timeToMinutes(appt.timeSlot)
+    const apptStart = timeToMinutes(appt.timeSlot)
     const apptDuration = appt.service?.duracion || 60
-    const apptEnd      = apptStart + apptDuration + bufferBetweenAppointments
+    const apptEnd = apptStart + apptDuration + bufferBetweenAppointments
 
     if (slotStart < apptEnd && slotEnd > apptStart) {
       throw new Error(`Horario ocupado — existe una cita de ${appt.timeSlot} a ${appt.endTime}`)
@@ -76,11 +79,16 @@ const getAll = async (req, res, next) => {
 
     const filter = {}
 
-    // Empleada solo ve sus propias citas
+    // Empleada solo ve sus propias citas - Forzamos ObjectId para evitar desajustes de tipos
     if (req.user?.role === 'empleada') {
-      filter.employee = req.user.id
+      if (!req.user.id || !mongoose.Types.ObjectId.isValid(req.user.id)) {
+        return res.status(400).json({ success: false, message: 'ID de empleada inválido o no proporcionado' });
+      }
+      filter.employee = new mongoose.Types.ObjectId(req.user.id);
     } else if (employeeId) {
-      filter.employee = employeeId
+      if (mongoose.Types.ObjectId.isValid(employeeId)) {
+        filter.employee = new mongoose.Types.ObjectId(employeeId);
+      }
     }
 
     if (status) filter.status = status
@@ -91,7 +99,7 @@ const getAll = async (req, res, next) => {
     } else if (from || to) {
       filter.date = {}
       if (from) filter.date.$gte = new Date(from)
-      if (to)   filter.date.$lte = new Date(to)
+      if (to) filter.date.$lte = new Date(to)
     }
 
     const skip = (Number(page) - 1) * Number(limit)
@@ -142,7 +150,10 @@ const getOne = async (req, res, next) => {
 // Público — clientes agendan desde el chatbot
 const create = async (req, res, next) => {
   try {
-    const { clientName, clientPhone, clientEmail, employee, service, date, timeSlot, notes } = req.body
+    let { clientName, clientPhone, clientEmail, employee, service, date, timeSlot, notes } = req.body
+
+    // Normalizar teléfono inmediatamente
+    clientPhone = normalizePhone(clientPhone)
 
     // Validaciones básicas
     if (!clientName || !clientPhone || !employee || !service || !date || !timeSlot) {
@@ -155,12 +166,14 @@ const create = async (req, res, next) => {
     const settings = await Settings.getSettings()
 
     // Validar rango máximo de días
-    const today  = dateOnly(new Date())
-    const target = dateOnly(new Date(date))
-    const diffDays = Math.floor((target - today) / (1000 * 60 * 60 * 1000 * 24))
-    if (diffDays < 0) {
+    const hoyBogota = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+    const targetStr = date.slice(0, 10)
+
+    if (targetStr < hoyBogota) {
       return res.status(400).json({ success: false, message: 'No se puede agendar en fechas pasadas' })
     }
+
+    const diffDays = Math.floor((new Date(targetStr) - new Date(hoyBogota)) / (1000 * 60 * 60 * 24))
     if (diffDays > settings.maxDaysInAdvance) {
       return res.status(400).json({
         success: false,
@@ -178,8 +191,8 @@ const create = async (req, res, next) => {
 
     // Calcular endTime
     const startMin = timeToMinutes(timeSlot)
-    const endMin   = startMin + svc.duracion
-    const endTime  = minutesToTime(endMin)
+    const endMin = startMin + svc.duracion
+    const endTime = minutesToTime(endMin)
 
     const appt = await Appointment.create({
       clientName, clientPhone, clientEmail,
@@ -188,11 +201,30 @@ const create = async (req, res, next) => {
       timeSlot, endTime,
       notes,
       status: 'pending',
+      priceSnapshot: svc.precio || 0 // Capturar precio actual
     })
+
+    // Sincronizar con colección Client (Persistent)
+    if (clientPhone) {
+      // Usamos $setOnInsert para NO reactivar si ya existe (el usuario lo pidió)
+      await Client.findOneAndUpdate(
+        { phone: clientPhone },
+        {
+          $setOnInsert: {
+            phone: clientPhone,
+            isActive: true
+          },
+          $set: {
+            ...(clientName && { name: clientName })
+          }
+        },
+        { upsert: true, new: true }
+      )
+    }
 
     await appt.populate([
       { path: 'employee', select: 'nombre foto' },
-      { path: 'service',  select: 'nombre precio duracion' },
+      { path: 'service', select: 'nombre precio duracion' },
     ])
 
     res.status(201).json({ success: true, data: appt })
@@ -216,13 +248,17 @@ const update = async (req, res, next) => {
     }
 
     const allowedForEmpleada = ['status', 'notes']
-    const allowedForAdmin    = ['status', 'notes', 'clientName', 'clientPhone', 'clientEmail', 'timeSlot', 'date', 'employee', 'service']
+    const allowedForAdmin = ['status', 'notes', 'clientName', 'clientPhone', 'clientEmail', 'timeSlot', 'date', 'employee', 'service']
 
     const fields = req.user?.role === 'admin' ? allowedForAdmin : allowedForEmpleada
 
     const updates = {}
     fields.forEach(f => {
-      if (req.body[f] !== undefined) updates[f] = req.body[f]
+      if (req.body[f] !== undefined) {
+        updates[f] = req.body[f]
+        // Si se actualiza el teléfono, normalizarlo
+        if (f === 'clientPhone') updates[f] = normalizePhone(updates[f])
+      }
     })
 
     // Si admin cambia el horario, recalcular endTime y verificar disponibilidad
@@ -241,6 +277,11 @@ const update = async (req, res, next) => {
 
       const startMin = timeToMinutes(newTimeSlot)
       updates.endTime = minutesToTime(startMin + svc.duracion)
+      
+      // Actualizar priceSnapshot solo si el servicio cambió
+      if (req.body.service && req.body.service !== appt.service.toString()) {
+        updates.priceSnapshot = svc.precio || 0
+      }
     }
 
     Object.assign(appt, updates)
@@ -248,7 +289,7 @@ const update = async (req, res, next) => {
 
     await appt.populate([
       { path: 'employee', select: 'nombre foto' },
-      { path: 'service',  select: 'nombre precio duracion' },
+      { path: 'service', select: 'nombre precio duracion' },
     ])
 
     res.json({ success: true, data: appt })
@@ -287,17 +328,51 @@ const cancel = async (req, res, next) => {
 // Solo admin
 const getStats = async (req, res, next) => {
   try {
-    const now   = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), 1) // inicio del mes
-    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 0) // fin del mes
+    const isEmployee = req.user?.role === 'empleada'
+    const now = new Date()
+    // first day of current month
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    // first day of next month
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-    const [monthlyStats, topServices, todayCount] = await Promise.all([
+    // 2. Base Match for MongoDB Aggregations
+    const baseMatch = {
+      date: { $gte: start, $lt: end }
+    }
+
+    if (isEmployee) {
+      if (!req.user.isObjectId) {
+        return res.status(400).json({ success: false, message: 'ID de empleada inválido' })
+      }
+      baseMatch.employee = new mongoose.Types.ObjectId(req.user.id)
+    }
+
+    // 3. Dynamic Filter for Today Count (matching getAll logic)
+    const todayFilter = {
+      date: {
+        $gte: dateOnly(now),
+        $lt: new Date(dateOnly(now).getTime() + 24 * 60 * 60 * 1000),
+      },
+      status: { $nin: ['cancelled'] },
+      ...(isEmployee && { employee: new mongoose.Types.ObjectId(req.user.id) })
+    }
+
+    const [globalStats, topServices, todayCount] = await Promise.all([
       Appointment.aggregate([
-        { $match: { date: { $gte: start, $lte: end } } },
+        { 
+          $match: {
+            ...(isEmployee && { employee: new mongoose.Types.ObjectId(req.user.id) })
+          }
+        },
         { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
       Appointment.aggregate([
-        { $match: { status: { $nin: ['cancelled'] }, date: { $gte: start, $lte: end } } },
+        {
+          $match: {
+            ...baseMatch,
+            status: { $nin: ['cancelled'] }
+          }
+        },
         { $group: { _id: '$service', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 5 },
@@ -305,18 +380,12 @@ const getStats = async (req, res, next) => {
         { $unwind: '$service' },
         { $project: { serviceName: '$service.nombre', count: 1 } },
       ]),
-      Appointment.countDocuments({
-        date: {
-          $gte: dateOnly(now),
-          $lt: new Date(dateOnly(now).getTime() + 24 * 60 * 60 * 1000),
-        },
-        status: { $nin: ['cancelled'] },
-      }),
+      Appointment.countDocuments(todayFilter),
     ])
 
     res.json({
       success: true,
-      data: { monthlyStats, topServices, todayCount },
+      data: { globalStats, topServices, todayCount, monthlyStats: [] },
     })
   } catch (error) {
     next(error)
@@ -420,7 +489,7 @@ const reschedule = async (req, res, next) => {
     }
 
     if (appt.status === 'cancelled') {
-        return res.status(400).json({ success: false, message: 'No se puede reagendar una cita cancelada.' })
+      return res.status(400).json({ success: false, message: 'No se puede reagendar una cita cancelada.' })
     }
 
     // Checar disponibilidad
@@ -439,7 +508,7 @@ const reschedule = async (req, res, next) => {
     appt.date = dateOnly(new Date(date));
     appt.timeSlot = timeSlot;
     appt.employee = employeeId;
-    
+
     // Calcular end time
     const startMin = timeToMinutes(timeSlot);
     appt.endTime = minutesToTime(startMin + svc.duracion);
@@ -451,24 +520,56 @@ const reschedule = async (req, res, next) => {
     const fechaFormat = dateOnly(new Date(date)).toISOString().split('T')[0];
     const message = `Hola ${appt.clientName}, tu cita del ${oldDateString} a las ${oldTimeSlot} fue reagendada para el ${fechaFormat} a las ${timeSlot}. Motivo: ${reason || 'Reasignación administrativa'}. Disculpa los inconvenientes - L'Élixir Salon`;
 
-    if(!appt.whatsappLog) appt.whatsappLog = [];
+    if (!appt.whatsappLog) appt.whatsappLog = [];
     appt.whatsappLog.push({
-        message,
-        date: new Date(),
-        status: 'pending_whatsapp'
+      message,
+      date: new Date(),
+      status: 'pending_whatsapp'
     });
 
     await appt.save();
 
     await appt.populate([
       { path: 'employee', select: 'nombre foto' },
-      { path: 'service',  select: 'nombre precio duracion' },
+      { path: 'service', select: 'nombre precio duracion' },
     ]);
 
     res.json({ success: true, message: 'Cita reagendada exitosamente', data: appt });
-  } catch(error) {
+  } catch (error) {
     next(error);
   }
 }
 
-module.exports = { getAll, getOne, create, update, cancel, reschedule, getStats, getClients }
+// ─── PATCH /api/appointments/:id/complete ──────────────────
+const complete = async (req, res, next) => {
+  try {
+    const appt = await Appointment.findById(req.params.id);
+    if (!appt) {
+      return res.status(404).json({ success: false, message: 'Cita no encontrada' });
+    }
+
+    // Authorization check for Specialist
+    if (req.user?.role === 'empleada' && appt.employee.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' })
+    }
+
+    const { finalPrice } = req.body;
+
+    appt.status = 'completed';
+    if (finalPrice !== undefined) {
+      appt.finalPrice = finalPrice;
+    }
+    await appt.save();
+
+    await appt.populate([
+      { path: 'employee', select: 'nombre foto' },
+      { path: 'service', select: 'nombre precio duracion' },
+    ]);
+
+    res.json({ success: true, message: 'Cita completada', data: appt });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, getOne, create, update, cancel, reschedule, getStats, getClients, complete }

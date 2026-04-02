@@ -1,16 +1,22 @@
 const mongoose = require('mongoose')
 
 const blockedSlotSchema = new mongoose.Schema({
-  // ObjectId de una empleada específica, o el string 'all' para bloquear a todas
+  // ObjectId de una empleada específica. Soporta legacy 'all' pero se recomienda usar isGlobal.
   employee: {
     type: mongoose.Schema.Types.Mixed,
-    required: true,
+    required: function() { return !this.isGlobal; },
     validate: {
       validator: function (v) {
-        return v === 'all' || mongoose.Types.ObjectId.isValid(v)
+        // En creación de nuevos slots, preferimos isGlobal.
+        return !v || v === 'all' || mongoose.Types.ObjectId.isValid(v)
       },
       message: 'employee debe ser un ObjectId válido o el string "all"',
     },
+  },
+
+  isGlobal: {
+    type: Boolean,
+    default: false
   },
 
   date:      { type: Date, required: true },
@@ -21,6 +27,8 @@ const blockedSlotSchema = new mongoose.Schema({
   timestamps: true,
 })
 
+// Índices para búsquedas eficientes
 blockedSlotSchema.index({ employee: 1, date: 1 })
+blockedSlotSchema.index({ isGlobal: 1, date: 1 })
 
 module.exports = mongoose.model('BlockedSlot', blockedSlotSchema)

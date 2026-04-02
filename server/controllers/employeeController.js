@@ -130,4 +130,67 @@ const reactivate = async (req, res, next) => {
   }
 }
 
-module.exports = { getAll, getOne, create, update, deactivate, reactivate }
+// ─── PUT /api/employees/profile (edición propia) ─────────────────────────────
+const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    // Solo permitimos campos que el usuario puede autogestionar
+    const { nombre, foto, password, email } = req.body;
+
+    const updates = {};
+    if (nombre) updates.nombre = nombre;
+    if (foto) updates.foto = foto;
+    if (email) updates.email = email;
+    if (password) {
+      updates.password = await bcrypt.hash(password, 12);
+    }
+
+    // El filtro findById + userId garantiza que solo edite su propio perfil
+    const employee = await Employee.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password'); // no devolver password
+
+    if (!employee) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    res.json({ success: true, message: 'Perfil actualizado correctamente', data: employee });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// ─── PATCH /api/employees/:id/disponibilidad ──────────────────────────────────
+const updateAvailability = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { disponibleHoy } = req.body;
+
+    // Solo admin puede cambiar disponibilidad de otros; empleada solo la suya
+    if (req.user.role === 'empleada' && req.user.id !== id) {
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
+    }
+
+    const employee = await Employee.findByIdAndUpdate(
+      id,
+      { $set: { disponibleHoy } },
+      { new: true, runValidators: true }
+    ).select('nombre disponibleHoy');
+
+    if (!employee) {
+      return res.status(404).json({ success: false, message: 'Empleado no encontrado' });
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Disponibilidad actualizada para ${employee.nombre}`, 
+      data: employee 
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { getAll, getOne, create, update, deactivate, reactivate, updateProfile, updateAvailability }

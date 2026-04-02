@@ -5,20 +5,21 @@ import { employeeService, authService } from '../services/api';
 import type { Employee } from '../types';
 
 const PERMISSION_LABELS: { key: string; label: string; fixed?: boolean }[] = [
-  { key: 'citas',         label: 'Dashboard / Citas',  fixed: true },
-  { key: 'calendario',    label: 'Calendario',          fixed: true },
-  { key: 'clientes',      label: 'Clientes' },
-  { key: 'servicios',     label: 'Servicios' },
+  { key: 'citas', label: 'Dashboard / Citas', fixed: true },
+  { key: 'calendario', label: 'Calendario', fixed: true },
+  { key: 'clientes', label: 'Clientes' },
+  { key: 'servicios', label: 'Servicios' },
   { key: 'especialistas', label: 'Especialistas' },
-  { key: 'accesos',       label: 'Accesos' },
-  { key: 'galeria',       label: 'Galería' },
+  { key: 'accesos', label: 'Accesos' },
+  { key: 'galeria', label: 'Galería' },
   { key: 'configuracion', label: 'Configuración' },
+  { key: 'liquidaciones', label: 'Liquidaciones' },
 ];
 
 const DEFAULT_PERMS = {
   citas: true, calendario: true, clientes: false,
   servicios: false, especialistas: false, accesos: false,
-  galeria: false, configuracion: false,
+  galeria: false, configuracion: false, liquidaciones: false,
 };
 
 export default function AdminAccessPage() {

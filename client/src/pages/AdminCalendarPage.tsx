@@ -10,6 +10,7 @@ export default function AdminCalendarPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [citasPendientes, setCitasPendientes] = useState<Appointment[]>([]);
 
   // Modals state
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ date: Date, appts: Appointment[], blocks: BlockedSlot[] } | null>(null);
@@ -22,15 +23,19 @@ export default function AdminCalendarPage() {
   const [reschForm, setReschForm] = useState({ date: '', timeSlot: '', employeeId: '', reason: '' });
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [selectedApptToComplete, setSelectedApptToComplete] = useState<Appointment | null>(null);
+  const [finalPriceInput, setFinalPriceInput] = useState<number>(0);
+  const [isCompleting, setIsCompleting] = useState(false);
+
   // Fetch data
   const loadData = async () => {
     try {
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-      const [resApps, resBlocks, resEmps] = await Promise.all([
-        appointmentService.getAll(), // Ideally pass from/to to backend, but getAll handles up to limit 50. Wait, AdminPage uses getAll with ?date= or without for all. 
-        // We will just filter client side for now, assuming small dataset. The endpoint can receive from/to according to the controller!
+      const [_, resApps, resBlocks, resEmps] = await Promise.all([
+        appointmentService.getAll(), 
         appointmentService.getAll({ from: startOfMonth.toISOString(), to: endOfMonth.toISOString(), limit: 1000 } as any),
         blockedSlotService.getAll(),
         employeeService.getAll()
@@ -39,6 +44,10 @@ export default function AdminCalendarPage() {
       if (resApps.success) setAppointments((resApps.data as unknown as Appointment[]) || []);
       if (resBlocks.success) setBlockedSlots((resBlocks.data as unknown as BlockedSlot[]) || []);
       if (resEmps.success) setEmployees((resEmps.data as unknown as Employee[]) || []);
+
+      // Cargar citas pendientes globales para la restricción
+      const resPend = await appointmentService.getAll({ status: 'pending' });
+      if (resPend.success) setCitasPendientes(resPend.data || []);
     } catch (e) {
       console.error(e);
     }
@@ -68,10 +77,8 @@ export default function AdminCalendarPage() {
   // Helpers
   const formatISO = (d: Date | string) => {
     if (typeof d === 'string') return d.split('T')[0];
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    // Forzado a Bogotá para evitar desfases de medianoche
+    return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   };
   
   const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -143,6 +150,29 @@ export default function AdminCalendarPage() {
       alert(e.message || 'Error reagendando');
     }
   };
+
+  const openPriceModal = (appt: Appointment) => {
+    setSelectedApptToComplete(appt);
+    setFinalPriceInput(appt.priceSnapshot || 0);
+    setShowPriceModal(true);
+  };
+
+  const handleFinalComplete = async () => {
+    if (!selectedApptToComplete) return;
+    try {
+      setIsCompleting(true);
+      await appointmentService.complete(selectedApptToComplete._id, { finalPrice: finalPriceInput });
+      setShowPriceModal(false);
+      setSelectedDayInfo(null);
+      loadData();
+    } catch (e: any) {
+      alert(e.message || 'Error al completar cita');
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  const hayPendientes = citasPendientes.length > 0;
 
   return (
     <AdminLayout searchPlaceholder="Buscar fecha o cita...">
@@ -270,14 +300,58 @@ export default function AdminCalendarPage() {
                     <span style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 800, color: T.primary }}>{a.timeSlot}</span>
                     <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, fontWeight: 600 }}>{a.clientName}</p>
                     <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>{(a.service as any)?.nombre || 'Servicio'} con {(a.employee as any)?.nombre}</p>
-                    <span style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, color: a.status === 'cancelled' ? T.error : T.primary }}>{a.status.toUpperCase()}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span 
+                        style={{ 
+                          fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, 
+                          textTransform: 'uppercase', letterSpacing: '0.15em', 
+                          backgroundColor: 
+                            a.status === 'confirmed' ? 'rgba(34, 197, 94, 0.1)' : 
+                            a.status === 'completed' ? 'rgba(107, 114, 128, 0.1)' : 
+                            a.status === 'pending' ? 'rgba(240, 189, 143, 0.3)' : 
+                            'rgba(186, 26, 26, 0.08)',
+                          color: 
+                            a.status === 'confirmed' ? '#22c55e' : 
+                            a.status === 'completed' ? '#6b7280' : 
+                            a.status === 'pending' ? '#623f1b' : 
+                            '#ba1a1a',
+                          padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {a.status === 'confirmed' ? 'Confirmada' : 
+                         a.status === 'completed' ? 'Completada' : 
+                         a.status === 'pending' ? 'Pendiente' : 
+                         'Cancelada'}
+                      </span>
+                    </div>
                   </div>
                   
-                  {a.status !== 'cancelled' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <button onClick={() => openReschedule(a)} style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, padding: '8px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}>REAGENDAR</button>
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {a.status === 'confirmed' && (
+                      <button 
+                        onClick={() => openPriceModal(a)}
+                        style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '8px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}
+                      >
+                        COMPLETAR
+                      </button>
+                    )}
+                    {a.status !== 'cancelled' && a.status !== 'completed' && (
+                      <button 
+                        onClick={() => openReschedule(a)} 
+                        disabled={hayPendientes}
+                        title={hayPendientes ? "Debes confirmar, rechazar o reagendar las citas pendientes antes de continuar" : ""}
+                        style={{ 
+                          fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, 
+                          backgroundColor: hayPendientes ? T.outlineVariant : T.secondaryContainer, 
+                          color: hayPendientes ? '#999' : T.onSecondaryContainer, 
+                          padding: '8px 16px', borderRadius: '9999px', border: 'none', 
+                          cursor: hayPendientes ? 'not-allowed' : 'pointer' 
+                        }}
+                      >
+                        REAGENDAR
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -382,6 +456,60 @@ export default function AdminCalendarPage() {
                 style={{ flex: 1, padding: '12px', backgroundColor: reschForm.timeSlot ? T.primary : T.outlineVariant, color: 'white', border: 'none', borderRadius: '9999px' }}
               >
                 Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRICE COMPLETION MODAL */}
+      {showPriceModal && selectedApptToComplete && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '400px', padding: '32px', borderRadius: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px' }}>Finalizar Servicio</h3>
+            <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '24px' }}>
+              Confirma el valor final cobrado a <strong>{selectedApptToComplete.clientName}</strong>.
+            </p>
+
+            <div style={{ backgroundColor: `${T.primary}08`, padding: '16px', borderRadius: '16px', marginBottom: '24px', border: `1px solid ${T.primary}20` }}>
+              <label style={{ display: 'block', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                Precio Final ($)
+              </label>
+              <input 
+                type="number" 
+                value={finalPriceInput} 
+                onChange={e => setFinalPriceInput(Number(e.target.value))}
+                autoFocus
+                onKeyDown={e => e.key === 'Enter' && handleFinalComplete()}
+                style={{ 
+                  width: '100%', border: 'none', background: 'none', 
+                  fontFamily: T.fontHeadline, fontSize: '32px', color: T.onSurface,
+                  fontWeight: 700, outline: 'none'
+                }} 
+              />
+              <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
+                Precio base sugerido: ${(selectedApptToComplete.priceSnapshot || 0).toLocaleString()}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => setShowPriceModal(false)} 
+                disabled={isCompleting}
+                style={{ flex: 1, padding: '14px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleFinalComplete} 
+                disabled={isCompleting}
+                style={{ 
+                  flex: 1, padding: '14px', backgroundColor: T.primary, color: 'white', 
+                  border: 'none', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700, 
+                  cursor: 'pointer', opacity: isCompleting ? 0.7 : 1 
+                }}
+              >
+                {isCompleting ? 'Procesando...' : 'Confirmar'}
               </button>
             </div>
           </div>

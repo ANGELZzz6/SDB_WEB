@@ -13,6 +13,7 @@ declare global {
 export default function AdminSpecialistsPage() {
   const [specialists, setSpecialists] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +21,8 @@ export default function AdminSpecialistsPage() {
     nombre: '',
     descripcion: '',
     foto: '',
-    especialidades: []
+    especialidades: [],
+    comisionPorcentaje: 0
   });
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -29,7 +31,12 @@ export default function AdminSpecialistsPage() {
       setLoading(true);
       const res = await employeeService.getAll(true); // Include inactive to see logic
       if (res.success && res.data) {
-        setSpecialists(res.data);
+        // Ordenar: Activas primero, Inactivas al final
+        const sorted = [...res.data].sort((a, b) => {
+          if (a.isActive === b.isActive) return 0;
+          return a.isActive ? -1 : 1;
+        });
+        setSpecialists(sorted);
       }
     } catch (error) {
       console.error(error);
@@ -49,11 +56,12 @@ export default function AdminSpecialistsPage() {
         nombre: emp.nombre,
         descripcion: emp.descripcion,
         foto: emp.foto,
-        especialidades: emp.especialidades
+        especialidades: emp.especialidades,
+        comisionPorcentaje: emp.comisionPorcentaje
       });
     } else {
       setEditingId(null);
-      setFormData({ nombre: '', descripcion: '', foto: '', especialidades: [] });
+      setFormData({ nombre: '', descripcion: '', foto: '', especialidades: [], comisionPorcentaje: 0 });
     }
     setIsModalOpen(true);
   };
@@ -77,6 +85,7 @@ export default function AdminSpecialistsPage() {
   const handleToggleActive = async (id: string, currentlyActive: boolean) => {
     try {
       if (currentlyActive) {
+        if (!window.confirm('¿Seguro que quieres desactivar a este especialista?')) return;
         await employeeService.deactivate(id);
       } else {
         await employeeService.reactivate(id);
@@ -85,6 +94,18 @@ export default function AdminSpecialistsPage() {
     } catch (error) {
       console.error(error);
       alert('Error cambiando estado');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('¿Seguro que quieres eliminar/desactivar a este especialista?')) {
+      try {
+        await employeeService.deactivate(id);
+        fetchSpecialists();
+      } catch (err) {
+        console.error(err);
+        alert('Error al desactivar');
+      }
     }
   };
 
@@ -115,9 +136,17 @@ export default function AdminSpecialistsPage() {
     inactive: specialists.filter(s => !s.isActive).length
   };
 
+  const filteredSpecialists = specialists.filter(s => 
+    s.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    s.descripcion?.toLowerCase().includes(search.toLowerCase()) ||
+    s.especialidades?.some(e => e.toLowerCase().includes(search.toLowerCase()))
+  );
+
   return (
     <AdminLayout
-      searchPlaceholder="Buscar especialista..."
+      searchPlaceholder="Buscar especialistas por nombre o servicios..."
+      searchValue={search}
+      onSearchChange={setSearch}
       topBarRight={
         <button onClick={() => openModal()} style={{
           display: 'flex', alignItems: 'center', gap: '8px',
@@ -149,6 +178,7 @@ export default function AdminSpecialistsPage() {
           border-radius: 16px; padding: 32px 24px;
           display: flex; flex-direction: column; align-items: center; text-align: center;
           transition: background-color 0.3s, transform 0.3s;
+          position: relative;
         }
         .spec-card:hover { background: ${T.surfaceContainerLowest}; transform: translateY(-2px); }
 
@@ -168,7 +198,7 @@ export default function AdminSpecialistsPage() {
               Especialistas
             </h2>
             <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant }}>
-              Gestiona tu equipo de artistas y profesionales de la belleza.
+              Gestiona tu equipo de profesionales de la belleza.
             </p>
           </div>
         </div>
@@ -180,10 +210,21 @@ export default function AdminSpecialistsPage() {
           </div>
         ) : (
           <div className="spec-grid">
-            {specialists.map((emp) => {
+            {filteredSpecialists.map((emp) => {
               const isActive = emp.isActive;
               return (
                 <div key={emp._id} className="spec-card" style={{ opacity: isActive ? 1 : 0.65 }}>
+                  {/* Delete button (trash) */}
+                  <button 
+                    onClick={() => handleDelete(emp._id)}
+                    style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', opacity: 0.6, transition: 'opacity 0.2s' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
+                    title="Eliminar Especialista"
+                  >
+                    🗑️
+                  </button>
+
                   {/* Photo */}
                   <div style={{ position: 'relative', marginBottom: '20px' }}>
                     {emp.foto ? (
@@ -312,6 +353,13 @@ export default function AdminSpecialistsPage() {
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.onSurfaceVariant, marginBottom: '6px' }}>Especialidades (separadas por coma)</label>
                 <input required type="text" value={formData.especialidades?.join(', ')} onChange={e => setFormData({ ...formData, especialidades: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.onSurfaceVariant, marginBottom: '6px' }}>% Comisión Global</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <input required type="number" min="0" max="100" value={formData.comisionPorcentaje} onChange={e => setFormData({ ...formData, comisionPorcentaje: Number(e.target.value) })} style={{ flex: 1, padding: '12px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px' }} />
+                  <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', color: T.primary, fontSize: '18px', fontWeight: 700 }}>%</span>
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>

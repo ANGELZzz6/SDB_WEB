@@ -10,6 +10,7 @@ export default function AdminGalleryPage() {
   const [categories, setCategories] = useState<GalleryCategory[]>([]);
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Forms
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -46,6 +47,17 @@ export default function AdminGalleryPage() {
       document.body.appendChild(script);
     }
   }, []);
+
+  const filteredCategories = categories.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredItems = items.filter(item => {
+    const captionMatch = item.caption?.toLowerCase().includes(search.toLowerCase());
+    const categoryName = typeof item.categoryId === 'string' ? '' : (item.categoryId as any).name;
+    const categoryMatch = categoryName?.toLowerCase().includes(search.toLowerCase());
+    return captionMatch || categoryMatch;
+  });
 
   // --- Categories ---
   const handleSaveCategory = async () => {
@@ -123,7 +135,11 @@ export default function AdminGalleryPage() {
   };
 
   return (
-    <AdminLayout searchPlaceholder="Buscar nombre o foto...">
+    <AdminLayout 
+      searchPlaceholder="Buscar por nombre, categoría o descripción..."
+      searchValue={search}
+      onSearchChange={setSearch}
+    >
       <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px' }}>
 
         {/* Header */}
@@ -169,7 +185,7 @@ export default function AdminGalleryPage() {
                 </button>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {categories.map(cat => (
+                  {filteredCategories.map(cat => (
                     <div key={cat._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', backgroundColor: T.surfaceContainerLowest, borderRadius: '16px', border: `1px solid ${T.outlineVariant}40`, opacity: cat.isActive ? 1 : 0.6 }}>
                       <div>
                         <h4 style={{ fontFamily: T.fontBody, fontSize: '18px', fontWeight: 700, color: T.onSurface, marginBottom: '4px' }}>{cat.name}</h4>
@@ -183,7 +199,7 @@ export default function AdminGalleryPage() {
                       </div>
                     </div>
                   ))}
-                  {categories.length === 0 && <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant }}>No hay categorías registradas.</p>}
+                  {filteredCategories.length === 0 && <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant }}>{search ? 'Sin resultados para la búsqueda.' : 'No hay categorías registradas.'}</p>}
                 </div>
               </div>
             )}
@@ -199,7 +215,7 @@ export default function AdminGalleryPage() {
                 </button>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
-                  {items.map(item => {
+                  {filteredItems.map(item => {
                     const catName = typeof item.categoryId === 'string' ? 'Cat' : (item.categoryId as any).name;
                     return (
                       <div key={item._id} style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '16px', overflow: 'hidden', border: `1px solid ${T.outlineVariant}40`, display: 'flex', flexDirection: 'column' }}>
@@ -222,7 +238,7 @@ export default function AdminGalleryPage() {
                     )
                   })}
                 </div>
-                {items.length === 0 && <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant }}>No hay fotos registradas.</p>}
+                {filteredItems.length === 0 && <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant }}>{search ? 'Sin resultados para la búsqueda.' : 'No hay fotos registradas.'}</p>}
               </div>
             )}
           </>
