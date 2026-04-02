@@ -27,8 +27,8 @@ const T = {
 const wrap: React.CSSProperties = {
   maxWidth: '1280px',
   margin: '0 auto',
-  paddingLeft: '32px',
-  paddingRight: '32px',
+  paddingLeft: '16px',
+  paddingRight: '16px',
   width: '100%',
   boxSizing: 'border-box',
 };
@@ -40,7 +40,7 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
   const links = [
     { label: 'Servicios', path: '/servicios' },
     { label: 'Especialistas', path: '/especialistas' },
-    { label: 'Galería', path: '/#galeria' },
+    { label: 'Galería', path: '/galeria' },
   ];
   return (
     <nav style={{
@@ -143,12 +143,12 @@ export default function SpecialistsPage() {
 
         .specialists-grid {
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 48px;
+          grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+          gap: 32px;
+          width: 100%;
         }
         @media (min-width: 768px) {
           .specialists-grid {
-            grid-template-columns: repeat(2, 1fr);
             gap: 96px;
             align-items: start;
           }
@@ -158,6 +158,9 @@ export default function SpecialistsPage() {
         }
 
         .specialist-card {
+          width: 100%;
+          min-width: 0;
+          overflow: hidden;
           position: relative;
           background: ${T.surfaceContainerLowest};
           border-radius: 2rem;

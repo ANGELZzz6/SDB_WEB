@@ -164,14 +164,20 @@ export default function AdminSpecialistsPage() {
       }
     >
       <style>{`
+        @media (max-width: 768px) {
+          .admin-spec-container { padding: 24px 16px 120px !important; }
+          .admin-spec-header { flex-direction: column; align-items: flex-start !important; gap: 20px; margin-bottom: 24px !important; }
+          .spec-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .stats-bar { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .admin-spec-modal { padding: 24px !important; width: 95% !important; margin: 20px !important; }
+        }
+
         .spec-grid {
           display: grid;
-          grid-template-columns: repeat(3,1fr);
+          grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
           gap: 24px;
           margin-bottom: 48px;
         }
-        @media (max-width: 1100px) { .spec-grid { grid-template-columns: repeat(2,1fr); } }
-        @media (max-width: 640px)  { .spec-grid { grid-template-columns: 1fr; } }
 
         .spec-card {
           background: ${T.surfaceContainerLow};
@@ -187,14 +193,13 @@ export default function AdminSpecialistsPage() {
           grid-template-columns: repeat(3,1fr);
           gap: 24px;
         }
-        @media (max-width: 768px) { .stats-bar { grid-template-columns: repeat(1,1fr); } }
       `}</style>
 
-      <div style={{ padding: '40px 48px 80px' }}>
+      <div className="admin-spec-container" style={{ padding: '40px 48px 80px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+        <div className="admin-spec-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
           <div>
-            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '44px', color: T.primary, letterSpacing: '-0.03em', fontWeight: 700, marginBottom: '6px' }}>
+            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(32px, 5vw, 44px)', color: T.primary, letterSpacing: '-0.03em', fontWeight: 700, marginBottom: '6px' }}>
               Especialistas
             </h2>
             <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant }}>
@@ -324,7 +329,7 @@ export default function AdminSpecialistsPage() {
       {/* CRUD Modal */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', outline: 'none' }}>
+          <div className="admin-spec-modal" style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto', outline: 'none' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '24px' }}>
               {editingId ? 'Editar Especialista' : 'Nuevo Especialista'}
             </h3>

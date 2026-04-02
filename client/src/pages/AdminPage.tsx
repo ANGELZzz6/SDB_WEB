@@ -88,73 +88,81 @@ export default function AdminPage() {
     date: a.date
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const d = new Date();
-        const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const fetchData = async (showLoading = true) => {
+    try {
+      if (showLoading) setLoading(true);
+      const d = new Date();
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-        const fetchParams: any = { date: dateStr };
-        if (isEmpleada) fetchParams.employeeId = user?.id;
+      const fetchParams: any = { date: dateStr };
+      if (isEmpleada) fetchParams.employeeId = user?.id;
 
-        // Fetch today's appointments + stats. Both admin and specialists fetch pending for their scope
-        const promises: Promise<any>[] = [
-          appointmentService.getAll(fetchParams),
-          appointmentService.getStats(),
-          appointmentService.getAll({ status: 'pending', ...(isEmpleada ? { employeeId: user?.id } : {}) })
-        ];
+      // Fetch today's appointments + stats. Both admin and specialists fetch pending for their scope
+      const promises: Promise<any>[] = [
+        appointmentService.getAll(fetchParams),
+        appointmentService.getStats(),
+        appointmentService.getAll({ status: 'pending', ...(isEmpleada ? { employeeId: user?.id } : {}) })
+      ];
 
-        const [apptsRes, statsRes, pendingRes, empsRes] = await Promise.all(promises.concat(employeeService.getAll()));
+      const [apptsRes, statsRes, pendingRes, empsRes] = await Promise.all(promises.concat(employeeService.getAll()));
 
-        if (empsRes?.success && empsRes?.data) {
-          setAllEmployees(empsRes.data);
-        }
-
-        // Filter stats for empleada
-        if (isEmpleada && apptsRes.success && apptsRes.data) {
-          const empleadaAppts = apptsRes.data;
-          const pending = empleadaAppts.filter((a: any) => a.status === 'pending').length;
-          const completed = empleadaAppts.filter((a: any) => a.status === 'completed').length;
-          const cancelled = empleadaAppts.filter((a: any) => a.status === 'cancelled').length;
-          setStats({
-            today: empleadaAppts.length,
-            pending,
-            completed,
-            cancelled,
-          });
-        }
-
-        if (apptsRes.success && apptsRes.data) {
-          const mapped = apptsRes.data.map(mapAppt);
-          mapped.sort((x: UIAppointment, y: UIAppointment) => x.time.localeCompare(y.time));
-          setAppointments(mapped);
-        }
-
-        if (!isEmpleada && statsRes.success && statsRes.data) {
-          const { globalStats, todayCount } = statsRes.data;
-          const pendingCount = globalStats?.find((s: any) => s._id === 'pending')?.count || 0;
-          const completedCount = globalStats?.find((s: any) => s._id === 'completed')?.count || 0;
-          const cancelledCount = globalStats?.find((s: any) => s._id === 'cancelled')?.count || 0;
-          setStats({
-            today: todayCount || 0,
-            pending: pendingCount,
-            completed: completedCount,
-            cancelled: cancelledCount,
-          });
-        }
-
-        if (pendingRes?.success && pendingRes?.data) {
-          setPendingAppointments(pendingRes.data.map(mapAppt));
-        }
-
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setLoading(false);
+      if (empsRes?.success && empsRes?.data) {
+        setAllEmployees(empsRes.data);
       }
-    };
+
+      // Filter stats for empleada
+      if (isEmpleada && apptsRes.success && apptsRes.data) {
+        const empleadaAppts = apptsRes.data;
+        const pending = empleadaAppts.filter((a: any) => a.status === 'pending').length;
+        const completed = empleadaAppts.filter((a: any) => a.status === 'completed').length;
+        const cancelled = empleadaAppts.filter((a: any) => a.status === 'cancelled').length;
+        setStats({
+          today: empleadaAppts.length,
+          pending,
+          completed,
+          cancelled,
+        });
+      }
+
+      if (apptsRes.success && apptsRes.data) {
+        const mapped = apptsRes.data.map(mapAppt);
+        mapped.sort((x: UIAppointment, y: UIAppointment) => x.time.localeCompare(y.time));
+        setAppointments(mapped);
+      }
+
+      if (!isEmpleada && statsRes.success && statsRes.data) {
+        const { globalStats, todayCount } = statsRes.data;
+        const pendingCount = globalStats?.find((s: any) => s._id === 'pending')?.count || 0;
+        const completedCount = globalStats?.find((s: any) => s._id === 'completed')?.count || 0;
+        const cancelledCount = globalStats?.find((s: any) => s._id === 'cancelled')?.count || 0;
+        setStats({
+          today: todayCount || 0,
+          pending: pendingCount,
+          completed: completedCount,
+          cancelled: cancelledCount,
+        });
+      }
+
+      if (pendingRes?.success && pendingRes?.data) {
+        setPendingAppointments(pendingRes.data.map(mapAppt));
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
+    
+    // Polling cada 30 segundos para evitar inconsistencias multisesión
+    const interval = setInterval(() => {
+      fetchData(false);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [user?.id, user?.role]);
 
   const handleAction = async (id: string, newStatus: 'confirmed' | 'cancelled') => {
@@ -172,6 +180,7 @@ export default function AdminPage() {
         }
         
         showNotif(newStatus === 'confirmed' ? '✅ Cita confirmada' : '❌ Cita rechazada', newStatus === 'confirmed' ? 'ok' : 'err');
+        fetchData(false); // Refrescar para asegurar sincronía
       }
     } catch (error) {
       console.error('Error updating appointment', error);
@@ -220,6 +229,7 @@ export default function AdminPage() {
             : a
         ));
         showNotif('✅ Cita reagendada exitosamente (sigue pendiente)');
+        fetchData(false);
       }
     } catch (e: any) {
       showNotif(e.message || 'Error reagendando', 'err');
@@ -234,6 +244,7 @@ export default function AdminPage() {
           a.id === id ? { ...a, status: 'Completada' } : a
         ));
         showNotif('✅ Cita marcada como completada', 'ok');
+        fetchData(false);
       }
     } catch (error) {
       console.error('Error completing appointment', error);
@@ -276,13 +287,27 @@ export default function AdminPage() {
         @media (min-width: 1400px) { .right-panel { display: block; } }
         @keyframes pulse-green {
           0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(34,197,94,0.4); }
-          50%      { opacity:0.8; box-shadow:0 0 0 6px rgba(34,197,94,0); }
+        }
+        @media (max-width: 768px) {
+          .admin-dashboard-container { padding: 24px 16px 120px !important; }
+          .admin-dashboard-header { flex-direction: column; align-items: flex-start !important; gap: 16px; margin-bottom: 32px !important; }
+          .admin-stats-grid { grid-template-columns: 1fr !important; gap: 16px !important; margin-bottom: 40px !important; }
+          .admin-search-inline { width: 100% !important; }
+          .admin-search-inline input { width: 100% !important; }
+          .pending-citas-grid { grid-template-columns: 1fr !important; }
+          .calendar-header-row { flex-direction: column; align-items: flex-start !important; gap: 16px; }
+          .appt-card { flex-direction: column !important; gap: 12px !important; align-items: flex-start !important; }
+          .appt-card > div:first-child { width: 100% !important; text-align: left !important; padding: 0 !important; }
+          .appt-card-content { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .appt-card-actions { width: 100% !important; justify-content: space-between !important; margin-top: 8px; border-top: 1px solid ${T.outlineVariant}30; padding-top: 12px; }
+          .admin-floating-status { width: 95% !important; gap: 12px !important; padding: 10px 20px !important; }
+          .admin-floating-status-stats { display: none !important; }
         }
       `}</style>
 
-      <div style={{ padding: '40px 48px 120px', position: 'relative' }}>
+      <div className="admin-dashboard-container" style={{ padding: '40px 48px 120px', position: 'relative' }}>
         {/* ── Header ── */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '48px', flexWrap: 'wrap', gap: '20px' }}>
+        <header className="admin-dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '48px', flexWrap: 'wrap', gap: '20px' }}>
           <div>
             <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(28px,4vw,40px)', color: T.primary, marginBottom: '6px', letterSpacing: '-0.02em' }}>
               Bienvenida, {user?.nombre || 'Admin'}
@@ -292,7 +317,7 @@ export default function AdminPage() {
             </p>
           </div>
           {/* Search inline in body */}
-          <div style={{ backgroundColor: T.surfaceContainerLow, padding: '10px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="admin-search-inline" style={{ backgroundColor: T.surfaceContainerLow, padding: '10px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span>🔍</span>
             <input
               type="text"
@@ -305,7 +330,7 @@ export default function AdminPage() {
         </header>
 
         {/* ── Stats bento ── */}
-        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px', marginBottom: '56px' }}>
+        <section className="admin-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px', marginBottom: '56px' }}>
           {[
             { className: 'stat-card-rose', bg: 'rgba(255,217,222,0.35)', icon: '📆', badge: 'Total Hoy', badgeColor: T.onPrimary, label: 'Citas Hoy', value: stats.today.toString(), valColor: '#3e0215' },
             { className: 'stat-card-amber', bg: 'rgba(255,220,191,0.35)', icon: '⏳', badge: 'Atención', badgeColor: '#623f1b', label: 'Pendientes', value: stats.pending.toString(), valColor: '#2d1600' },
@@ -326,41 +351,46 @@ export default function AdminPage() {
 
         {/* ── Pending Appointments (Prominent Summary) ── */}
         {pendingAppointments.length > 0 && (
-          <section style={{ marginBottom: '56px', backgroundColor: '#fff8e1', padding: '24px', borderRadius: '16px', border: '1px solid #ffe082' }}>
+          <section style={{ marginBottom: '24px', backgroundColor: '#fff8e1', padding: '24px', borderRadius: '16px', border: '1px solid #ffe082' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#5d4037', marginBottom: '20px' }}>
               ⏳ Citas Pendientes de Confirmación ({pendingAppointments.length})
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            <div className="pending-citas-grid grid grid-cols-1 md:grid-cols-2 gap-4">
               {pendingAppointments.map(appt => (
-                <div key={appt.id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderLeft: `4px solid ${T.primary}` }}>
-                  <h4 style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, margin: '0 0 4px' }}>{appt.client}</h4>
-                  <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: '0 0 2px' }}>📞 {appt.clientPhone}</p>
-                  <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: '0 0 2px' }}>💎 {appt.service} · {appt.duration}</p>
-                  <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: '0 0 16px' }}>👩‍🎨 {appt.specialist} · {appt.time}</p>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                <div key={appt.id} className="w-full min-w-0 rounded-2xl p-4 md:p-5 min-h-0" style={{ backgroundColor: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderLeft: `4px solid ${T.primary}` }}>
+                  <div className="flex flex-col gap-1 mb-3">
+                    <h4 className="truncate" style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, margin: 0 }}>{appt.client}</h4>
+                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📞 {appt.clientPhone}</p>
+                    <p className="truncate" style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>💎 {appt.service} · {appt.duration}</p>
+                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>👩‍🎨 {appt.specialist} · {appt.time}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 w-full mt-3">
                     <button
                       onClick={() => handleAction(appt.id, 'confirmed')}
-                      style={{ flex: 1, padding: '10px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '9999px', cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '13px', transition: 'opacity 0.2s' }}
+                      className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
+                      style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
                       onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
                       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                     >
-                      ✓ Confirmar
+                      Confirmar
                     </button>
                     <button
                       onClick={() => openReschedule(appt)}
-                      style={{ flex: 1, padding: '10px', backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, border: 'none', borderRadius: '9999px', cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '13px', transition: 'opacity 0.2s' }}
+                      className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
+                      style={{ backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
                       onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
                       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                     >
-                      🕒 Reagendar
+                      Reagendar
                     </button>
                     <button
                       onClick={() => handleAction(appt.id, 'cancelled')}
-                      style={{ flex: 1, padding: '10px', backgroundColor: T.errorContainer, color: T.error, border: 'none', borderRadius: '9999px', cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '13px', transition: 'opacity 0.2s' }}
+                      className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
+                      style={{ backgroundColor: T.errorContainer, color: T.error, border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
                       onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
                       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                     >
-                      ✕ Rechazar
+                      Rechazar
                     </button>
                   </div>
                 </div>
@@ -371,7 +401,7 @@ export default function AdminPage() {
 
         {/* ── Calendar Section ── */}
         <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+          <div className="calendar-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
               <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '26px', color: T.onSurface, letterSpacing: '-0.01em' }}>Hoy</h3>
               {/* View toggle */}
@@ -405,58 +435,57 @@ export default function AdminPage() {
                <p style={{ fontFamily: T.fontBody, fontSize: '16px' }}>Cargando citas de hoy...</p>
              </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="flex flex-col gap-3">
               {filtered.map((appt) => {
                 const statusStyle = STATUS_STYLES[appt.status];
                 return (
-                  <div key={appt.id} className="appt-card" style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
-                    <div style={{ width: '56px', paddingTop: '20px', textAlign: 'right', flexShrink: 0 }}>
+                  <div key={appt.id} className="appt-card flex gap-0 sm:gap-6 items-stretch w-full min-w-0">
+                    {/* Time marker hidden on mobile, visible on sm+ */}
+                    <div className="hidden sm:block w-14 pt-5 text-right shrink-0">
                       <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: `${T.onSurfaceVariant}55`, letterSpacing: '0.05em' }}>{appt.time}</span>
                     </div>
-                    <div style={{ flex: 1, padding: '20px 24px', backgroundColor: appt.status === 'Completada' ? T.surfaceContainerLow : T.surfaceContainerLowest, borderRadius: '14px', borderLeft: `4px solid ${appt.status === 'Completada' ? T.surfaceContainerHighest : T.primary}`, boxShadow: `0 16px 40px rgba(62,2,21,${appt.status === 'Completada' ? '0.02' : '0.04'})`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: appt.status === 'Completada' ? 0.85 : 1, gap: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: 0 }}>
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                          <img src={appt.clientPhoto} alt={appt.client} style={{ width: '48px', height: '48px', borderRadius: '9999px', objectFit: 'cover', filter: appt.status === 'Completada' ? 'grayscale(60%)' : 'none' }} />
-                          {appt.status !== 'Completada' && <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '14px', height: '14px', backgroundColor: '#22c55e', border: '2px solid white', borderRadius: '9999px' }} />}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <h4 style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{appt.client}</h4>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>{appt.serviceIcon} {appt.service}</span>
-                            <span style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.outlineVariant, display: 'inline-block' }} />
-                            <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>👤 {appt.specialist}</span>
+                    
+                    <div className="appt-card-content w-full min-w-0 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ flex: 1, backgroundColor: appt.status === 'Completada' ? T.surfaceContainerLow : T.surfaceContainerLowest, borderLeft: `4px solid ${appt.status === 'Completada' ? T.surfaceContainerHighest : T.primary}`, boxShadow: `0 16px 40px rgba(62,2,21,${appt.status === 'Completada' ? '0.02' : '0.04'})`, opacity: appt.status === 'Completada' ? 0.85 : 1 }}>
+                      
+                      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="relative shrink-0">
+                            <img src={appt.clientPhoto} alt={appt.client} className="w-12 h-12 rounded-full object-cover" style={{ filter: appt.status === 'Completada' ? 'grayscale(60%)' : 'none' }} />
+                            {appt.status !== 'Completada' && <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />}
+                          </div>
+                          <div className="min-w-0 w-full">
+                            <div className="flex items-center justify-between w-full mb-1">
+                              <h4 className="truncate" style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, marginBottom: 0 }}>{appt.client}</h4>
+                              <span className="shrink-0 sm:hidden" style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="sm:hidden font-bold" style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary }}>{appt.time}</span>
+                              <span className="hidden sm:inline" style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.outlineVariant }} />
+                              <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>{appt.serviceIcon} {appt.service}</span>
+                              <span className="hidden sm:inline" style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.outlineVariant }} />
+                              <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>👤 {appt.specialist}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexShrink: 0 }}>
-                        <div style={{ textAlign: 'right', opacity: appt.status === 'Completada' ? 0.6 : 1 }}>
-                          <p style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}70`, marginBottom: '2px' }}>Duración</p>
-                          <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface }}>{appt.duration}</p>
+
+                        <div className="flex flex-wrap gap-2 mt-2 md:mt-0 shrink-0 items-center">
+                          <div className="text-left sm:text-right hidden sm:block mr-4">
+                            <p style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}70`, marginBottom: '2px' }}>Duración</p>
+                            <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface }}>{appt.duration}</p>
+                          </div>
+                          <span className="shrink-0 hidden sm:inline-block" style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '6px 14px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
+                          {appt.status === 'Confirmada' && (
+                            <button
+                              onClick={() => handleComplete(appt.id)}
+                              className="text-[11px] font-bold uppercase tracking-wider bg-green-500 text-white px-4 py-2 rounded-full transform transition hover:scale-105 hover:bg-green-600"
+                              style={{ border: 'none', cursor: 'pointer', fontFamily: T.fontBody }}
+                            >
+                              ✓ Completar
+                            </button>
+                          )}
                         </div>
-                        <span style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '6px 14px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
-                        {appt.status === 'Confirmada' && (
-                          <button
-                            onClick={() => handleComplete(appt.id)}
-                            style={{
-                              fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700,
-                              textTransform: 'uppercase', letterSpacing: '0.1em',
-                              backgroundColor: '#22c55e', color: '#fff',
-                              padding: '8px 16px', borderRadius: '9999px', border: 'none',
-                              cursor: 'pointer', transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#16a34a';
-                              e.currentTarget.style.transform = 'scale(1.05)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#22c55e';
-                              e.currentTarget.style.transform = 'scale(1)';
-                            }}
-                          >
-                            ✓ Completar
-                          </button>
-                        )}
                       </div>
+
                     </div>
                   </div>
                 );
@@ -472,26 +501,7 @@ export default function AdminPage() {
         </section>
       </div>
 
-      {/* Floating Status Bar */}
-      <div style={{ position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)', zIndex: 60, backgroundColor: 'rgba(255,255,255,0.80)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', padding: '14px 32px', borderRadius: '9999px', boxShadow: '0 20px 40px rgba(62,2,21,0.10)', border: '1px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '32px', whiteSpace: 'nowrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '9999px', backgroundColor: '#22c55e', display: 'inline-block', animation: 'pulse-green 2s infinite' }} />
-          <p style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurface }}>Salón Abierto</p>
-        </div>
-        <div style={{ width: '1px', height: '20px', backgroundColor: `${T.outlineVariant}40` }} />
-        <div style={{ display: 'flex', gap: '28px' }}>
-          {[{ label: 'Especialistas Totales', val: '2' }, { label: 'Citas HOY', val: stats.today.toString() }].map(({ label, val }) => (
-            <div key={label} style={{ textAlign: 'center' }}>
-              <p style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}70`, marginBottom: '2px' }}>{label}</p>
-              <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.primary }}>{val}</p>
-            </div>
-          ))}
-        </div>
-        <button style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', backgroundColor: T.primary, color: '#FFF', padding: '10px 20px', borderRadius: '9999px', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-        >Actualizar</button>
-      </div>
+
 
       
       {/* RESCHEDULE MODAL */}

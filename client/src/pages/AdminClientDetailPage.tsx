@@ -135,7 +135,14 @@ export default function AdminClientDetailPage() {
 
   return (
     <AdminLayout>
-      <div style={{ padding: '40px 48px 80px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-client-detail-container { padding: 24px 16px 120px !important; }
+          .admin-client-detail-header { flex-direction: column !important; align-items: flex-start !important; gap: 20px !important; }
+          .admin-client-detail-header h2 { font-size: 32px !important; }
+        }
+      `}</style>
+      <div className="admin-client-detail-container" style={{ padding: '40px 48px 80px' }}>
         {/* Navigation & Header */}
         <button 
           onClick={() => navigate('/admin/clientes')}

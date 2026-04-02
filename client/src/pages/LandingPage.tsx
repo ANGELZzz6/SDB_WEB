@@ -40,10 +40,16 @@ const SERVICES = [
 const wrap: React.CSSProperties = {
   maxWidth: '1280px',
   margin: '0 auto',
-  paddingLeft: '32px',
-  paddingRight: '32px',
+  paddingLeft: '16px',
+  paddingRight: '16px',
   width: '100%',
   boxSizing: 'border-box',
+};
+
+const desktopWrap: React.CSSProperties = {
+  ...wrap,
+  paddingLeft: '32px',
+  paddingRight: '32px',
 };
 
 /* ─────────────────────────────────────────────────
@@ -54,6 +60,7 @@ export default function LandingPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [gallery, setGallery] = useState<string[]>([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     serviceService.getAll().then(res => {
@@ -100,6 +107,24 @@ export default function LandingPage() {
         .nav-links { display: none; }
         @media (min-width: 768px) { .nav-links { display: flex; } }
 
+        .hamburger {
+          display: flex; flex-direction: column; gap: 4px; cursor: pointer; padding: 10px; z-index: 100;
+        }
+        .hamburger span { width: 24px; height: 2px; background: ${T.primary}; transition: 0.3s; }
+        @media (min-width: 768px) { .hamburger { display: none; } }
+
+        .mobile-menu {
+          position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+          background: ${T.surface}; z-index: 90;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          gap: 32px; transition: transform 0.4s ease-in-out;
+          transform: translateY(-100%);
+        }
+        .mobile-menu.open { transform: translateY(0); }
+        .mobile-menu a, .mobile-menu button {
+          font-family: ${T.fontHeadline}; font-style: italic; font-size: 28px; color: ${T.primary}; text-decoration: none; background: none; border: none; cursor: pointer;
+        }
+
         /* Hero layout */
         .hero-layout {
           display: flex;
@@ -117,21 +142,17 @@ export default function LandingPage() {
         /* Services grid */
         .services-grid {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
           gap: 20px;
-        }
-        @media (min-width: 640px) {
-          .services-grid { grid-template-columns: repeat(2, 1fr); }
+          width: 100%;
         }
 
         /* Specialists grid */
         .specialists-grid {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
           gap: 32px;
-        }
-        @media (min-width: 768px) {
-          .specialists-grid { grid-template-columns: repeat(2, 1fr); }
+          width: 100%;
         }
 
         /* Essence layout */
@@ -142,18 +163,31 @@ export default function LandingPage() {
         }
         @media (min-width: 768px) {
           .essence-layout { flex-direction: row; align-items: center; gap: 80px; }
-          .essence-left { width: 35%; flex-shrink: 0; }
+          .essence-left { width: 35% !important; flex-shrink: 0; }
           .essence-right { flex: 1; }
+        }
+
+        /* Hero refinements */
+        @media (max-width: 768px) {
+          .hero-layout { gap: 40px !important; }
+          .hero-stats { justify-content: flex-start !important; gap: 20px !important; }
+          .hero-stats > div { padding-right: 0 !important; }
+          .hero-stats-divider { display: none !important; }
+          .hero-bg-blob { display: none !important; }
+          .hero-text-container { align-items: flex-start !important; text-align: left !important; }
+          .hero-buttons { flex-direction: column !important; align-items: stretch !important; width: 100% !important; }
+          .hero-buttons button { width: 100% !important; text-align: center !important; }
+          .floating-bar { width: 95% !important; bottom: 12px !important; border-radius: 20px !important; padding: 12px 16px !important; }
+          .floating-bar p { font-size: 10px !important; }
+          .floating-bar button { padding: 10px 16px !important; font-size: 11px !important; }
         }
 
         /* Gallery grid */
         .gallery-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
           gap: 16px;
-        }
-        @media (min-width: 768px) {
-          .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+          width: 100%;
         }
 
         /* Contact grid */
@@ -230,16 +264,16 @@ export default function LandingPage() {
         WebkitBackdropFilter: 'blur(16px)',
         borderBottom: `1px solid ${T.outlineVariant}30`,
       }}>
-        <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}>
+        <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px', paddingLeft: '24px', paddingRight: '24px' }}>
           {/* Logo */}
           <span
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setIsMenuOpen(false); }}
             style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none', letterSpacing: '-0.01em' }}
           >
-            Beauty Salon
+            L'Élixir Salon
           </span>
 
-          {/* Nav links */}
+          {/* Nav links (Desktop) */}
           <div className="nav-links" style={{ alignItems: 'center', gap: '40px' }}>
             {[
               { label: 'Servicios', path: '/servicios' },
@@ -260,23 +294,49 @@ export default function LandingPage() {
                 {label}
               </button>
             ))}
+            <button
+              onClick={() => navigate('/chatbot')}
+              style={{
+                fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.12em',
+                backgroundColor: T.primary, color: T.onPrimary,
+                padding: '12px 24px', borderRadius: '9999px', border: 'none',
+                cursor: 'pointer', transition: 'transform 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            >
+              Agendar Cita
+            </button>
           </div>
 
-          {/* CTA */}
-          <button
-            onClick={() => navigate('/chatbot')}
-            style={{
-              fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.12em',
-              backgroundColor: T.primary, color: T.onPrimary,
-              padding: '12px 24px', borderRadius: '9999px', border: 'none',
-              cursor: 'pointer', transition: 'transform 0.2s',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-          >
-            Agendar Cita
-          </button>
+          {/* Hamburger button (Mobile) */}
+          <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'rotate(45deg) translate(5px, 6px)' : 'none', transition: '0.3s' }}></div>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, opacity: isMenuOpen ? 0 : 1, transition: '0.3s', margin: '5px 0' }}></div>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'rotate(-45deg) translate(5px, -6px)' : 'none', transition: '0.3s' }}></div>
+          </div>
+        </div>
+
+        {/* Mobile menu overlay */}
+        <div className={`mobile-menu ${isMenuOpen ? 'open' : ''}`}>
+           {[
+              { label: 'Servicios', path: '/servicios' },
+              { label: 'Especialistas', path: '/especialistas' },
+              { label: 'Galería', path: '/galeria' },
+              { label: 'Agendar Cita', path: '/chatbot' },
+            ].map(({ label, path }) => (
+              <button
+                key={label}
+                onClick={() => { navigate(path); setIsMenuOpen(false); }}
+                style={{ fontSize: '28px', fontFamily: T.fontHeadline, fontStyle: 'italic', color: T.primary, background: 'none', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              >
+                {label}
+              </button>
+            ))}
+            <button onClick={() => setIsMenuOpen(false)} style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', marginTop: '60px', opacity: 0.5, color: T.onSurfaceVariant, background: 'none', border: 'none', cursor: 'pointer' }}>CERRAR</button>
         </div>
       </nav>
 
@@ -290,8 +350,8 @@ export default function LandingPage() {
         style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}
       >
         {/* Floating ambient blobs */}
-        <div style={{ position: 'absolute', top: '25%', right: '-80px', width: '384px', height: '384px', backgroundColor: '#ffd9de', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
-        <div style={{ position: 'absolute', bottom: '25%', left: '-80px', width: '320px', height: '320px', backgroundColor: '#ece7e4', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
+        <div className="hero-bg-blob" style={{ position: 'absolute', top: '25%', right: '-80px', width: '384px', height: '384px', backgroundColor: '#ffd9de', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
+        <div className="hero-bg-blob" style={{ position: 'absolute', bottom: '25%', left: '-80px', width: '320px', height: '320px', backgroundColor: '#ece7e4', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
 
         <div style={{ ...wrap, paddingTop: '140px', paddingBottom: '80px', position: 'relative', zIndex: 1 }}>
           <div className="hero-layout">
@@ -332,7 +392,7 @@ export default function LandingPage() {
               </p>
 
               {/* CTAs */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', paddingTop: '8px' }}>
+              <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', paddingTop: '8px' }}>
                 <button
                   id="hero-cta"
                   onClick={() => navigate('/chatbot')}
@@ -368,7 +428,7 @@ export default function LandingPage() {
               </div>
 
               {/* Stats */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0', paddingTop: '24px', flexWrap: 'wrap' }}>
+              <div className="hero-stats" style={{ display: 'flex', alignItems: 'center', gap: '0', paddingTop: '24px', flexWrap: 'wrap' }}>
                 {[
                   { value: '6+', label: 'Servicios' },
                   { value: '7/7', label: 'Días' },
@@ -379,7 +439,7 @@ export default function LandingPage() {
                       <div style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '28px', color: T.primary }}>{value}</div>
                       <div style={{ fontFamily: T.fontBody, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant, marginTop: '2px' }}>{label}</div>
                     </div>
-                    {i < 2 && <div style={{ width: '1px', height: '32px', backgroundColor: `${T.outlineVariant}40`, marginRight: '32px' }} />}
+                    {i < 2 && <div className="hero-stats-divider" style={{ width: '1px', height: '32px', backgroundColor: `${T.outlineVariant}40`, marginRight: '32px' }} />}
                   </div>
                 ))}
               </div>
@@ -762,7 +822,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════
           FLOATING BOOKING BAR
       ══════════════════════════════ */}
-      <div className="floating-bar">
+      <div className="floating-bar" style={{ width: 'calc(100% - 32px)', maxWidth: '640px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '20px' }}>🕐</span>
           <div>

@@ -31,8 +31,8 @@ const T = {
 const wrap: React.CSSProperties = {
   maxWidth: '1280px',
   margin: '0 auto',
-  paddingLeft: '32px',
-  paddingRight: '32px',
+  paddingLeft: '16px',
+  paddingRight: '16px',
   width: '100%',
   boxSizing: 'border-box',
 };
@@ -69,8 +69,8 @@ export default function ServicesPage() {
 
   const navLinks = [
     { label: 'Servicios', path: '/servicios' },
-    { label: 'Especialistas', path: '/#especialistas' },
-    { label: 'Galería', path: '/#galeria' },
+    { label: 'Especialistas', path: '/especialistas' },
+    { label: 'Galería', path: '/galeria' },
   ];
 
   return (
@@ -86,17 +86,15 @@ export default function ServicesPage() {
 
         .services-grid {
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
           gap: 24px;
-        }
-        @media (min-width: 768px) {
-          .services-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (min-width: 1024px) {
-          .services-grid { grid-template-columns: repeat(3, 1fr); }
+          width: 100%;
         }
 
         .service-card {
+          width: 100%;
+          min-width: 0;
+          overflow: hidden;
           background: ${T.surfaceContainerLowest};
           border-radius: 16px;
           padding: 32px;

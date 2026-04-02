@@ -161,7 +161,11 @@ export default function ChatbotPage() {
       }
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Error al agendar. Es posible que el horario ya esté ocupado.');
+      if (err.response?.status === 429) {
+        alert(err.response.data?.message || 'Has alcanzado el límite de citas permitidas (4 cada 30 min). Por favor intenta más tarde.');
+      } else {
+        alert(err.message || 'Error al agendar. Es posible que el horario ya esté ocupado.');
+      }
       setStep(4); // Regresar al selector de horas
     } finally {
       setSubmitting(false);

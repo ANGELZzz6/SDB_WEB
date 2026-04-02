@@ -21,6 +21,7 @@ export default function AdminLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const [internalSearch, setInternalSearch] = useState('');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const search = searchValue !== undefined ? searchValue : internalSearch;
   const setSearch = onSearchChange || setInternalSearch;
@@ -71,9 +72,27 @@ export default function AdminLayout({
           background: #f8f3f0; color: #944555;
         }
         @media (max-width: 768px) {
-          .admin-sidebar { display: none !important; }
-          .admin-main { margin-left: 0 !important; }
-          .admin-topbar { left: 0 !important; }
+          .admin-sidebar { 
+            position: fixed; left: 0; top: 0; width: 280px; height: 100vh;
+            transform: translateX(-100%); transition: transform 0.3s ease;
+            box-shadow: 10px 0 30px rgba(0,0,0,0.1); 
+            display: flex !important;
+          }
+          .admin-sidebar.open { transform: translateX(0); }
+          .admin-main { margin-left: 0 !important; padding-bottom: 80px !important; }
+          .admin-topbar { left: 0 !important; padding: 0 16px !important; }
+          .topbar-search-wrapper { display: none !important; }
+          .admin-bottom-nav { 
+             display: flex !important; position: fixed; bottom: 0; left: 0; right: 0;
+             height: 64px; background: #fff; border-top: 1px solid ${T.outlineVariant}30;
+             z-index: 45; justify-content: space-around; align-items: center;
+             padding: 0 8px; box-shadow: 0 -4px 12px rgba(0,0,0,0.03); 
+          }
+          .drawer-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 48;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+          }
+          .drawer-overlay.visible { opacity: 1; pointer-events: auto; }
         }
         .logout-btn {
           display: flex; align-items: center; gap: 8px;
@@ -90,23 +109,41 @@ export default function AdminLayout({
         }
       `}</style>
 
-      {/* ── SIDEBAR ── */}
-      <aside className="admin-sidebar" style={{
+      {/* ── MOBILE OVERLAY ── */}
+      <div 
+        className={`drawer-overlay ${isDrawerOpen ? 'visible' : ''}`} 
+        onClick={() => setIsDrawerOpen(false)} 
+      />
+
+      {/* ── SIDEBAR (Now responsive) ── */}
+      <aside className={`admin-sidebar ${isDrawerOpen ? 'open' : ''}`} style={{
         width: '256px', minHeight: '100vh', position: 'fixed', left: 0, top: 0,
         backgroundColor: T.surface, display: 'flex', flexDirection: 'column',
         paddingTop: '32px', paddingBottom: '32px', zIndex: 50,
       }}>
-        {/* Logo */}
-        <div style={{ padding: '0 24px', marginBottom: '48px' }}>
-          <h1
-            onClick={() => navigate('/')}
-            style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer' }}
+        {/* Logo and close button for mobile */}
+        <div style={{ padding: '0 24px', marginBottom: '48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1
+              onClick={() => { navigate('/'); setIsDrawerOpen(false); }}
+              style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer' }}
+            >
+              Beauty Salon
+            </h1>
+            <p style={{ fontFamily: T.fontHeadline, fontSize: '13px', letterSpacing: '0.04em', color: `${T.onSurfaceVariant}70`, marginTop: '4px' }}>
+              Admin Dashboard
+            </p>
+          </div>
+          <button 
+            onClick={() => setIsDrawerOpen(false)}
+            className="mobile-only"
+            style={{ display: 'none', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: T.onSurfaceVariant }}
           >
-            Beauty Salon
-          </h1>
-          <p style={{ fontFamily: T.fontHeadline, fontSize: '13px', letterSpacing: '0.04em', color: `${T.onSurfaceVariant}70`, marginTop: '4px' }}>
-            Admin Dashboard
-          </p>
+            ✕
+          </button>
+          <style>{`
+            @media (max-width: 768px) { .mobile-only { display: block !important; } }
+          `}</style>
         </div>
 
         {/* Nav */}
@@ -119,7 +156,7 @@ export default function AdminLayout({
             return (
               <button
                 key={path}
-                onClick={() => navigate(path)}
+                onClick={() => { navigate(path); setIsDrawerOpen(false); }}
                 className={`admin-nav-item ${isActive ? 'active' : 'inactive'}`}
               >
                 <span style={{ fontSize: '18px', lineHeight: 1 }}>{icon}</span>
@@ -131,7 +168,7 @@ export default function AdminLayout({
 
         {/* Admin profile */}
         <div 
-          onClick={() => navigate('/admin/perfil')}
+          onClick={() => { navigate('/admin/perfil'); setIsDrawerOpen(false); }}
           style={{ padding: '16px 24px', marginTop: 'auto', borderTop: `1px solid ${T.surfaceContainer}`, cursor: 'pointer', transition: 'background-color 0.2s' }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainerLow)}
           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
@@ -159,8 +196,20 @@ export default function AdminLayout({
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
         borderBottom: `1px solid ${T.outlineVariant}20`,
       }}>
+        {/* Hamburger + Mobile Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+             onClick={() => setIsDrawerOpen(true)}
+             className="mobile-only"
+             style={{ display: 'none', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: T.primary, padding: '8px' }}
+          >
+            ☰
+          </button>
+          <h1 className="mobile-only" style={{ display: 'none', fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '18px', color: T.primary, margin: 0 }}>L'Élixir Admin</h1>
+        </div>
+
         {/* Search */}
-        <div style={{
+        <div className="topbar-search-wrapper" style={{
           backgroundColor: T.surfaceContainerLow, borderRadius: '9999px',
           padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '10px',
           maxWidth: '380px', width: '100%',
@@ -178,10 +227,17 @@ export default function AdminLayout({
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {topBarRight}
           
-          <button onClick={handleLogout} className="logout-btn">
+          <button onClick={handleLogout} className="logout-btn desktop-only" style={{ display: 'flex' }}>
              <span>🚪</span>
              Cerrar Sesión
           </button>
+
+          <style>{`
+            @media (max-width: 768px) {
+              .desktop-only { display: none !important; }
+              .user-name-label { display: none; }
+            }
+          `}</style>
 
           <button
             style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.onSurfaceVariant, padding: '4px' }}
@@ -195,14 +251,61 @@ export default function AdminLayout({
             onClick={() => navigate('/admin/perfil')}
             style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: `1px solid ${T.outlineVariant}30`, cursor: 'pointer' }}
           >
-            <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 500, color: T.onSurface }}>{user?.nombre || 'Admin'}</span>
+            <span className="user-name-label" style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 500, color: T.onSurface }}>{user?.nombre || 'Admin'}</span>
             <img src={user?.foto || "https://i.pravatar.cc/80?img=9"} alt="User" style={{ width: '36px', height: '36px', borderRadius: '9999px', objectFit: 'cover' }} />
           </div>
         </div>
       </header>
 
+      {/* ── BOTTOM NAVIGATION (Mobile Only) ── */}
+      <nav className="admin-bottom-nav" style={{ display: 'none' }}>
+        {filteredNav.slice(0, 5).map(({ icon, label, path, key }) => {
+          const isActive =
+            path === '/admin'
+              ? location.pathname === '/admin'
+              : location.pathname.startsWith(path);
+          
+          // Shorten labels if too long for mobile
+          return (
+            <button
+              key={key}
+              onClick={() => navigate(path)}
+              style={{
+                background: 'none', border: 'none', display: 'flex', flexDirection: 'column', 
+                alignItems: 'center', gap: '4px', cursor: 'pointer',
+                color: isActive ? T.primary : T.onSurfaceVariant,
+                fontFamily: T.fontBody, fontSize: '10px', fontWeight: isActive ? 700 : 500,
+                transition: 'color 0.2s', padding: '8px'
+              }}
+            >
+              <span style={{ fontSize: '20px' }}>{icon}</span>
+              <span style={{ textTransform: 'capitalize' }}>
+                {key === 'settlements' ? 'Pagos' : 
+                 key === 'citas' ? 'Inicio' : 
+                 key === 'calendario' ? 'Agenda' :
+                 key === 'clientes' ? 'Clientes' :
+                 key === 'specialists' ? 'Staff' : label.split(' ')[0]}
+              </span>
+            </button>
+          );
+        })}
+        {/* Profile/Menu as last item in bottom nav if there's space, or just Profile shortcut */}
+        <button
+           onClick={() => navigate('/admin/perfil')}
+           style={{
+             background: 'none', border: 'none', display: 'flex', flexDirection: 'column', 
+             alignItems: 'center', gap: '4px', cursor: 'pointer',
+             color: location.pathname.startsWith('/admin/perfil') ? T.primary : T.onSurfaceVariant,
+             fontFamily: T.fontBody, fontSize: '10px', fontWeight: 500
+           }}
+        >
+           <span style={{ fontSize: '20px' }}>👤</span>
+           <span>Perfil</span>
+        </button>
+      </nav>
+
       {/* ── CONTENT ── */}
-      <main className="admin-main" style={{ marginLeft: '256px', paddingTop: '72px', minHeight: '100vh', flex: 1 }}>
+      <main className="admin-main" style={{ marginLeft: '256px', paddingTop: '72px', minHeight: '100vh', flex: 1, minWidth: 0, overflowX: 'hidden', width: '100%', maxWidth: '100vw' }}>
         {children}
       </main>
     </div>

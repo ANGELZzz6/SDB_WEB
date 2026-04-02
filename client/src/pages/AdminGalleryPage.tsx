@@ -140,19 +140,19 @@ export default function AdminGalleryPage() {
       searchValue={search}
       onSearchChange={setSearch}
     >
-      <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px' }}>
+      <div className="admin-calendar-container" style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <header className="admin-gallery-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary }}>
+            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary, margin: 0 }}>
               Galería Dinámica
             </h1>
-            <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant }}>
+            <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant, margin: 0 }}>
               Administra las fotos y categorías de tu portafolio
             </p>
           </div>
-        </div>
+        </header>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '32px', borderBottom: `1px solid ${T.outlineVariant}40`, paddingBottom: '16px' }}>
@@ -214,7 +214,7 @@ export default function AdminGalleryPage() {
                   + Subir Foto
                 </button>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(250px, 100%), 1fr))', gap: '20px' }}>
                   {filteredItems.map(item => {
                     const catName = typeof item.categoryId === 'string' ? 'Cat' : (item.categoryId as any).name;
                     return (
@@ -249,7 +249,7 @@ export default function AdminGalleryPage() {
       {/* CATEGORY MODAL */}
       {showCategoryModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: T.surface, width: '400px', padding: '32px', borderRadius: '24px' }}>
+          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '400px', padding: '32px', borderRadius: '24px' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '24px' }}>
               {categoryForm.id ? 'Editar Categoría' : 'Nueva Categoría'}
             </h3>
@@ -267,7 +267,7 @@ export default function AdminGalleryPage() {
       {/* ITEM MODAL */}
       {showItemModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: T.surface, width: '400px', padding: '32px', borderRadius: '24px' }}>
+          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '400px', padding: '32px', borderRadius: '24px' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '24px' }}>
               {itemForm.id ? 'Editar Foto' : 'Subir Foto'}
             </h3>

@@ -14,6 +14,7 @@ interface RealClient {
   lastService: string;
   favoriteEmployee: string;
   isActive?: boolean;
+  telefonoDuplicado?: boolean;
 }
 
 const getTier = (visits: number) => {
@@ -86,14 +87,26 @@ export default function AdminClientsPage() {
       searchValue={search}
       onSearchChange={setSearch}
     >
-      <div style={{ padding: '40px 48px 80px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-clients-container { padding: 24px 16px 120px !important; }
+          .admin-clients-header { flex-direction: column; align-items: flex-start !important; gap: 24px; margin-bottom: 24px !important; }
+          .admin-clients-metrics { width: 100% !important; justify-content: flex-start !important; flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: 8px; margin: 0 -16px; padding-left: 16px; }
+          .admin-clients-metrics > div { flex-shrink: 0; min-width: 160px; }
+          .desktop-table { display: none !important; }
+          .mobile-cards { display: block !important; }
+        }
+        .mobile-cards { display: none; }
+      `}</style>
+
+      <div className="admin-clients-container" style={{ padding: '40px 48px 80px' }}>
         {/* Header */}
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px', flexWrap: 'wrap', gap: '16px' }}>
+        <header className="admin-clients-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <span style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: T.primary, display: 'block', marginBottom: '4px' }}>Gestión de</span>
             <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '40px', color: T.onSurface, letterSpacing: '-0.02em', fontWeight: 400 }}>Clientes</h2>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="admin-clients-metrics" style={{ display: 'flex', gap: '12px' }}>
             {[{ label: 'Total Clientes', value: clients.length, c: T.primary }, { label: 'Activos este mes', value: activeThisMonth, c: T.onSecondaryContainer }].map(({ label, value, c }) => (
               <div key={label} style={{ backgroundColor: T.surfaceContainerLow, padding: '12px 20px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: T.onSurfaceVariant }}>{label}</span>
@@ -104,7 +117,7 @@ export default function AdminClientsPage() {
         </header>
 
         {/* Table */}
-        <section style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '16px', boxShadow: '0 12px 40px rgba(62,2,21,0.06)', overflow: 'hidden', marginBottom: '28px' }}>
+        <section className="desktop-table" style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '16px', boxShadow: '0 12px 40px rgba(62,2,21,0.06)', overflow: 'hidden', marginBottom: '28px' }}>
           <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.surfaceContainerLow}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '18px', color: T.onSurface }}>Base de Datos de Clientes</h3>
           </div>
@@ -134,7 +147,6 @@ export default function AdminClientsPage() {
                 ) : (
                   filteredClients.map((c, index) => {
                     const tier = getTier(c.visits);
-                    // Avatar determinístico basado en ID
                     const avatarId = (c.name.length + index) % 70 + 1;
                     return (
                       <tr key={c.id}
@@ -161,7 +173,21 @@ export default function AdminClientsPage() {
                         </td>
                         <td style={{ padding: '18px 24px' }}>
                           {c.email && <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>✉ {c.email}</p>}
-                          <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, marginTop: c.email ? '3px' : '0' }}>📞 {c.phone}</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: c.email ? '3px' : '0' }}>
+                            <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>📞 {c.phone}</p>
+                            {c.telefonoDuplicado && (
+                              <span 
+                                title="Este número de teléfono está asociado a otro cliente diferente."
+                                style={{ 
+                                  fontSize: '10px', backgroundColor: '#fef3c7', color: '#92400e', 
+                                  padding: '2px 8px', borderRadius: '4px', fontWeight: 700,
+                                  border: '1px solid #fde68a'
+                                }}
+                              >
+                                DUPLICADO
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '9999px', backgroundColor: T.surfaceContainer, fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>{c.visits || 0}</span>
@@ -201,6 +227,46 @@ export default function AdminClientsPage() {
           <div style={{ padding: '14px 24px', backgroundColor: `${T.surfaceContainerLow}40`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>Mostrando {filteredClients.length} clientes</p>
           </div>
+        </section>
+
+        {/* MOBILE CARDS */}
+        <section className="mobile-cards">
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>Cargando...</div>
+          ) : filteredClients.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>Sin clientes.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+              {filteredClients.map((c, index) => {
+                const tier = getTier(c.visits);
+                const avatarId = (c.name.length + index) % 70 + 1;
+                return (
+                  <div 
+                    key={c.id} 
+                    onClick={() => navigate(`/admin/clientes/${c.phone}`)}
+                    style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '16px', padding: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: `1px solid ${T.outlineVariant}20` }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      <img src={`https://i.pravatar.cc/60?img=${avatarId}`} alt={c.name} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 700, color: T.onSurface, margin: 0 }}>{c.name}</h4>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 800, color: tier.color, textTransform: 'uppercase' }}>{tier.label}</span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary }}>{c.visits} visitas</span>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: `1px solid ${T.outlineVariant}10`, paddingTop: '12px' }}>
+                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📞 {c.phone}</p>
+                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📅 Última: {c.lastDate ? formatLastDate(c.lastDate) : 'S/I'}</p>
+                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary, fontWeight: 600, margin: 0 }}>👩‍🎨 {c.favoriteEmployee || 'S/I'}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* Insight Cards */}

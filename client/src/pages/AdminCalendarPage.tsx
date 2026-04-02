@@ -27,10 +27,13 @@ export default function AdminCalendarPage() {
   const [selectedApptToComplete, setSelectedApptToComplete] = useState<Appointment | null>(null);
   const [finalPriceInput, setFinalPriceInput] = useState<number>(0);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Fetch data
-  const loadData = async () => {
+  const loadData = async (showLoading = true) => {
     try {
+      if (showLoading) setLoading(true);
+      // No mostrar loading spinner en el polling para no interrumpir
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
@@ -50,11 +53,20 @@ export default function AdminCalendarPage() {
       if (resPend.success) setCitasPendientes(resPend.data || []);
     } catch (e) {
       console.error(e);
+    } finally {
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+    
+    // Polling cada 30 segundos
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [currentDate.getMonth(), currentDate.getFullYear()]);
 
   // Calendar logic
@@ -93,7 +105,7 @@ export default function AdminCalendarPage() {
         ...blockForm
       });
       setShowBlockModal(false);
-      loadData();
+      loadData(false);
       setSelectedDayInfo(null);
     } catch (e: any) {
       alert(e.message || 'Error bloqueando horario');
@@ -104,7 +116,7 @@ export default function AdminCalendarPage() {
     if(!confirm('¿Eliminar este bloqueo?')) return;
     try {
       await blockedSlotService.delete(id);
-      loadData();
+      loadData(false);
       setSelectedDayInfo(null);
     } catch (e) {
       console.error(e);
@@ -145,7 +157,7 @@ export default function AdminCalendarPage() {
       } as any);
       setShowRescheduleModal(false);
       setSelectedDayInfo(null);
-      loadData();
+      loadData(false);
     } catch (e: any) {
       alert(e.message || 'Error reagendando');
     }
@@ -164,7 +176,7 @@ export default function AdminCalendarPage() {
       await appointmentService.complete(selectedApptToComplete._id, { finalPrice: finalPriceInput });
       setShowPriceModal(false);
       setSelectedDayInfo(null);
-      loadData();
+      loadData(false);
     } catch (e: any) {
       alert(e.message || 'Error al completar cita');
     } finally {
@@ -176,10 +188,18 @@ export default function AdminCalendarPage() {
 
   return (
     <AdminLayout searchPlaceholder="Buscar fecha o cita...">
-      <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-calendar-container { padding: 24px 16px 120px !important; }
+          .admin-calendar-header { flex-direction: column; align-items: flex-start !important; gap: 24px; margin-bottom: 24px !important; }
+          .admin-calendar-nav { width: 100% !important; justify-content: space-between !important; }
+          .calendar-scroll-wrapper { overflow-x: auto; padding-bottom: 10px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+          .calendar-matrix { min-width: 800px; }
+        }
+      `}</style>
+      <div className="admin-calendar-container" style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px' }}>
         
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div className="admin-calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary }}>
               Calendario General
@@ -189,7 +209,7 @@ export default function AdminCalendarPage() {
             </p>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: T.surfaceContainerLowest, padding: '8px', borderRadius: '9999px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+          <div className="admin-calendar-nav" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: T.surfaceContainerLowest, padding: '8px', borderRadius: '9999px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
             <button onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
               ←
             </button>
@@ -203,54 +223,64 @@ export default function AdminCalendarPage() {
         </div>
 
         {/* Matrix */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '12px' }}>
-          {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
-            <div key={d} style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 800, color: T.onSurfaceVariant, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              {d}
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
-          {blanks.map((_, i) => <div key={`blank-${i}`} style={{ minHeight: '120px', borderRadius: '16px', backgroundColor: 'transparent' }} />)}
-          
-          {daysThisMonth.map((day, i) => {
-            const iso = formatISO(day);
-            const dayAppts = appointments.filter(a => formatISO(a.date) === iso);
-            const dayBlocks = blockedSlots.filter(b => formatISO(b.date) === iso);
-            
-            const isToday = formatISO(new Date()) === iso;
-
-            return (
-              <div 
-                key={i} 
-                onClick={() => setSelectedDayInfo({ date: day, appts: dayAppts, blocks: dayBlocks })}
-                style={{ 
-                  minHeight: '120px', backgroundColor: T.surfaceContainerLowest, borderRadius: '16px',
-                  padding: '12px', boxSizing: 'border-box', border: isToday ? `2px solid ${T.primary}` : `1px solid ${T.outlineVariant}40`,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)', cursor: 'pointer', display: 'flex', flexDirection: 'column'
-                }}
-              >
-                <div style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: isToday ? 800 : 500, color: isToday ? T.primary : T.onSurface, marginBottom: '8px' }}>
-                  {day.getDate()}
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' }}>
-                  {dayBlocks.map((b, idx) => (
-                    <div key={`blk-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      🚫 {b.isFullDay ? 'DÍA BLOQUEADO' : b.timeSlot}
-                    </div>
-                  ))}
-                  {dayAppts.map((a, idx) => (
-                    <div key={`apt-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: a.status==='cancelled' ? T.surfaceVariant : T.primaryFixed, color: a.status==='cancelled'? T.onSurfaceVariant : T.primary, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: a.status==='cancelled'?'line-through':'none' }}>
-                      {a.timeSlot} {a.clientName}
-                    </div>
-                  ))}
-                </div>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '100px', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>
+            Cargando calendario...
+          </div>
+        ) : (
+          <div className="calendar-scroll-wrapper">
+            <div className="calendar-matrix">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
+                  <div key={d} style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 800, color: T.onSurfaceVariant, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    {d}
+                  </div>
+                ))}
               </div>
-            )
-          })}
-        </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
+              {blanks.map((_, i) => <div key={`blank-${i}`} style={{ minHeight: '120px', borderRadius: '16px', backgroundColor: 'transparent' }} />)}
+              
+              {daysThisMonth.map((day, i) => {
+                const iso = formatISO(day);
+                const dayAppts = appointments.filter(a => formatISO(a.date) === iso);
+                const dayBlocks = blockedSlots.filter(b => formatISO(b.date) === iso);
+                
+                const isToday = formatISO(new Date()) === iso;
+
+                return (
+                  <div 
+                    key={i} 
+                    onClick={() => setSelectedDayInfo({ date: day, appts: dayAppts, blocks: dayBlocks })}
+                    style={{ 
+                      minHeight: '120px', backgroundColor: T.surfaceContainerLowest, borderRadius: '16px',
+                      padding: '12px', boxSizing: 'border-box', border: isToday ? `2px solid ${T.primary}` : `1px solid ${T.outlineVariant}40`,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)', cursor: 'pointer', display: 'flex', flexDirection: 'column'
+                    }}
+                  >
+                    <div style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: isToday ? 800 : 500, color: isToday ? T.primary : T.onSurface, marginBottom: '8px' }}>
+                      {day.getDate()}
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' }}>
+                      {dayBlocks.map((b, idx) => (
+                        <div key={`blk-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          🚫 {b.isFullDay ? 'DÍA BLOQUEADO' : b.timeSlot}
+                        </div>
+                      ))}
+                      {dayAppts.map((a, idx) => (
+                        <div key={`apt-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: a.status==='cancelled' ? T.surfaceVariant : T.primaryFixed, color: a.status==='cancelled'? T.onSurfaceVariant : T.primary, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: a.status==='cancelled'?'line-through':'none' }}>
+                          {a.timeSlot} {a.clientName}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 

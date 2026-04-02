@@ -177,27 +177,32 @@ export default function AdminServicesPage() {
       }
     >
       <style>{`
+        @media (max-width: 768px) {
+          .admin-svc-container { padding: 24px 16px 120px !important; }
+          .admin-svc-header { flex-direction: column; align-items: flex-start !important; gap: 20px; margin-bottom: 24px !important; }
+          .svc-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .admin-svc-modal { padding: 24px !important; width: 95% !important; margin: 20px !important; }
+        }
+
         .svc-card { transition: transform 0.3s, box-shadow 0.3s; }
         .svc-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(62,2,21,0.08) !important; }
         .svc-card:hover .svc-img { transform: scale(1.05); }
         .svc-img { transition: transform 0.5s; }
         .svc-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
           gap: 28px;
         }
-        @media (max-width: 1100px) { .svc-grid { grid-template-columns: repeat(2,1fr); } }
-        @media (max-width: 680px) { .svc-grid { grid-template-columns: 1fr; } }
       `}</style>
 
-      <div style={{ padding: '40px 48px 80px' }}>
+      <div className="admin-svc-container" style={{ padding: '40px 48px 80px' }}>
         {/* Header */}
-        <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+        <section className="admin-svc-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <nav style={{ display: 'flex', gap: '8px', fontFamily: T.fontBody, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: `${T.onSurfaceVariant}65`, marginBottom: '8px' }}>
               <span>Admin</span><span>/</span><span style={{ color: T.primary, fontWeight: 700 }}>Servicios</span>
             </nav>
-            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '40px', color: T.onSurface, letterSpacing: '-0.02em', fontWeight: 700 }}>
+            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(32px, 5vw, 40px)', color: T.onSurface, letterSpacing: '-0.02em', fontWeight: 700 }}>
               Servicios
             </h2>
           </div>
@@ -285,7 +290,7 @@ export default function AdminServicesPage() {
       {/* CRUD Modal */}
       {isModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', outline: 'none' }}>
+          <div className="admin-svc-modal" style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', outline: 'none' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '24px' }}>
               {editingId ? 'Editar Servicio' : 'Nuevo Servicio'}
             </h3>

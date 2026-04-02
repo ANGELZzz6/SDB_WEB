@@ -25,8 +25,8 @@ const T = {
 const wrap: React.CSSProperties = {
   maxWidth: '1280px',
   margin: '0 auto',
-  paddingLeft: '32px',
-  paddingRight: '32px',
+  paddingLeft: '16px',
+  paddingRight: '16px',
   width: '100%',
   boxSizing: 'border-box',
 };
@@ -170,11 +170,14 @@ export default function GalleryPage() {
         .masonry-grid {
           column-count: 1;
           column-gap: 24px;
+          width: 100%;
         }
-        @media (min-width: 640px) { .masonry-grid { column-count: 2; } }
+        @media (min-width: 480px) { .masonry-grid { column-count: 2; } }
         @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
 
         .masonry-item {
+          width: 100%;
+          min-width: 0;
           break-inside: avoid;
           margin-bottom: 24px;
           border-radius: 16px;
@@ -248,7 +251,7 @@ export default function GalleryPage() {
           left: 50%;
           transform: translateX(-50%);
           z-index: 100;
-          width: 90%;
+          width: calc(100% - 32px);
           max-width: 520px;
         }
       `}</style>

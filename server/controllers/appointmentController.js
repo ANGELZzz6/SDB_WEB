@@ -163,6 +163,20 @@ const create = async (req, res, next) => {
       })
     }
 
+    // FIX 5: Rate Limiting (4 citas / 30 min por teléfono)
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const recentApptsCount = await Appointment.countDocuments({
+      clientPhone,
+      createdAt: { $gte: thirtyMinutesAgo }
+    });
+
+    if (recentApptsCount >= 4) {
+      return res.status(429).json({ 
+        success: false, 
+        message: 'Has alcanzado el límite de citas permitidas (4 cada 30 min). Por favor intenta más tarde o contacta al salón directamente.' 
+      });
+    }
+
     const settings = await Settings.getSettings()
 
     // Validar rango máximo de días
@@ -206,20 +220,27 @@ const create = async (req, res, next) => {
 
     // Sincronizar con colección Client (Persistent)
     if (clientPhone) {
-      // Usamos $setOnInsert para NO reactivar si ya existe (el usuario lo pidió)
-      await Client.findOneAndUpdate(
-        { phone: clientPhone },
-        {
-          $setOnInsert: {
-            phone: clientPhone,
-            isActive: true
-          },
-          $set: {
-            ...(clientName && { name: clientName })
-          }
-        },
-        { upsert: true, new: true }
-      )
+      // FIX 4: Manejo de duplicados con mismo teléfono pero diferente nombre
+      const regexName = new RegExp(`^${clientName.trim()}$`, 'i');
+      let client = await Client.findOne({ 
+        phone: clientPhone, 
+        name: { $regex: regexName } 
+      });
+
+      if (!client) {
+        // No existe un cliente con ese nombre y teléfono exactos
+        const phoneExists = await Client.exists({ phone: clientPhone });
+        await Client.create({
+          phone: clientPhone,
+          name: clientName,
+          telefonoDuplicado: !!phoneExists, // Marcar si el teléfono ya lo usa alguien más
+          isActive: true
+        });
+      } else if (!client.isActive) {
+        // Si ya existía pero estaba inactivo, lo reactivamos
+        client.isActive = true;
+        await client.save();
+      }
     }
 
     await appt.populate([

@@ -130,15 +130,27 @@ export default function AdminSettingsPage() {
   return (
     <AdminLayout searchPlaceholder="Buscar ajustes...">
       <style>{`
+        @media (max-width: 768px) {
+          .admin-settings-container { padding: 24px 16px 160px !important; }
+          .admin-settings-header { margin-bottom: 24px !important; }
+          .admin-settings-header h2 { font-size: 32px !important; }
+          .settings-two-col { grid-template-columns: 1fr !important; gap: 20px !important; }
+          .settings-inner-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .settings-social-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .floating-save-bar { bottom: 90px !important; width: 90% !important; padding: 12px 20px !important; gap: 16px !important; flex-direction: column !important; border-radius: 20px !important; left: 5% !important; transform: none !important; margin-left: 0 !important; }
+          .floating-save-bar > div:first-child { display: none; }
+          .floating-save-bar > div:nth-child(2) { display: none; }
+          .floating-save-bar > div:last-child { width: 100%; display: flex; gap: 8px; }
+          .floating-save-bar button { flex: 1; padding: 10px !important; font-size: 11px !important; }
+        }
         .settings-two-col {
           display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
         }
-        @media (max-width: 900px) { .settings-two-col { grid-template-columns: 1fr; } }
       `}</style>
 
-      <div style={{ padding: '40px 48px 140px', maxWidth: '900px' }}>
+      <div className="admin-settings-container" style={{ padding: '40px 48px 140px', maxWidth: '900px' }}>
         {/* Page header */}
-        <div style={{ marginBottom: '40px' }}>
+        <div className="admin-settings-header" style={{ marginBottom: '40px' }}>
           <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '40px', color: T.primary, letterSpacing: '-0.02em', fontWeight: 700, marginBottom: '6px' }}>Configuración</h2>
           <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant }}>Personaliza la experiencia de tu salón y gestiona las reglas de operación.</p>
         </div>
@@ -170,7 +182,7 @@ export default function AdminSettingsPage() {
 
               <div style={{ gridColumn: '1/-1' }}>
                 <FieldLabel>Horarios Generales de Atención</FieldLabel>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '8px' }}>
+                <div className="settings-inner-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '8px' }}>
                    <div>
                       <FieldLabel>Hora Apertura</FieldLabel>
                       <UnderlineInput type="time" value={settings.businessHours.inicio} onChange={(v) => handleNestedChange('businessHours', 'inicio', v)} />
@@ -184,7 +196,7 @@ export default function AdminSettingsPage() {
 
               <div style={{ gridColumn: '1/-1' }}>
                 <FieldLabel>Redes Sociales</FieldLabel>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '8px' }}>
+                <div className="settings-social-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '8px' }}>
                    <div>
                       <FieldLabel>Instagram</FieldLabel>
                       <UnderlineInput value={settings.socialMedia.instagram || ''} onChange={(v) => handleNestedChange('socialMedia', 'instagram', v)} />
@@ -255,7 +267,7 @@ export default function AdminSettingsPage() {
 
       {/* Floating Save Bar */}
       {hasChanges && (
-        <div style={{
+        <div className="floating-save-bar" style={{
           position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
           marginLeft: '40px', zIndex: 60,
           backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',

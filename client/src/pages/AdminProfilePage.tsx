@@ -96,8 +96,18 @@ export default function AdminProfilePage() {
 
   return (
     <AdminLayout>
-      <div style={{ padding: '40px 48px 80px', maxWidth: '800px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '40px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-profile-container { padding: 24px 16px 120px !important; }
+          .admin-profile-header { margin-bottom: 24px !important; text-align: left; }
+          .admin-profile-header h2 { fontSize: 32px !important; }
+          .admin-profile-form-card { padding: 24px !important; border-radius: 16px !important; }
+          .admin-profile-foto-row { flex-direction: column !important; align-items: flex-start !important; gap: 16px !important; }
+          .admin-profile-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+        }
+      `}</style>
+      <div className="admin-profile-container" style={{ padding: '40px 48px 80px', maxWidth: '800px', margin: '0 auto' }}>
+        <header className="admin-profile-header" style={{ marginBottom: '40px' }}>
           <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '40px', color: T.primary, fontWeight: 700 }}>
             Mi Perfil
           </h2>
@@ -106,11 +116,11 @@ export default function AdminProfilePage() {
           </p>
         </header>
 
-        <div style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', padding: '40px', boxShadow: '0 12px 40px rgba(0,0,0,0.05)' }}>
+        <div className="admin-profile-form-card" style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', padding: '40px', boxShadow: '0 12px 40px rgba(0,0,0,0.05)' }}>
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
             {/* Foto Section */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', backgroundColor: T.surfaceContainerLow, padding: '20px', borderRadius: '16px' }}>
+            <div className="admin-profile-foto-row" style={{ display: 'flex', alignItems: 'center', gap: '24px', backgroundColor: T.surfaceContainerLow, padding: '20px', borderRadius: '16px' }}>
               <div style={{ position: 'relative' }}>
                 {formData.foto ? (
                   <img src={formData.foto} alt="Profile" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: `3px solid ${T.surface}` }} />
@@ -131,7 +141,7 @@ export default function AdminProfilePage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="admin-profile-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.onSurfaceVariant, marginBottom: '8px' }}>Nombre Completo</label>
                 <input 

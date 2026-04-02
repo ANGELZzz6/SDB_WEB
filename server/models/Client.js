@@ -4,9 +4,12 @@ const clientSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: true,
-    unique: true,
     index: true,
     trim: true
+  },
+  telefonoDuplicado: {
+    type: Boolean,
+    default: false
   },
   name: {
     type: String,

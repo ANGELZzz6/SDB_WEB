@@ -38,7 +38,13 @@ export default function AdminAccessPage() {
     try {
       setLoading(true);
       const res = await employeeService.getAll(true);
-      if (res.success && res.data) setEmployees(res.data);
+      if (res.success && res.data) {
+        const sorted = (res.data as Employee[]).sort((a, b) => {
+          if (a.isActive === b.isActive) return 0;
+          return a.isActive ? -1 : 1;
+        });
+        setEmployees(sorted);
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -96,10 +102,18 @@ export default function AdminAccessPage() {
 
   return (
     <AdminLayout searchPlaceholder="Buscar especialista...">
-      <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px' }}>
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-access-container { padding: 24px 16px 120px !important; }
+          .admin-access-header { flex-direction: column; align-items: flex-start !important; gap: 16px; margin-bottom: 24px !important; }
+          .admin-access-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .admin-access-modal { padding: 24px !important; width: 95% !important; margin: 10px !important; }
+        }
+      `}</style>
+      <div className="admin-access-container" style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px' }}>
+        <header className="admin-access-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
-            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary }}>
+            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(28px, 5vw, 36px)', color: T.primary, margin: 0 }}>
               Control de Accesos
             </h1>
             <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant }}>
@@ -111,7 +125,7 @@ export default function AdminAccessPage() {
         {loading ? (
           <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant }}>Cargando empleados...</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          <div className="admin-access-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: '20px' }}>
             {employees.map(emp => (
               <div key={emp._id} style={{
                 backgroundColor: T.surfaceContainerLowest,
@@ -158,7 +172,7 @@ export default function AdminAccessPage() {
         {/* MODAL */}
         {showModal && selectedEmp && (
           <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '460px', padding: '32px', borderRadius: '24px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="admin-access-modal" style={{ backgroundColor: T.surface, width: '100%', maxWidth: '460px', padding: '32px', borderRadius: '24px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
               <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px' }}>
                 Accesos para {selectedEmp.nombre}
               </h3>

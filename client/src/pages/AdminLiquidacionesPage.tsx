@@ -90,20 +90,34 @@ export default function AdminLiquidacionesPage() {
 
   return (
     <AdminLayout>
-      <div style={{ padding: '40px 48px 80px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-liq-container { padding: 24px 16px 120px !important; }
+          .admin-liq-header { flex-direction: column; align-items: flex-start !important; gap: 24px; margin-bottom: 32px !important; }
+          .admin-liq-stats { width: 100% !important; justify-content: flex-start !important; gap: 12px !important; }
+          .admin-liq-stats > div { flex: 1; padding: 12px 16px !important; }
+          .admin-liq-select-row { flex-direction: column !important; align-items: flex-start !important; gap: 16px !important; }
+          .admin-liq-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+          .admin-liq-history-aside { position: relative !important; top: 0 !important; }
+          .desktop-table-liq { display: none !important; }
+          .mobile-cards-liq { display: block !important; }
+        }
+        .mobile-cards-liq { display: none; }
+      `}</style>
+      <div className="admin-liq-container" style={{ padding: '40px 48px 80px' }}>
         
         {/* Header & Global Stats */}
-        <header style={{ marginBottom: '48px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '24px' }}>
+        <header className="admin-liq-header" style={{ marginBottom: '48px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '24px' }}>
           <div>
-            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '42px', color: T.onSurface, margin: 0 }}>
+            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(28px, 5vw, 42px)', color: T.onSurface, margin: 0 }}>
               Liquidaciones y Comisiones
             </h1>
-            <p style={{ fontFamily: T.fontBody, fontSize: '16px', color: T.onSurfaceVariant, marginTop: '8px' }}>
+            <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant, marginTop: '8px' }}>
               Gestión contable de las ganancias de especialistas y el salón.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '16px' }}>
+          <div className="admin-liq-stats" style={{ display: 'flex', gap: '16px' }}>
              <div style={{ backgroundColor: T.surfaceContainerLowest, padding: '16px 24px', borderRadius: '20px', border: `1px solid ${T.surfaceContainerLow}`, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
                 <p style={{ fontSize: '10px', fontWeight: 800, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Pagado a Staff</p>
                 <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, margin: 0 }}>
@@ -120,8 +134,8 @@ export default function AdminLiquidacionesPage() {
         </header>
 
         {/* Selection Area */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '40px', alignItems: 'center' }}>
-          <div style={{ flex: 1, maxWidth: '320px' }}>
+        <div className="admin-liq-select-row" style={{ display: 'flex', gap: '20px', marginBottom: '40px', alignItems: 'center' }}>
+          <div style={{ flex: 1, maxWidth: '320px', width: '100%' }}>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant, textTransform: 'uppercase', marginBottom: '8px' }}>Seleccionar Especialista</label>
             <select 
               value={selectedEmpId} 
@@ -135,7 +149,7 @@ export default function AdminLiquidacionesPage() {
             </select>
           </div>
           {selectedEmpId && pendingData && (
-             <div style={{ padding: '14px 24px', backgroundColor: T.primaryFixed, color: T.primary, borderRadius: '16px', marginTop: '24px' }}>
+             <div style={{ padding: '14px 24px', backgroundColor: T.primaryFixed, color: T.primary, borderRadius: '16px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>Comisión Configurada: {pendingData.commissionPercentage}%</span>
              </div>
           )}
@@ -145,11 +159,11 @@ export default function AdminLiquidacionesPage() {
           loading ? (
             <div style={{ textAlign: 'center', padding: '100px', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>Analizando registros...</div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '32px' }}>
+            <div className="admin-liq-grid" style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '32px' }}>
               
               {/* Left Column: Pending Table */}
               <div>
-                <section style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', border: `1px solid ${T.surfaceContainerLow}`, boxShadow: '0 8px 30px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+                <section className="desktop-table-liq" style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '24px', border: `1px solid ${T.surfaceContainerLow}`, boxShadow: '0 8px 30px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
                   <div style={{ padding: '24px 32px', borderBottom: `1px solid ${T.surfaceContainerLow}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.onSurface, margin: 0 }}>Citas Pendientes de Liquidar</h3>
                     <span style={{ backgroundColor: T.onSurface + '10', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>{pendingData?.appointments.length || 0} Sesiones</span>
@@ -192,23 +206,49 @@ export default function AdminLiquidacionesPage() {
                         <p style={{ fontSize: '32px', fontFamily: T.fontHeadline, fontStyle: 'italic', margin: 0, color: T.primary, fontWeight: 800 }}>${(pendingData?.totalCommission || 0).toLocaleString()}</p>
                      </div>
                   </div>
-                  
-                  {pendingData && pendingData.appointments.length > 0 && (
-                    <div style={{ padding: '24px 32px', textAlign: 'center' }}>
-                       <button 
-                         onClick={handleCreateSettlement}
-                         disabled={isLiquidating}
-                         style={{ width: '100%', padding: '18px', backgroundColor: T.primary, color: 'white', border: 'none', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em', cursor: 'pointer', boxShadow: '0 8px 24px rgba(148,69,85,0.2)' }}
-                       >
-                         {isLiquidating ? 'PROCESANDO...' : 'GENERAR LIQUIDACIÓN Y MARCAR COMO PAGADO'}
-                       </button>
-                    </div>
-                  )}
                 </section>
+
+                <section className="mobile-cards-liq">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {pendingData?.appointments.map((a: any) => (
+                      <div key={a._id} style={{ backgroundColor: T.surfaceContainerLowest, padding: '16px', borderRadius: '16px', border: `1px solid ${T.outlineVariant}20` }}>
+                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: T.onSurface }}>{new Date(a.date).toLocaleDateString()}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 800, color: T.primary }}>${(a.finalPrice || a.priceSnapshot || 0).toLocaleString()}</span>
+                         </div>
+                         <p style={{ fontSize: '14px', color: T.onSurfaceVariant, margin: 0 }}>{a.serviceName || a.service?.nombre}</p>
+                      </div>
+                    ))}
+                    {pendingData && pendingData.appointments.length > 0 && (
+                      <div style={{ padding: '20px', backgroundColor: T.primary + '10', borderRadius: '16px', border: `1px solid ${T.primary}20` }}>
+                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: T.onSurfaceVariant }}>BRUTO:</span>
+                            <span style={{ fontSize: '13px', fontWeight: 700 }}>${pendingData.totalRevenue.toLocaleString()}</span>
+                         </div>
+                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: T.primary }}>COMISIÓN:</span>
+                            <span style={{ fontSize: '18px', fontWeight: 800, color: T.primary }}>${pendingData.totalCommission.toLocaleString()}</span>
+                         </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {pendingData && pendingData.appointments.length > 0 && (
+                  <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                     <button 
+                       onClick={handleCreateSettlement}
+                       disabled={isLiquidating}
+                       style={{ width: '100%', padding: '18px', backgroundColor: T.primary, color: 'white', border: 'none', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 800, fontSize: '14px', letterSpacing: '0.05em', cursor: 'pointer', boxShadow: '0 8px 24px rgba(148,69,85,0.2)' }}
+                     >
+                       {isLiquidating ? 'PROCESANDO...' : 'GENERAR LIQUIDACIÓN'}
+                     </button>
+                  </div>
+                )}
               </div>
 
               {/* Right Column: History */}
-              <aside>
+              <aside className="admin-liq-history-aside">
                 <div style={{ position: 'sticky', top: '100px' }}>
                    <h4 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, marginBottom: '20px' }}>Historial del Especialista</h4>
                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
