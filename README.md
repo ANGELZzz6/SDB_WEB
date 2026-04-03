@@ -1,182 +1,101 @@
-# [NOMBRE_SALON] — Sistema de Agendamiento
+# L'Élixir Salon — Sistema de Agendamiento & CMS
 
-Sistema de agendamiento de citas para salón de belleza colombiano.
-**Dirección:** Carrera 102 #70-50 | **Horario:** 6:00am - 9:00pm
+Plataforma integral de gestión para salones de belleza de alta gama, con motor de agendamiento inteligente y personalización dinámica de marca.
+**Dirección:** Carrera 102 #70-50 | **Atención:** Gestionada vía CMS
 
 ---
 
-## Stack
+## Stack Técnico
 
 | Capa | Tecnología |
 |------|-----------|
 | Frontend | React + TypeScript + Tailwind CSS (Vite) |
+| Branding | Motor de inyección de variables CSS dinámicas |
 | Backend | Node.js + Express |
-| Base de datos | MongoDB Atlas |
-| Auth | JWT (admin y empleadas) |
-| Imágenes | Cloudinary |
-| Frontend deploy | Vercel |
-| Backend deploy | Render |
+| Base de Datos | MongoDB Atlas |
+| Auth | PBAC (Permission-Based Access Control) |
+| Imágenes | Cloudinary (Widget Integrado) |
 
 ---
 
 ## Setup Inicial
-
-### Prerrequisitos
-- Node.js >= 18
-- Cuenta en [MongoDB Atlas](https://cloud.mongodb.com) (free tier M0)
-- Cuenta en [Cloudinary](https://cloudinary.com) (free tier)
 
 ### 1. Clonar y configurar variables de entorno
 
 ```bash
 # Configurar servidor
 cp server/.env.example server/.env
-# → Editar server/.env con tu MONGODB_URI, JWT_SECRET, Cloudinary keys
+# → Editar server/.env con MONGODB_URI, JWT_SECRET, CLOUDINARY_KEYS
 
 # Configurar cliente
 cp client/.env.example client/.env
-# → Editar client/.env con tu VITE_CLOUDINARY_CLOUD_NAME
+# → Editar client/.env con VITE_API_URL
 ```
 
-### 2. Instalar dependencias
+### 2. Instalación e Inicio
 
 ```bash
-# Instalar deps del servidor
-cd server
-npm install
+# Servidor (Puerto 5000)
+cd server && npm install && npm run dev
 
-# Instalar deps del cliente
-cd ../client
-npm install
-```
-
-### 3. Iniciar en desarrollo
-
-**Backend** (puerto 5000):
-```bash
-cd server
-npm run dev
-```
-
-**Frontend** (puerto 5173):
-```bash
-cd client
-npm run dev
-```
-
-### 4. Verificar que todo funciona
-
-```
-GET http://localhost:5000/api/health
-→ { "success": true, "message": "Servidor funcionando correctamente" }
-
-Frontend: http://localhost:5173
+# Cliente (Puerto 5173)
+cd client && npm install && npm run dev
 ```
 
 ---
 
-## Estructura de Carpetas
+## Estructura de Carpetas Clave
 
 ```
 salon-app/
-├── client/                  ← React + TypeScript + Tailwind
-│   └── src/
-│       ├── pages/
-│       │   ├── LandingPage.tsx     ← Módulo 1 (pendiente)
-│       │   ├── ChatbotPage.tsx     ← Módulo 2 (pendiente)
-│       │   └── AdminPanel.tsx      ← Módulo 3 (pendiente)
-│       ├── components/             ← Componentes reutilizables
-│       ├── services/
-│       │   └── api.ts              ← Cliente HTTP base
-│       └── types/
-│           └── index.ts            ← Tipos TypeScript globales
+├── client/src/
+│   ├── pages/
+│   │   ├── LandingPage.tsx        ← Sitio Público (Dinámico)
+│   │   ├── ChatbotPage.tsx        ← Reservas Automatizadas
+│   │   ├── AdminPage.tsx          ← Dashboard Operativo
+│   │   └── AdminSettingsPage.tsx  ← CMS Visual y PBAC
+│   └── services/api.ts            ← Cliente de API (Axios)
 │
-├── server/                  ← Node.js + Express
-│   ├── config/
-│   │   └── db.js                   ← Conexión MongoDB Atlas
+├── server/
 │   ├── models/
-│   │   ├── Employee.js
-│   │   ├── Service.js
-│   │   ├── Appointment.js
-│   │   ├── BlockedSlot.js
-│   │   └── Settings.js
-│   ├── controllers/               ← Lógica de negocio (pendiente)
-│   ├── routes/
-│   │   ├── employees.js
-│   │   ├── services.js
-│   │   ├── appointments.js
-│   │   ├── blockedSlots.js
-│   │   ├── settings.js
-│   │   └── auth.js
-│   ├── middleware/
-│   │   ├── auth.js                ← JWT + roles
-│   │   └── errorHandler.js        ← Manejador global de errores
-│   └── server.js                  ← Punto de entrada
-│
-├── AGENT.md                        ← Contexto del proyecto para el agente
-└── README.md
+│   │   ├── SiteConfig.js          ← Configuración de Marca (Singleton)
+│   │   ├── Client.js              ← CRM & BI Metrics
+│   │   └── Appointment.js         ← Gestión de Citas
+│   ├── controllers/
+│   │   └── siteConfigController.js ← Lógica de Personalización
+│   └── middleware/
+│       ├── auth.js                ← JWT Validation
+│       └── checkPermission.js     ← PBAC Middleware
 ```
 
 ---
 
-## API Endpoints (Scaffold)
+## API Endpoints Principales
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/api/health` | Health check del servidor |
-| POST | `/api/auth/login` | Login admin/empleada |
-| GET | `/api/auth/me` | Usuario actual |
-| GET | `/api/employees` | Listar empleadas |
-| POST | `/api/employees` | Crear empleada |
-| GET | `/api/services` | Listar servicios |
-| POST | `/api/services` | Crear servicio |
-| GET | `/api/appointments` | Listar citas |
-| POST | `/api/appointments` | Crear cita (público) |
-| GET | `/api/appointments/available-slots` | Slots disponibles |
-| GET | `/api/blocked-slots` | Listar slots bloqueados |
-| POST | `/api/blocked-slots` | Bloquear slot |
-| GET | `/api/settings` | Configuración del negocio |
-| PUT | `/api/settings` | Actualizar configuración |
+| GET | `/api/config` | Obtener configuración de marca (Público) |
+| PUT | `/api/config` | Actualizar CMS Visual (Admin) |
+| GET | `/api/appointments/available-slots` | Motor de disponibilidad |
+| GET | `/api/clients/:phone` | Detalle analítico CRM |
+| POST | `/api/auth/login` | Autenticación PBAC |
 
 ---
 
-## Módulos de Desarrollo
+## Estado de Módulos
 
-Prioridad según AGENT.md:
-
-1. **Módulo 1 — Landing Page** → `client/src/pages/LandingPage.tsx`
-   - Hero, servicios, empleadas, galería, contacto
-
-2. **Módulo 2 — Chatbot de Agendamiento** → `client/src/pages/ChatbotPage.tsx`
-   - Flujo por botones: Empleada → Servicio → Día → Hora → Datos → Confirmación
-
-3. **Módulo 3 — Panel Admin** → `client/src/pages/AdminPanel.tsx`
-   - Roles: admin (total) + empleada (sus citas)
-
----
-
-## CORS
-
-- **Development:** `http://localhost:5173`
-- **Production:** `FRONTEND_URL` del `.env` (dominio de Vercel)
-
-La configuración es dinámica según `NODE_ENV`.
+- [x] **Módulo 1 — Landing Page**: 100% dinámico y personalizable.
+- [x] **Módulo 2 — Chatbot**: Flujo de reserva con validación de slots en tiempo real.
+- [x] **Módulo 3 — Panel Admin**: Gestión completa de citas, clientes (BI), servicios y especialistas.
+- [x] **Módulo 4 — CMS Visual**: Personalización de colores, textos e imágenes desde la web.
 
 ---
 
 ## Deploy
 
-```
-Frontend  → Vercel   (npm run build → dist/)
-Backend   → Render   (npm start)
-DB        → MongoDB Atlas (M0 free, 512MB)
-Imágenes  → Cloudinary (25GB free)
-```
-
-**Variables de entorno en Render:**
-Copiar todas las de `server/.env.example` y completar con valores reales.
-
-**Variables de entorno en Vercel:**
+- **Frontend**: Vercel
+- **Backend**: Render
+- **Imágenes**: Cloudinary
 Copiar las de `client/.env.example` y completar.
 
 ---

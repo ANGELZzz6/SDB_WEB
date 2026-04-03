@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
-import { settingsService } from '../services/api';
-import type { Settings } from '../types';
+import { settingsService, siteConfigService } from '../services/api';
+import type { Settings, SiteConfig } from '../types';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cmsTab, setCmsTab] = useState<'negocio' | 'redes' | 'textos' | 'imagenes' | 'colores'>('negocio');
   
   const [settings, setSettings] = useState<Settings>({
     _id: '',
@@ -20,17 +21,49 @@ export default function AdminSettingsPage() {
     socialMedia: { instagram: '', facebook: '', tiktok: '' }
   });
 
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>({
+    nombreSalon: '',
+    telefono: '',
+    whatsapp: '',
+    direccion: '',
+    horario: '',
+    instagram: '',
+    facebook: '',
+    whatsappLink: '',
+    heroTitulo: '',
+    heroSubtitulo: '',
+    heroBotonTexto: '',
+    seccionServiciosTitulo: '',
+    seccionEspecialistasTitulo: '',
+    footerTexto: '',
+    colorPrimario: '#944555',
+    colorSecundario: '#3e0215',
+    colorAcento: '#fdf8f9',
+    heroImagenUrl: '',
+    fondoImagenUrl: ''
+  });
+
   const [hasChanges, setHasChanges] = useState(false);
+  const [hasCmsChanges, setHasCmsChanges] = useState(false);
   const [originalSettings, setOriginalSettings] = useState<Settings | null>(null);
+  const [originalCms, setOriginalCms] = useState<SiteConfig | null>(null);
 
   useEffect(() => {
-    const fetchSettings = async () => {
+    const fetchAll = async () => {
       try {
         setLoading(true);
-        const res = await settingsService.get();
-        if (res.success && res.data) {
-          setSettings(res.data);
-          setOriginalSettings(res.data);
+        const [resSettings, resConfig] = await Promise.all([
+          settingsService.get(),
+          siteConfigService.get()
+        ]);
+
+        if (resSettings.success && resSettings.data) {
+          setSettings(resSettings.data);
+          setOriginalSettings(resSettings.data);
+        }
+        if (resConfig.success && resConfig.data) {
+          setSiteConfig(resConfig.data);
+          setOriginalCms(resConfig.data);
         }
       } catch (error) {
         console.error(error);
@@ -38,12 +71,17 @@ export default function AdminSettingsPage() {
         setLoading(false);
       }
     };
-    fetchSettings();
+    fetchAll();
   }, []);
 
   const handleChange = (field: keyof Settings, value: any) => {
     setSettings(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
+  };
+
+  const handleCmsChange = (field: keyof SiteConfig, value: any) => {
+    setSiteConfig(prev => ({ ...prev, [field]: value }));
+    setHasCmsChanges(true);
   };
 
   const handleNestedChange = (parent: 'businessHours' | 'socialMedia', field: string, value: any) => {
@@ -60,16 +98,41 @@ export default function AdminSettingsPage() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const res = await settingsService.update(settings);
-      if (res.success && res.data) {
-        setSettings(res.data);
-        setOriginalSettings(res.data);
+      const promises = [];
+      
+      if (hasChanges) {
+        promises.push(settingsService.update(settings));
+      }
+      if (hasCmsChanges) {
+        promises.push(siteConfigService.update(siteConfig));
+      }
+
+      const results = await Promise.all(promises);
+      
+      // Check if all were successful
+      const allSuccess = results.every(r => r.success);
+      if (allSuccess) {
+        if (hasChanges) {
+          const res = results[0]; // First one if both changed
+          if (res.data) {
+            setSettings(res.data as Settings);
+            setOriginalSettings(res.data as Settings);
+          }
+        }
+        if (hasCmsChanges) {
+          const res = hasChanges ? results[1] : results[0];
+          if (res.data) {
+            setSiteConfig(res.data as SiteConfig);
+            setOriginalCms(res.data as SiteConfig);
+          }
+        }
         setHasChanges(false);
-        alert('Ajustes guardados correctamente');
+        setHasCmsChanges(false);
+        alert('Cambios guardados correctamente');
       }
     } catch (error) {
       console.error(error);
-      alert('Error al guardar ajustes');
+      alert('Error al guardar cambios');
     } finally {
       setSaving(false);
     }
@@ -79,6 +142,10 @@ export default function AdminSettingsPage() {
     if (originalSettings) {
       setSettings(originalSettings);
       setHasChanges(false);
+    }
+    if (originalCms) {
+      setSiteConfig(originalCms);
+      setHasCmsChanges(false);
     }
   };
 
@@ -101,11 +168,12 @@ export default function AdminSettingsPage() {
     </label>
   );
 
-  const UnderlineInput = ({ value, onChange, type = "text" }: { value: string | number, onChange: (v: string) => void, type?: string }) => (
+  const UnderlineInput = ({ value, onChange, type = "text", placeholder = "" }: { value: string | number, onChange: (v: string) => void, type?: string, placeholder?: string }) => (
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
       style={{
         width: '100%', backgroundColor: 'transparent', border: 'none',
         borderBottom: `1px solid ${T.outlineVariant}40`, padding: '8px 0',
@@ -116,6 +184,44 @@ export default function AdminSettingsPage() {
       onBlur={(e) => (e.currentTarget.style.borderBottomColor = `${T.outlineVariant}40`)}
     />
   );
+
+  const UnderlineTextarea = ({ value, onChange, rows = 3 }: { value: string, onChange: (v: string) => void, rows?: number }) => (
+    <textarea
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={rows}
+      style={{
+        width: '100%', backgroundColor: 'transparent', border: 'none',
+        borderBottom: `1px solid ${T.outlineVariant}40`, padding: '8px 0',
+        fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface,
+        transition: 'border-color 0.2s', resize: 'none'
+      }}
+      onFocus={(e) => (e.currentTarget.style.borderBottomColor = T.primary)}
+      onBlur={(e) => (e.currentTarget.style.borderBottomColor = `${T.outlineVariant}40`)}
+    />
+  );
+
+  const openCloudinary = (field: 'heroImagenUrl' | 'fondoImagenUrl') => {
+    if (!(window as any).cloudinary) {
+      alert('Cloudinary widget is not loaded yet. Please wait.');
+      return;
+    }
+    const myWidget = (window as any).cloudinary.createUploadWidget(
+      {
+        cloudName: 'dz1gbtqnc',
+        apiKey: '512765153651593',
+        uploadPreset: 'salon_uploads',
+        sources: ['local', 'camera', 'url'],
+        multiple: false
+      },
+      (error: any, result: any) => {
+        if (!error && result && result.event === "success") {
+          handleCmsChange(field, result.info.secure_url);
+        }
+      }
+    );
+    myWidget.open();
+  };
 
   if (loading) {
     return (
@@ -137,6 +243,7 @@ export default function AdminSettingsPage() {
           .settings-two-col { grid-template-columns: 1fr !important; gap: 20px !important; }
           .settings-inner-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
           .settings-social-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+          .cms-tabs-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
           .floating-save-bar { bottom: 90px !important; width: 90% !important; padding: 12px 20px !important; gap: 16px !important; flex-direction: column !important; border-radius: 20px !important; left: 5% !important; transform: none !important; margin-left: 0 !important; }
           .floating-save-bar > div:first-child { display: none; }
           .floating-save-bar > div:nth-child(2) { display: none; }
@@ -262,11 +369,184 @@ export default function AdminSettingsPage() {
               </div>
             </SectionCard>
           </div>
+
+          {/* CMS SECTION — PERSONALIZACIÓN */}
+          <SectionCard style={{ marginTop: '16px' }}>
+            <SectionTitle icon="🎨" title="Personalización del Sitio" />
+            
+            {/* CMS Tabs */}
+            <div className="cms-tabs-container" style={{ display: 'flex', gap: '8px', marginBottom: '32px', borderBottom: `1px solid ${T.outlineVariant}20`, paddingBottom: '12px' }}>
+              {[
+                { id: 'negocio', label: 'Negocio', icon: '🏢' },
+                { id: 'redes', label: 'Redes', icon: '📱' },
+                { id: 'textos', label: 'Textos Landing', icon: '✍️' },
+                { id: 'imagenes', label: 'Imágenes', icon: '🖼️' },
+                { id: 'colores', label: 'Colores', icon: '✨' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setCmsTab(tab.id as any)}
+                  className="whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold shrink-0"
+                  style={{
+                    border: 'none',
+                    backgroundColor: cmsTab === tab.id ? T.primary : 'transparent',
+                    color: cmsTab === tab.id ? 'white' : T.onSurfaceVariant,
+                    fontFamily: T.fontBody,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>{tab.icon}</span> {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="settings-inner-grid">
+              
+              {/* TAB 1: NEGOCIO */}
+              {cmsTab === 'negocio' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                  <div>
+                    <FieldLabel>Nombre Comercial</FieldLabel>
+                    <UnderlineInput value={siteConfig.nombreSalon} onChange={(v) => handleCmsChange('nombreSalon', v)} />
+                  </div>
+                  <div>
+                    <FieldLabel>Teléfono Público</FieldLabel>
+                    <UnderlineInput value={siteConfig.telefono} onChange={(v) => handleCmsChange('telefono', v)} />
+                  </div>
+                  <div>
+                    <FieldLabel>WhatsApp (Solo números)</FieldLabel>
+                    <UnderlineInput value={siteConfig.whatsapp} onChange={(v) => handleCmsChange('whatsapp', v)} />
+                  </div>
+                  <div>
+                    <FieldLabel>Dirección Física</FieldLabel>
+                    <UnderlineInput value={siteConfig.direccion} onChange={(v) => handleCmsChange('direccion', v)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldLabel>Horario de Atención (Texto)</FieldLabel>
+                    <UnderlineTextarea value={siteConfig.horario} onChange={(v) => handleCmsChange('horario', v)} rows={2} />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: REDES */}
+              {cmsTab === 'redes' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                  <div>
+                    <FieldLabel>Instagram (@handle)</FieldLabel>
+                    <UnderlineInput value={siteConfig.instagram} onChange={(v) => handleCmsChange('instagram', v)} />
+                  </div>
+                  <div>
+                    <FieldLabel>Facebook (Handle o URL)</FieldLabel>
+                    <UnderlineInput value={siteConfig.facebook} onChange={(v) => handleCmsChange('facebook', v)} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <FieldLabel>Link Directo WhatsApp (Opcional)</FieldLabel>
+                    <UnderlineInput value={siteConfig.whatsappLink} onChange={(v) => handleCmsChange('whatsappLink', v)} placeholder="https://wa.me/..." />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: TEXTOS LANDING */}
+              {cmsTab === 'textos' && (
+                <div className="grid grid-cols-1 gap-6 w-full">
+                  <div>
+                    <FieldLabel>Título Principal (Hero)</FieldLabel>
+                    <UnderlineInput value={siteConfig.heroTitulo} onChange={(v) => handleCmsChange('heroTitulo', v)} />
+                  </div>
+                  <div>
+                    <FieldLabel>Subtítulo (Hero)</FieldLabel>
+                    <UnderlineTextarea value={siteConfig.heroSubtitulo} onChange={(v) => handleCmsChange('heroSubtitulo', v)} rows={2} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <FieldLabel>Texto Botón Hero</FieldLabel>
+                      <UnderlineInput value={siteConfig.heroBotonTexto} onChange={(v) => handleCmsChange('heroBotonTexto', v)} />
+                    </div>
+                    <div>
+                      <FieldLabel>Título Sección Servicios</FieldLabel>
+                      <UnderlineInput value={siteConfig.seccionServiciosTitulo} onChange={(v) => handleCmsChange('seccionServiciosTitulo', v)} />
+                    </div>
+                  </div>
+                  <div>
+                    <FieldLabel>Título Sección Especialistas</FieldLabel>
+                    <UnderlineInput value={siteConfig.seccionEspecialistasTitulo} onChange={(v) => handleCmsChange('seccionEspecialistasTitulo', v)} />
+                  </div>
+                  <div>
+                    <FieldLabel>Texto Footer / Copyright</FieldLabel>
+                    <UnderlineTextarea value={siteConfig.footerTexto} onChange={(v) => handleCmsChange('footerTexto', v)} rows={2} />
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 4: IMÁGENES */}
+              {cmsTab === 'imagenes' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+                  <div>
+                    <FieldLabel>Imagen Hero (Principal)</FieldLabel>
+                    <div style={{ position: 'relative', height: '180px', borderRadius: '12px', overflow: 'hidden', backgroundColor: T.surfaceContainerHighest, marginBottom: '12px' }}>
+                      {siteConfig.heroImagenUrl ? (
+                        <img src={siteConfig.heroImagenUrl} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin imagen</div>
+                      )}
+                    </div>
+                    <button onClick={() => openCloudinary('heroImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                      {siteConfig.heroImagenUrl ? 'Reemplazar Hero' : 'Subir Hero'}
+                    </button>
+                  </div>
+                  <div>
+                    <FieldLabel>Imagen Fondo / Textura</FieldLabel>
+                    <div style={{ position: 'relative', height: '180px', borderRadius: '12px', overflow: 'hidden', backgroundColor: T.surfaceContainerHighest, marginBottom: '12px' }}>
+                      {siteConfig.fondoImagenUrl ? (
+                        <img src={siteConfig.fondoImagenUrl} alt="Fondo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin imagen</div>
+                      )}
+                    </div>
+                    <button onClick={() => openCloudinary('fondoImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                      {siteConfig.fondoImagenUrl ? 'Reemplazar Fondo' : 'Subir Fondo'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 5: COLORES */}
+              {cmsTab === 'colores' && (
+                <div className="w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                    <div>
+                      <FieldLabel>Color Primario</FieldLabel>
+                      <input type="color" value={siteConfig.colorPrimario} onChange={(e) => handleCmsChange('colorPrimario', e.target.value)} style={{ width: '100%', height: '44px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}40`, padding: '2px', cursor: 'pointer' }} />
+                    </div>
+                    <div>
+                      <FieldLabel>Color Secundario</FieldLabel>
+                      <input type="color" value={siteConfig.colorSecundario} onChange={(e) => handleCmsChange('colorSecundario', e.target.value)} style={{ width: '100%', height: '44px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}40`, padding: '2px', cursor: 'pointer' }} />
+                    </div>
+                    <div>
+                      <FieldLabel>Color Acento</FieldLabel>
+                      <input type="color" value={siteConfig.colorAcento} onChange={(e) => handleCmsChange('colorAcento', e.target.value)} style={{ width: '100%', height: '44px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}40`, padding: '2px', cursor: 'pointer' }} />
+                    </div>
+                  </div>
+
+                  <FieldLabel>Vista previa de marca</FieldLabel>
+                  <div style={{ padding: '24px', borderRadius: '16px', backgroundColor: siteConfig.colorAcento, border: `1px solid ${T.outlineVariant}20`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                     <h4 style={{ color: siteConfig.colorSecundario, fontFamily: T.fontHeadline, fontSize: '24px', margin: 0 }}>{siteConfig.nombreSalon}</h4>
+                     <button style={{ backgroundColor: siteConfig.colorPrimario, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700 }}>{siteConfig.heroBotonTexto}</button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </SectionCard>
         </div>
       </div>
 
       {/* Floating Save Bar */}
-      {hasChanges && (
+      {(hasChanges || hasCmsChanges) && (
         <div className="floating-save-bar" style={{
           position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)',
           marginLeft: '40px', zIndex: 60,
@@ -289,7 +569,7 @@ export default function AdminSettingsPage() {
             }}
               onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
               onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            >{saving ? 'Guardando...' : 'Guardar Ajustes'}</button>
+            >{saving ? 'Guardando...' : 'Guardar Cambios'}</button>
           </div>
         </div>
       )}

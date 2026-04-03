@@ -474,6 +474,28 @@ export default function AdminPage() {
                             <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface }}>{appt.duration}</p>
                           </div>
                           <span className="shrink-0 hidden sm:inline-block" style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '6px 14px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
+                          
+                          {(appt.status === 'Confirmada' || appt.status === 'Pendiente') && (
+                            <a
+                              href={`https://wa.me/${appt.clientPhone.replace(/\D/g, '').startsWith('57') ? appt.clientPhone.replace(/\D/g, '') : `57${appt.clientPhone.replace(/\D/g, '')}`}?text=${encodeURIComponent(`Hola ${appt.client} 👋, te escribimos desde L'Élixir Salon. ¡Tenemos un espacio disponible ahora mismo! ¿Puedes pasar antes de tu cita de las ${appt.time}? Te esperamos 💅`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                backgroundColor: '#25D366', color: 'white',
+                                padding: '6px 14px', borderRadius: '9999px',
+                                fontFamily: T.fontBody, fontSize: '11px', fontWeight: 800,
+                                textTransform: 'uppercase', letterSpacing: '0.1em',
+                                textDecoration: 'none', whiteSpace: 'nowrap',
+                                transition: 'opacity 0.2s'
+                              }}
+                              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                            >
+                              📲 Llamar
+                            </a>
+                          )}
+
                           {appt.status === 'Confirmada' && (
                             <button
                               onClick={() => handleComplete(appt.id)}

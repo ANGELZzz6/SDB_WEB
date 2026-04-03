@@ -65,6 +65,7 @@ app.use('/api/gallery',      require('./routes/gallery'))
 app.use('/api/auth',         require('./routes/auth'))
 app.use('/api/clients',      require('./routes/clients'))
 app.use('/api/settlements',  require('./routes/settlementRoutes'))
+app.use('/api/config',       require('./routes/siteConfigRoutes'))
 
 // Health check
 app.get('/api/health', (req, res) => {

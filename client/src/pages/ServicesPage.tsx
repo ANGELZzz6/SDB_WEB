@@ -1,8 +1,8 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { serviceService } from '../services/api';
-import type { Service } from '../types';
+import { serviceService, siteConfigService } from '../services/api';
+import type { Service, SiteConfig } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -10,17 +10,17 @@ import type { Service } from '../types';
 const T = {
   fontHeadline: "'Noto Serif', serif",
   fontBody: "'Plus Jakarta Sans', sans-serif",
-  primary: '#944555',
+  primary: 'var(--color-primary, #944555)',
   primaryContainer: '#e8899a',
   primaryFixed: '#ffd9de',
   primaryFixedDim: '#ffb2be',
   onPrimary: '#ffffff',
-  surface: '#fdf8f5',
+  surface: 'var(--color-accent, #fdf8f5)',
   surfaceContainerLow: '#f8f3f0',
   surfaceContainerLowest: '#ffffff',
   surfaceContainer: '#f2edea',
   surfaceContainerHigh: '#ece7e4',
-  onSurface: '#1c1b1a',
+  onSurface: 'var(--color-secondary, #1c1b1a)',
   onSurfaceVariant: '#534245',
   outlineVariant: '#d9c1c3',
 };
@@ -45,8 +45,20 @@ export default function ServicesPage() {
   const location = useLocation();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
 
   useEffect(() => {
+    // Cargar configuración CMS
+    siteConfigService.get().then(res => {
+      if (res.success && res.data) {
+        setConfig(res.data);
+        // Inyectar colores dinámicos
+        document.documentElement.style.setProperty('--color-primary', res.data.colorPrimario);
+        document.documentElement.style.setProperty('--color-secondary', res.data.colorSecundario);
+        document.documentElement.style.setProperty('--color-accent', res.data.colorAcento);
+      }
+    });
+
     serviceService.getAll().then(res => {
       if (res.success && res.data) {
         setServices(res.data.filter((s:any) => s.isActive));
@@ -156,7 +168,7 @@ export default function ServicesPage() {
             onClick={() => navigate('/')}
             style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none' }}
           >
-            Beauty Salon
+            {config?.nombreSalon || "L'Élixir Salon"}
           </span>
 
           <div className="nav-links" style={{ alignItems: 'center', gap: '32px' }}>
@@ -228,7 +240,7 @@ export default function ServicesPage() {
               lineHeight: 1.1, letterSpacing: '-0.03em',
               fontWeight: 400,
             }}>
-              Rituales de Belleza
+              {config?.seccionServiciosTitulo || "Rituales de Belleza"}
             </h1>
             <div style={{ width: '96px', height: '1px', backgroundColor: `${T.outlineVariant}60`, margin: '32px auto 0' }} />
           </header>
@@ -431,14 +443,20 @@ export default function ServicesPage() {
       <footer style={{ backgroundColor: T.surfaceContainer, paddingTop: '64px', paddingBottom: '32px' }}>
         <div style={{ ...wrap, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center' }}>
           <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primary }}>
-            Beauty Salon de Belleza
+            {config?.nombreSalon || "L'Élixir Salon"}
           </span>
 
           <div className="footer-links">
-            {['Instagram', 'WhatsApp', 'Contacto', 'Privacidad'].map((link) => (
+            {[
+              { label: 'Instagram', url: config?.instagram ? `https://instagram.com/${config.instagram.replace('@', '')}` : '#' },
+              { label: 'Facebook', url: config?.facebook ? (config.facebook.startsWith('http') ? config.facebook : `https://facebook.com/${config.facebook}`) : '#' },
+              { label: 'WhatsApp', url: config?.whatsappLink || `https://wa.me/57${config?.whatsapp.replace(/\D/g, '') || "3000000000"}` },
+            ].map((link) => (
               <a
-                key={link}
-                href="#"
+                key={link.label}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   fontFamily: T.fontBody, fontSize: '11px', fontWeight: 500,
                   textTransform: 'uppercase', letterSpacing: '0.15em',
@@ -448,7 +466,7 @@ export default function ServicesPage() {
                 onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.4')}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.8')}
               >
-                {link}
+                {link.label}
               </a>
             ))}
           </div>
@@ -456,7 +474,7 @@ export default function ServicesPage() {
           <div style={{ width: '100%', height: '1px', backgroundColor: `${T.outlineVariant}30`, margin: '8px 0' }} />
 
           <p style={{ fontFamily: T.fontBody, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}80` }}>
-            © {new Date().getFullYear()} Beauty Salon. El Arte de Cuidarte.
+            {config?.footerTexto || `© ${new Date().getFullYear()} L'Élixir Salon. El Arte de Cuidarte.`}
           </p>
         </div>
       </footer>

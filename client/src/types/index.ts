@@ -89,6 +89,29 @@ export interface Settings {
   }
 }
 
+export interface SiteConfig {
+  _id?: string
+  nombreSalon: string
+  telefono: string
+  whatsapp: string
+  direccion: string
+  horario: string
+  instagram: string
+  facebook: string
+  whatsappLink: string
+  heroTitulo: string
+  heroSubtitulo: string
+  heroBotonTexto: string
+  seccionServiciosTitulo: string
+  seccionEspecialistasTitulo: string
+  footerTexto: string
+  colorPrimario: string
+  colorSecundario: string
+  colorAcento: string
+  heroImagenUrl: string
+  fondoImagenUrl: string
+}
+
 // Respuesta genérica de la API
 export interface ApiResponse<T> {
   success: boolean

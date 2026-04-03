@@ -6,7 +6,8 @@ import type {
   Settings, 
   ApiResponse,
   GalleryCategory,
-  GalleryItem
+  GalleryItem,
+  SiteConfig
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -202,4 +203,9 @@ export const settlementService = {
   create: (data: any) => api.post<ApiResponse<any>>('/settlements', data),
   getHistory: (specialistId: string) => api.get<ApiResponse<any[]>>(`/settlements/history/${specialistId}`),
   getStats: () => api.get<ApiResponse<any>>('/settlements/stats'),
+};
+
+export const siteConfigService = {
+  get: () => api.get<ApiResponse<SiteConfig>>('/config'),
+  update: (data: Partial<SiteConfig>) => api.put<ApiResponse<SiteConfig>>('/config', data),
 };

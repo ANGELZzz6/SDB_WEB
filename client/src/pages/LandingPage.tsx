@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { serviceService, galleryService, employeeService } from '../services/api';
-import type { Employee, Service } from '../types';
+import { serviceService, galleryService, employeeService, siteConfigService } from '../services/api';
+import type { Employee, Service, SiteConfig } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -10,14 +10,14 @@ import type { Employee, Service } from '../types';
 const T = {
   fontHeadline: "'Noto Serif', serif",
   fontBody: "'Plus Jakarta Sans', sans-serif",
-  primary: '#944555',
+  primary: 'var(--color-primary, #944555)',
   primaryContainer: '#e8899a',
   primaryFixed: '#ffd9de',
   onPrimary: '#ffffff',
-  surface: '#fdf8f5',
+  surface: 'var(--color-accent, #fdf8f5)',
   surfaceContainerLow: '#f8f3f0',
   surfaceContainerLowest: '#ffffff',
-  onSurface: '#1c1b1a',
+  onSurface: 'var(--color-secondary, #1c1b1a)',
   onSurfaceVariant: '#534245',
   outlineVariant: '#d9c1c3',
 };
@@ -46,11 +46,6 @@ const wrap: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-const desktopWrap: React.CSSProperties = {
-  ...wrap,
-  paddingLeft: '32px',
-  paddingRight: '32px',
-};
 
 /* ─────────────────────────────────────────────────
    LANDING PAGE
@@ -61,8 +56,20 @@ export default function LandingPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [gallery, setGallery] = useState<string[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
 
   useEffect(() => {
+    // Cargar configuración CMS
+    siteConfigService.get().then(res => {
+      if (res.success && res.data) {
+        setConfig(res.data);
+        // Inyectar colores dinámicos
+        document.documentElement.style.setProperty('--color-primary', res.data.colorPrimario);
+        document.documentElement.style.setProperty('--color-secondary', res.data.colorSecundario);
+        document.documentElement.style.setProperty('--color-accent', res.data.colorAcento);
+      }
+    });
+
     serviceService.getAll().then(res => {
       if (res.success && res.data) {
         setServices(res.data.filter((s:any) => s.isActive).slice(0, 6));
@@ -270,7 +277,7 @@ export default function LandingPage() {
             onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setIsMenuOpen(false); }}
             style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none', letterSpacing: '-0.01em' }}
           >
-            L'Élixir Salon
+            {config?.nombreSalon || "L'Élixir Salon"}
           </span>
 
           {/* Nav links (Desktop) */}
@@ -344,11 +351,18 @@ export default function LandingPage() {
       {/* ══════════════════════════════
           2. HERO
       ══════════════════════════════ */}
-      <section
-        id="inicio"
-        className="hero-bg"
-        style={{ minHeight: '100vh', position: 'relative', overflow: 'hidden' }}
-      >
+        <section
+          id="inicio"
+          className="hero-bg"
+          style={{ 
+            minHeight: '100vh', 
+            position: 'relative', 
+            overflow: 'hidden',
+            backgroundImage: config?.fondoImagenUrl ? `url(${config.fondoImagenUrl})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        >
         {/* Floating ambient blobs */}
         <div className="hero-bg-blob" style={{ position: 'absolute', top: '25%', right: '-80px', width: '384px', height: '384px', backgroundColor: '#ffd9de', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
         <div className="hero-bg-blob" style={{ position: 'absolute', bottom: '25%', left: '-80px', width: '320px', height: '320px', backgroundColor: '#ece7e4', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
@@ -380,15 +394,15 @@ export default function LandingPage() {
                 lineHeight: 1.05,
                 letterSpacing: '-0.03em',
               }}>
-                Tu belleza,<br />
-                <span style={{ color: T.primary }}>nuestra pasión</span>
+                {config?.heroTitulo.split(',')[0]}<br />
+                <span style={{ color: T.primary }}>{config?.heroTitulo.split(',')[1] || config?.heroTitulo}</span>
               </h1>
 
               <p style={{
                 fontFamily: T.fontBody, fontSize: '18px', fontWeight: 300,
                 color: T.onSurfaceVariant, maxWidth: '460px', lineHeight: 1.8,
               }}>
-                Un espacio diseñado para resaltar tu luz propia con servicios de lujo y atención personalizada. Cada detalle pensado para tu bienestar.
+                {config?.heroSubtitulo || "Un espacio diseñado para resaltar tu luz propia con servicios de lujo y atención personalizada. Cada detalle pensado para tu bienestar."}
               </p>
 
               {/* CTAs */}
@@ -408,7 +422,7 @@ export default function LandingPage() {
                   onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 28px 60px rgba(148,69,85,0.30)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 20px 50px rgba(148,69,85,0.20)'; }}
                 >
-                  Agendar Cita
+                  {config?.heroBotonTexto || "Agendar Cita"}
                 </button>
                 <button
                   onClick={() => document.getElementById('servicios')?.scrollIntoView({ behavior: 'smooth' })}
@@ -450,8 +464,8 @@ export default function LandingPage() {
               {/* Main image */}
               <div style={{ width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', boxShadow: `0 40px 80px rgba(148,69,85,0.12)` }}>
                 <img
-                  src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=700&h=875&fit=crop"
-                  alt="Salón de belleza de lujo"
+                  src={config?.heroImagenUrl || "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=700&h=875&fit=crop"}
+                  alt={config?.nombreSalon || "Salón de belleza de lujo"}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
                 {/* Glassmorphism badge on image */}
@@ -519,7 +533,7 @@ export default function LandingPage() {
             {/* Left: Section intro */}
             <div className="essence-left">
               <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(36px, 4vw, 48px)', color: T.onSurface, lineHeight: 1.15, letterSpacing: '-0.02em' }}>
-                Nuestros<br /><span style={{ color: T.primary }}>Servicios</span>
+                {config?.seccionServiciosTitulo || "Nuestros Servicios"}
               </h2>
               <div style={{ width: '48px', height: '1px', backgroundColor: T.primary, margin: '24px 0 28px' }} />
               <p style={{ fontFamily: T.fontBody, fontSize: '16px', color: T.onSurfaceVariant, lineHeight: 1.8 }}>
@@ -600,7 +614,7 @@ export default function LandingPage() {
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <p style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: T.primaryContainer, marginBottom: '12px' }}>El Equipo</p>
             <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(36px, 4vw, 48px)', color: T.onSurface, letterSpacing: '-0.02em' }}>
-              Conoce a Nuestras <span style={{ color: T.primary }}>Especialistas</span>
+              {config?.seccionEspecialistasTitulo || "Conoce a Nuestras Especialistas"}
             </h2>
           </div>
 
@@ -737,7 +751,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <p style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.45)', marginBottom: '6px' }}>Ubicación</p>
-                  <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#FFFFFF' }}>Carrera 102 #70-50, Bogotá</p>
+                  <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#FFFFFF' }}>{config?.direccion || "Carrera 102 #70-50, Bogotá"}</p>
                 </div>
               </div>
 
@@ -747,8 +761,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <p style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.45)', marginBottom: '6px' }}>Horario</p>
-                  <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#FFFFFF' }}>Lunes a Domingo</p>
-                  <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '18px', color: T.primaryContainer }}>6:00 AM – 9:00 PM</p>
+                  <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#FFFFFF' }}>{config?.horario || "Lunes a Domingo 6:00 AM – 9:00 PM"}</p>
                 </div>
               </div>
             </div>
@@ -759,7 +772,7 @@ export default function LandingPage() {
                 Escríbenos por WhatsApp y te agendamos al instante. Atención personalizada todos los días.
               </p>
               <a
-                href="https://wa.me/573000000000"
+                href={config?.whatsappLink || `https://wa.me/57${config?.whatsapp.replace(/\D/g, '') || "3000000000"}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -793,18 +806,24 @@ export default function LandingPage() {
         <div style={wrap}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center' }}>
 
-            <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primaryContainer }}>Beauty Salon de Belleza</span>
+            <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primaryContainer }}>{config?.nombreSalon || "L'Élixir Salon"}</span>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px' }}>
-              {['Instagram', 'WhatsApp', 'Contacto'].map((link) => (
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '24px' }}>
+              {[
+                { label: 'Instagram', url: config?.instagram ? `https://instagram.com/${config.instagram.replace('@', '')}` : '#' },
+                { label: 'Facebook', url: config?.facebook ? (config.facebook.startsWith('http') ? config.facebook : `https://facebook.com/${config.facebook}`) : '#' },
+                { label: 'WhatsApp', url: config?.whatsappLink || `https://wa.me/57${config?.whatsapp.replace(/\D/g, '') || "3000000000"}` },
+              ].map((link) => (
                 <a
-                  key={link}
-                  href="#"
+                  key={link.label}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ fontFamily: T.fontBody, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.45)', textDecoration: 'none', transition: 'opacity 0.3s' }}
                   onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '1')}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.6')}
                 >
-                  {link}
+                  {link.label}
                 </a>
               ))}
             </div>
@@ -812,7 +831,7 @@ export default function LandingPage() {
             <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.06)', margin: '8px 0' }} />
 
             <p style={{ fontFamily: T.fontBody, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.3)' }}>
-              © {new Date().getFullYear()} Beauty Salon. El Arte de Cuidarte.
+              {config?.footerTexto || `© ${new Date().getFullYear()} L'Élixir Salon. El Arte de Cuidarte.`}
             </p>
           </div>
         </div>
@@ -829,7 +848,7 @@ export default function LandingPage() {
             <p style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant }}>
               Atención hoy
             </p>
-            <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.primary, fontWeight: 600 }}>6:00 AM – 9:00 PM</p>
+            <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.primary, fontWeight: 600 }}>{config?.horario || "6:00 AM – 9:00 PM"}</p>
           </div>
         </div>
         <button

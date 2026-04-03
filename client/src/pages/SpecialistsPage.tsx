@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { employeeService } from '../services/api';
-import type { Employee } from '../types';
+import { employeeService, siteConfigService } from '../services/api';
+import type { Employee, SiteConfig } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -9,16 +9,16 @@ import type { Employee } from '../types';
 const T = {
   fontHeadline: "'Noto Serif', serif",
   fontBody: "'Plus Jakarta Sans', sans-serif",
-  primary: '#944555',
+  primary: 'var(--color-primary, #944555)',
   primaryContainer: '#e8899a',
   primaryFixed: '#ffd9de',
   primaryFixedDim: '#ffb2be',
   onPrimary: '#ffffff',
-  surface: '#fdf8f5',
+  surface: 'var(--color-accent, #fdf8f5)',
   surfaceContainerLow: '#f8f3f0',
   surfaceContainerLowest: '#ffffff',
   surfaceContainer: '#f2edea',
-  onSurface: '#1c1b1a',
+  onSurface: 'var(--color-secondary, #1c1b1a)',
   onSurfaceVariant: '#534245',
   outlineVariant: '#d9c1c3',
   onSecondaryContainer: '#7a532e',
@@ -36,7 +36,7 @@ const wrap: React.CSSProperties = {
 /* ─────────────────────────────────────────────────
    Shared Navbar
  ───────────────────────────────────────────────── */
-function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigate>; location: ReturnType<typeof useLocation> }) {
+function Navbar({ navigate, location, config }: { navigate: ReturnType<typeof useNavigate>; location: ReturnType<typeof useLocation>; config: SiteConfig | null }) {
   const links = [
     { label: 'Servicios', path: '/servicios' },
     { label: 'Especialistas', path: '/especialistas' },
@@ -51,7 +51,7 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
     }}>
       <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}>
         <span onClick={() => navigate('/')} style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none' }}>
-          Beauty Salon
+          {config?.nombreSalon || "L'Élixir Salon"}
         </span>
         <div className="nav-links" style={{ alignItems: 'center', gap: '40px' }}>
           {links.map(({ label, path }) => {
@@ -93,22 +93,26 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
 /* ─────────────────────────────────────────────────
    Shared Footer
  ───────────────────────────────────────────────── */
-function Footer() {
+function Footer({ config }: { config: SiteConfig | null }) {
   return (
     <footer style={{ backgroundColor: T.surfaceContainer, paddingTop: '64px', paddingBottom: '32px' }}>
       <div style={{ ...wrap, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center' }}>
-        <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primary }}>Beauty Salon de Belleza</span>
+        <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primary }}>{config?.nombreSalon || "L'Élixir Salon"}</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px' }}>
-          {['Instagram', 'WhatsApp', 'Contacto', 'Privacidad'].map((l) => (
-            <a key={l} href="#" style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, textDecoration: 'none', opacity: 0.8, transition: 'opacity 0.3s' }}
+          {[
+            { label: 'Instagram', url: config?.instagram ? `https://instagram.com/${config.instagram.replace('@', '')}` : '#' },
+            { label: 'Facebook', url: config?.facebook ? (config.facebook.startsWith('http') ? config.facebook : `https://facebook.com/${config.facebook}`) : '#' },
+            { label: 'WhatsApp', url: config?.whatsappLink || `https://wa.me/57${config?.whatsapp.replace(/\D/g, '') || "3000000000"}` },
+          ].map((link) => (
+            <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, textDecoration: 'none', opacity: 0.8, transition: 'opacity 0.3s' }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.4')}
               onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.8')}
-            >{l}</a>
+            >{link.label}</a>
           ))}
         </div>
         <div style={{ width: '100%', height: '1px', backgroundColor: `${T.outlineVariant}30`, margin: '8px 0' }} />
         <p style={{ fontFamily: T.fontBody, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}80` }}>
-          © {new Date().getFullYear()} Beauty Salon. El Arte de Cuidarte.
+          {config?.footerTexto || `© ${new Date().getFullYear()} L'Élixir Salon. El Arte de Cuidarte.`}
         </p>
       </div>
     </footer>
@@ -123,8 +127,20 @@ export default function SpecialistsPage() {
   const location = useLocation();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<SiteConfig | null>(null);
 
   useEffect(() => {
+    // Cargar configuración CMS
+    siteConfigService.get().then(res => {
+      if (res.success && res.data) {
+        setConfig(res.data);
+        // Inyectar colores dinámicos
+        document.documentElement.style.setProperty('--color-primary', res.data.colorPrimario);
+        document.documentElement.style.setProperty('--color-secondary', res.data.colorSecundario);
+        document.documentElement.style.setProperty('--color-accent', res.data.colorAcento);
+      }
+    });
+
     employeeService.getAll().then(res => {
       if (res.success && res.data) {
         setEmployees(res.data.filter((e:any) => e.isActive));
@@ -210,7 +226,7 @@ export default function SpecialistsPage() {
         }
       `}</style>
 
-      <Navbar navigate={navigate} location={location} />
+      <Navbar navigate={navigate} location={location} config={config} />
 
       <main style={{ paddingTop: '128px', paddingBottom: '128px' }}>
         <div style={wrap}>
@@ -221,7 +237,7 @@ export default function SpecialistsPage() {
               Nuestro Equipo
             </span>
             <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(40px, 6vw, 56px)', color: T.onSurface, lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: '20px', fontWeight: 400 }}>
-              Manos que Transforman
+              {config?.seccionEspecialistasTitulo || "Conoce a Nuestras Especialistas"}
             </h1>
             <p style={{ fontFamily: T.fontBody, fontSize: '17px', color: T.onSurfaceVariant, lineHeight: 1.8, fontWeight: 300 }}>
               Cada tratamiento es ejecutado por artistas apasionadas que entienden que la belleza es un ritual personal y único.
@@ -328,7 +344,7 @@ export default function SpecialistsPage() {
         </div>
       </main>
 
-      <Footer />
+      <Footer config={config} />
 
       {/* Floating Booking Bar */}
       <div className="floating-bar">
