@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken')
 const Employee = require('../models/Employee')
 
 // ─── Helper: generar JWT ────────────────────────────────────────────────────
-const signToken = (id, role) =>
-  jwt.sign({ id, role }, process.env.JWT_SECRET, {
+const signToken = (id, role, tokenVersion = 0, type = 'normal') =>
+  jwt.sign({ id, role, tokenVersion, type }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   })
 
@@ -40,12 +40,19 @@ const login = async (req, res, next) => {
         : password === adminPass
 
       if (isAdminUser && isValidPassword) {
-        const token = signToken('admin', 'admin')
+        // Marcamos el token como tipo 'virtual' para el admin
+        const token = signToken('admin', 'admin', 0, 'virtual')
         return res.json({
           success: true,
           data: {
             token,
-            user: { id: 'admin', role: 'admin', nombre: 'Administrador' },
+            user: { 
+              id: 'virtual-admin', 
+              role: 'admin', 
+              nombre: process.env.ADMIN_NOMBRE || 'Administradora',
+              email: process.env.ADMIN_EMAIL || '',
+              isVirtual: true
+            },
           },
         })
       }
@@ -54,7 +61,7 @@ const login = async (req, res, next) => {
       if (role === 'admin') {
         return res.status(401).json({
           success: false,
-          message: 'Credenciales de administrador incorrectas',
+          message: 'Credenciales incorrectas',
         })
       }
     }
@@ -67,7 +74,7 @@ const login = async (req, res, next) => {
         { email: { $regex: new RegExp(`^${identifier}$`, 'i') } }
       ],
       isActive: true,
-    }).select('+password')
+    }).select('+password +tokenVersion')
 
     if (!employee) {
       return res.status(401).json({
@@ -79,7 +86,7 @@ const login = async (req, res, next) => {
     if (!employee.password) {
       return res.status(401).json({
         success: false,
-        message: 'Esta empleada no tiene contraseña configurada',
+        message: 'Credenciales incorrectas',
       })
     }
 
@@ -91,7 +98,7 @@ const login = async (req, res, next) => {
       })
     }
 
-    const token = signToken(employee._id, 'empleada')
+    const token = signToken(employee._id, 'empleada', employee.tokenVersion || 0)
     return res.json({
       success: true,
       data: {
@@ -115,23 +122,33 @@ const login = async (req, res, next) => {
 // ─── GET /api/auth/me ────────────────────────────────────────────────────────
 const me = async (req, res, next) => {
   try {
-    // req.user ya viene hydrated por el middleware authMiddleware
-    if (req.user.role === 'admin') {
-      return res.json({
+    // 1. Prioridad: Detectar admin virtual ANTES de cualquier consulta a la DB
+    if (req.user.role === 'admin' || req.user.id === 'admin' || req.user.id === 'virtual-admin') {
+      return res.status(200).json({
         success: true,
-        data: { id: 'admin', role: 'admin', nombre: 'Administrador', email: process.env.ADMIN_EMAIL || '' },
-      })
+        data: {
+          id: 'admin',
+          role: 'admin',
+          nombre: process.env.ADMIN_NOMBRE || 'Administradora',
+          email: process.env.ADMIN_EMAIL || '',
+          permissions: {},
+          isActive: true,
+          isVirtual: true
+        }
+      });
     }
 
-    const employee = await Employee.findById(req.user.id).select('-password')
+    // 2. Flujo normal para empleadas (buscar en DB)
+    const employee = await Employee.findById(req.user.id).select('nombre email foto disponibleHoy permissions isActive');
+
     if (!employee || !employee.isActive) {
       return res.status(404).json({
         success: false,
-        message: 'Empleada no encontrada o inactiva',
-      })
+        message: 'Usuario no encontrado o inactivo',
+      });
     }
 
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
         id:          employee._id,
@@ -141,17 +158,26 @@ const me = async (req, res, next) => {
         foto:        employee.foto,
         disponibleHoy: employee.disponibleHoy,
         permissions: employee.permissions || {},
+        isActive:    true,
+        isVirtual:   false
       },
-    })
+    });
   } catch (error) {
     next(error)
   }
 }
 
 // ─── POST /api/auth/logout ───────────────────────────────────────────────────
-// JWT es stateless; el cliente borra el token. Aquí sólo confirmamos.
-const logout = (_req, res) => {
-  res.json({ success: true, message: 'Sesión cerrada correctamente' })
+// Bloquea el token actual incrementando la versión en la DB (solo para especialistas)
+const logout = async (req, res, next) => {
+  try {
+    if (req.user && req.user.role === 'empleada') {
+      await Employee.findByIdAndUpdate(req.user.id, { $inc: { tokenVersion: 1 } })
+    }
+    res.json({ success: true, message: 'Sesión cerrada correctamente' })
+  } catch (error) {
+    next(error)
+  }
 }
 
 // ─── POST /api/auth/create-employee-account ─────────────────────────────────

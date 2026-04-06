@@ -1,81 +1,78 @@
 # 📖 Sistema de Gestión L'Élixir - Master Context & Business Logic
 
-Este documento sirve como transferencia de contexto técnico y de negocio. Detalla la arquitectura actual, las reglas de persistencia, el motor de Business Intelligence (BI) y el sistema de personalización dinámica.
+Este documento es la única fuente de verdad (SSOT) del proyecto. Consolida el contexto de negocio, arquitectura técnica, sistema de diseño y reglas críticas.
 
 ---
 
-## 🏗️ 1. Arquitectura de Seguridad (PBAC)
+## 🏗️ 1. Arquitectura y Stack Tecnológico
 
-Hemos migrado de un sistema basado en roles fijos a uno de **Control de Acceso Basado en Permisos (PBAC)** dinámico.
+- **Frontend**: React 18 + TypeScript + Tailwind CSS (v4).
+- **Backend**: Node.js + Express.
+- **Base de Datos**: MongoDB Atlas (Mongoose).
+- **Multimedia**: Cloudinary (Imágenes de empleados y galería).
+- **Seguridad (PBAC)**: Control de acceso basado en permisos dinámicos + JWT.
+- **Notificaciones**: WhatsApp Business (via API o librerías bridge).
 
-- **Middlewares Críticos**:
-    - `authMiddleware.js`: Convierte el JWT en un objeto `req.user`. Si el usuario es una "empleada", hace una query en tiempo real a la colección `Employee` para obtener sus `permissions`.
-    - `checkPermission.js`: Valida si el módulo solicitado (ej: `'clientes'`, `'servicios'`) está activo en el objeto de permisos del usuario. Los administradores tienen un bypass total.
-- **Estructura de Permisos**:
-  `{ citas: bool, clientes: bool, servicios: bool, especialistas: bool, galeria: bool, configuracion: bool, liquidaciones: bool }`
-
----
-
-## 👤 2. Gestión de Clientes y CRM
-
-El sistema utiliza un modelo de persistencia híbrido para garantizar integridad histórica y facilidad de uso.
-
-### A. Colección `Client` vs `Appointments`
-- Históricamente, los clientes se derivaban de las citas.
-- **Estado Actual**: Existe una colección `Client` que actúa como fuente de verdad para el estado de activación (`isActive`).
-- **Sincronización Automática**: Al crear una cita, el `appointmentController` intenta registrar al cliente usando `findOneAndUpdate` con `$setOnInsert`. Esto asegura que si un cliente fue desactivado manualmente, no se reactive solo por agendar una nueva cita.
+### Estructura de Seguridad
+- `authMiddleware.js`: Intercepta el token. Si es Rol `'admin'`, otorga bypass. Si es `'empleada'`, carga permisos desde la DB.
+- **Virtual Admin**: Existe una cuenta "maestra" virtual (no está en la DB de empleados) que se intercepta en el backend (`authController.js`) comparando el ID o el Rol `'admin'`. Esto previene errores de "Cast to ObjectId" en la base de datos.
+- **Persistencia de Sesión**: Los especialistas tienen un `tokenVersion` para invalidar sesiones antiguas (cierre de sesión dinámico).
 
 ---
 
-## 📊 3. Motor de Business Intelligence (BI)
+## 👤 2. Modelos de Datos y Business Intelligence
 
-Transforma datos operativos en indicadores estratégicos.
+### Core Entities
+- **Employee**: Gestiona perfil, especialidades, horario personalizado y permisos. 
+    - *Regla*: `isActive` es obligatorio para login.
+- **Service**: Servicios con duración (minutos), precio y empleados asignados.
+- **Appointment**: Citas con `priceSnapshot` (precio capturado al agendar) y `endTime` calculado.
+- **Client**: Colección CRM que rastrea `ltv` (lifetime value), frecuencia de visitas y riesgos de deserción.
 
-### A. Integridad Financiera (`priceSnapshot`)
-- El modelo `Appointment` incluye un campo `priceSnapshot` que captura el precio en el momento de la reserva.
-
-### B. Métricas de Retención (Smart Risk)
-- **Frecuencia (`visitFrequency`)**: Calculada históricamente.
-- **Detección de Riesgo (`isAtRisk`)**: Activada si `días_desde_última_visita > (frecuencia_habitual * 2)`.
-
----
-
-## 📅 4. Motor de Agendamiento y Disponibilidad
-
-### A. Capa de Disponibilidad Proactiva (`disponibleHoy`)
-- Los especialistas pueden activar/desactivar su agenda diaria manualmente, afectando al chatbot en tiempo real.
-
-### B. Sistema de Bloqueos Inteligentes (`BlockedSlot`)
-- Soporta bloqueos globales y por especialista con motivos (reasons) visibles para el cliente.
+### Motor de BI & CRM
+- **Sincronización Automática**: Al completar una cita, se actualizan las métricas del cliente en la colección `Client`.
+- **Price Integrity**: Siempre usar `priceSnapshot` para reportes financieros, ignorando cambios posteriores en el precio del servicio base.
 
 ---
 
-## 🎨 5. CMS Visual y Motor de Branding Dinámico
+## 🎨 3. Sistema de Diseño (The Ethereal Editor)
 
-Implementado para permitir cambios de identidad visual sin intervención técnica.
+El diseño busca una estética premium, minimalista y botánica (colores palo de rosa y cafés cálidos).
 
-### A. Modelo Singleton `SiteConfig`
-- Solo existe un documento en la colección `siteconfigs` (gestión vía `findOne/findOneAndUpdate`).
-- Almacena: Horarios, Redes Sociales, Textos de Marketing y URLs de imágenes (Cloudinary).
+### Tokens de Color (Muestra)
+| Token | Hex | Uso |
+|---|---|---|
+| `primary` | `#944555` | Acentos, botones, marca |
+| `surface` | `#FDF8F5` | Fondo crema cálido (Base) |
+| `secondary` | `#7D5630` | Íconos, elementos táctiles |
+| `on-surface` | `#1C1B1A` | Texto principal (No usar #000) |
 
-### B. Inyección de Branding (CSS Variables)
-- El sistema utiliza variables CSS (`--color-primary`, etc.) inyectadas dinámicamente en el `:root` desde el frontend al cargar la app.
-- El panel administrativo permite una previsualización en tiempo real del branding antes de persistir los cambios.
-
----
-
-## 📂 6. Archivos Clave para el Futuro Agente
-
-- **Personalización (CMS)**: `server/models/SiteConfig.js`, `server/controllers/siteConfigController.js`.
-- **Lógica CRM/BI**: `server/controllers/clientController.js`.
-- **Sincronización**: `server/controllers/appointmentController.js`.
-- **Disponibilidad**: `server/controllers/availabilityController.js`.
-- **Modelos**: `server/models/Client.js`, `server/models/Appointment.js`, `server/models/BlockedSlot.js`, `server/models/SiteConfig.js`.
-- **Seguridad**: `server/middleware/auth.js`, `server/middleware/checkPermission.js`.
-- **Frontend Core**: `client/src/App.tsx`, `client/src/lib/adminTokens.ts`.
-- **Frontend CMS**: `client/src/pages/AdminSettingsPage.tsx` (Sección Personalización).
+### Tipografía
+- **Headlines**: `Noto Serif` (Google Fonts). Uso de *italic* para énfasis elegante.
+- **Body/Actions**: `Plus Jakarta Sans`.
 
 ---
 
-> [!NOTE]
-> Este sistema está diseñado para ser modular. Cualquier lógica nueva de automatización debe basarse en las métricas de `visitFrequency` y el motor de branding dinámico implementado.
+## 📅 4. Lógica de Agendamiento y Disponibilidad
+
+### Reglas Críticas
+1. **Buffer**: Espacio configurable entre citas (default 10min).
+2. **Disponibilidad Proactiva**: El flag `disponibleHoy` en `Employee` puede cerrar la agenda instantáneamente si el especialista lo decide.
+3. **Bloqueos**: Los `BlockedSlot` pueden ser totales (día completo) o parciales (hora específica).
+4. **Validación de Slots**: El backend calcula slots disponibles restando `Citas Existentes + Duración Servicio + Buffer + Bloqueos`.
+
+---
+
+## 🛠️ 5. Mantenimiento y Herramientas
+
+- **Pruebas**: Usar `server/test-backend.js` para validación integral de endpoints (Auth, CRUD, Flujos).
+- **CMS**: La colección `siteconfigs` (Singleton) gestiona horarios globales, mensajes de confirmación y RRSS.
+- **Documentación Redundante**: Se han eliminado `AGENT.md` y `DESIGN.md` en favor de este documento.
+
+---
+
+> [!IMPORTANT]
+> **Seguridad Médula**: Nunca realices un `findById` sobre un usuario sin validar primero si es el administrador virtual (`req.user.id === 'admin'`). En consultas de empleados, siempre incluir `isActive` en el `.select()` para evitar errores de validación de estado.
+
+> [!TIP]
+> Para depurar el flujo de autenticación, revisa `server/controllers/authController.js` método `me`.

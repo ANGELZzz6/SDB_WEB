@@ -146,6 +146,109 @@ const getOne = async (req, res, next) => {
   }
 }
 
+// ─── POST /api/appointments/bulk ──────────────────────────────────────────────
+// Crea múltiples citas de forma atómica (lógica dry-run)
+const createBulk = async (req, res, next) => {
+  try {
+    const { clientName, clientPhone, clientEmail, appointments, notes } = req.body
+    
+    if (!appointments || !Array.isArray(appointments) || appointments.length === 0) {
+      return res.status(400).json({ success: false, message: 'Se requiere una lista de citas' })
+    }
+    
+    // Normalizar teléfono
+    const normalizedPhone = normalizePhone(clientPhone || '')
+    if (!normalizedPhone) {
+      return res.status(400).json({ success: false, message: 'Teléfono celular requerido' })
+    }
+
+    // 1. Limitar número de citas recientes (Spam protection)
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const recentApptsCount = await Appointment.countDocuments({
+      clientPhone: normalizedPhone,
+      createdAt: { $gte: thirtyMinutesAgo }
+    });
+    if (recentApptsCount + appointments.length > 5) {
+      return res.status(429).json({ 
+        success: false, 
+        message: 'Límite de citas excedido (máx 4 cada 30 min). No puedes agendar tantas citas a la vez.' 
+      });
+    }
+
+    // 2. Validación de traslapes intra-petición (Mismo cliente, mismo día, servicios que se cruzan)
+    const dailySlots = {}; // { "YYYY-MM-DD": [ {start, end, serviceName} ] }
+    
+    // 3. Dry-Run: Validar disponibilidad de cada slot individualmente
+    const preparedData = [];
+    const bulkId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+    const settings = await Settings.getSettings();
+
+    for (const item of appointments) {
+      const { employee, service, date, timeSlot } = item;
+      
+      let svc;
+      try {
+        svc = await checkSlotAvailable(employee, service, date, timeSlot);
+      } catch (err) {
+        return res.status(409).json({ 
+          success: false, 
+          message: `El servicio "${item.serviceName || 'seleccionado'}" ya no está disponible a las ${timeSlot}. Error: ${err.message}` 
+        });
+      }
+
+      // Validar traslape del propio cliente en su "carrito"
+      const startMin = timeToMinutes(timeSlot);
+      const endMin = startMin + svc.duracion;
+      const dateKey = date.slice(0, 10);
+      
+      if (!dailySlots[dateKey]) dailySlots[dateKey] = [];
+      for (const existing of dailySlots[dateKey]) {
+        if (startMin < existing.end && endMin > existing.start) {
+          return res.status(400).json({ 
+            success: false, 
+            message: `Tus servicios "${existing.serviceName}" y "${svc.nombre}" se cruzan en el horario. Por favor sepáralos.` 
+          });
+        }
+      }
+      dailySlots[dateKey].push({ start: startMin, end: endMin, serviceName: svc.nombre });
+
+      preparedData.push({
+        clientName, clientPhone: normalizedPhone, clientEmail,
+        employee, service,
+        date: dateOnly(new Date(date)),
+        timeSlot, endTime: minutesToTime(endMin),
+        notes, bulkId,
+        status: 'pending',
+        priceSnapshot: svc.precio || 0
+      });
+    }
+
+    // 4. Inserción masiva (Si llegamos aquí, el dry-run fue exitoso)
+    const createdAppointments = await Appointment.insertMany(preparedData);
+    
+    // 5. Registro de cliente persistente (usamos la info del primero)
+    const regexName = new RegExp(`^${clientName.trim()}$`, 'i');
+    const existingClient = await Client.findOne({ phone: normalizedPhone, name: { $regex: regexName } });
+    if (!existingClient) {
+      const phoneExists = await Client.exists({ phone: normalizedPhone });
+      await Client.create({
+        phone: normalizedPhone,
+        name: clientName,
+        telefonoDuplicado: !!phoneExists, // Marcar si el teléfono ya lo usa alguien más
+        isActive: true
+      });
+    }
+
+    res.status(201).json({ success: true, count: createdAppointments.length, bulkId, data: createdAppointments });
+
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: 'Uno de los horarios seleccionados fue ocupado por otro cliente. Por favor verifica tu carrito.' });
+    }
+    next(error);
+  }
+}
+
 // ─── POST /api/appointments ──────────────────────────────────────────────────
 // Público — clientes agendan desde el chatbot
 const create = async (req, res, next) => {
@@ -250,6 +353,9 @@ const create = async (req, res, next) => {
 
     res.status(201).json({ success: true, data: appt })
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: 'Este horario ya fue reservado por otro cliente mientras realizabas la solicitud. Por favor elige otro.' })
+    }
     next(error)
   }
 }
@@ -326,6 +432,20 @@ const cancel = async (req, res, next) => {
     const appt = await Appointment.findById(req.params.id)
     if (!appt) {
       return res.status(404).json({ success: false, message: 'Cita no encontrada' })
+    }
+
+    // BLOCKER 1: Validación para cancelación pública
+    // Si no tiene token (req.user no existe), validamos que el cuerpo traiga el teléfono
+    if (!req.user) {
+      const { clientPhone } = req.body
+      if (!clientPhone || normalizePhone(clientPhone) !== appt.clientPhone) {
+        return res.status(403).json({ success: false, message: 'No tienes permiso para cancelar esta cita. El número de teléfono no coincide.' })
+      }
+    } else {
+      // Si tiene token, pero es "empleada" solo puede cancelar las suyas
+      if (req.user.role === 'empleada' && appt.employee.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, message: 'Acceso denegado — no eres el especialista asignado' })
+      }
     }
 
     if (appt.status === 'cancelled') {
@@ -593,4 +713,4 @@ const complete = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, getOne, create, update, cancel, reschedule, getStats, getClients, complete }
+module.exports = { getAll, getOne, create, createBulk, update, cancel, reschedule, getStats, getClients, complete }

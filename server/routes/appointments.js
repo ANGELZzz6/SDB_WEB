@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const apptCtrl = require('../controllers/appointmentController')
 const availCtrl = require('../controllers/availabilityController')
-const { authMiddleware, requireRole } = require('../middleware/auth')
+const { authMiddleware, optionalAuth, requireRole } = require('../middleware/auth')
 const checkPermission = require('../middleware/checkPermission')
 
 // ── Disponibilidad — PÚBLICA (chatbot la necesita sin login) ─────────────────
@@ -26,6 +26,9 @@ router.get('/', authMiddleware, apptCtrl.getAll)
 // GET /api/appointments/:id
 router.get('/:id', authMiddleware, apptCtrl.getOne)
 
+// POST /api/appointments/bulk — PÚBLICO (clientes agendan múltiples servicios)
+router.post('/bulk', apptCtrl.createBulk)
+
 // POST /api/appointments — PÚBLICO (clientes agendan desde chatbot)
 router.post('/', apptCtrl.create)
 
@@ -38,8 +41,7 @@ router.patch('/:id/complete', authMiddleware, apptCtrl.complete)
 // PATCH /api/appointments/:id/reschedule — admin solamente (para este flujo)
 router.patch('/:id/reschedule', authMiddleware, checkPermission('citas'), apptCtrl.reschedule)
 
-// DELETE /api/appointments/:id — cancelar (admin, empleada dueña, o cliente)
-// Sin restricción de horas según reglas de negocio
-router.delete('/:id', apptCtrl.cancel)
+// DELETE /api/appointments/:id — cancelar (admin, empleada dueña, o cliente con validación)
+router.delete('/:id', optionalAuth, apptCtrl.cancel)
 
 module.exports = router

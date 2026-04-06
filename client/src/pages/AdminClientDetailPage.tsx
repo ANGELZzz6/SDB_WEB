@@ -160,11 +160,11 @@ export default function AdminClientDetailPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px', flexWrap: 'wrap' }}>
               <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '42px', color: T.onSurface, margin: 0 }}>
-                {data.client.name}
+                {data?.client?.name || 'Cliente'}
               </h2>
               <div style={{ display: 'flex', gap: '10px' }}>
-                {getTierBadge(data.stats.clientTier)}
-                {data.stats.isFrequent && (
+                {data?.client?.tier && getTierBadge(data.client.tier)}
+                {data?.stats?.isFrequent && (
                   <span style={{ 
                     backgroundColor: '#fffbe6', color: '#856404', padding: '6px 12px', 
                     borderRadius: '12px', fontSize: '11px', fontWeight: 800, border: '1px solid #ffe58f'
@@ -172,7 +172,7 @@ export default function AdminClientDetailPage() {
                     ⭐ FRECUENTE
                   </span>
                 )}
-                {data.stats.isAtRisk && (
+                {data?.stats?.isAtRisk && (
                   <span style={{ 
                     backgroundColor: '#fff2f0', color: '#ff4d4f', padding: '6px 14px', 
                     borderRadius: '12px', fontSize: '11px', fontWeight: 800, border: '1px solid #ffccc7',
@@ -184,14 +184,23 @@ export default function AdminClientDetailPage() {
               </div>
             </div>
             <p style={{ fontFamily: T.fontBody, fontSize: '16px', color: T.onSurfaceVariant, margin: 0 }}>
-              📞 {data.client.phone} {data.client.email && ` | ✉ ${data.client.email}`}
+              📞 {data?.client?.phone} {data?.client?.email && ` | ✉ ${data.client.email}`}
             </p>
           </div>
           
           <div style={{ backgroundColor: T.surfaceContainerHigh, padding: '16px 24px', borderRadius: '16px', border: `1px dashed ${T.primary}40` }}>
              <p style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>Próxima Visita Sugerida</p>
              <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, margin: 0 }}>
-               {data.stats.nextSuggestedVisit ? formatDate(data.stats.nextSuggestedVisit) : 'Faltan datos...'}
+               {(() => {
+                 const v = data?.stats?.totalVisits || 0;
+                 if (v === 0) return 'Sin visitas registradas';
+                 if (v === 1) return 'Se necesitan 2+ para proyectar';
+                 if (!data?.stats?.nextSuggestedVisit) return 'Sin patrón definido';
+                 return formatDate(data.stats.nextSuggestedVisit);
+               })()}
+             </p>
+             <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '4px', opacity: 0.7 }}>
+               {(data?.stats?.totalVisits || 0) < 2 ? 'Basado en frecuencia histórica' : ''}
              </p>
           </div>
         </header>
@@ -199,10 +208,10 @@ export default function AdminClientDetailPage() {
         {/* Multi-Metric Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '40px' }}>
           {[
-            { label: 'Gasto Total', value: `$${data.stats.totalSpent.toLocaleString()}`, sub: 'Vida del cliente', icon: '💰', color: T.primary },
-            { label: 'Ticket Promedio', value: `$${data.stats.averageTicket.toLocaleString()}`, sub: 'Por cada sesión', icon: '📊', color: T.onSurface },
-            { label: 'Servicio Estrella', value: data.stats.favoriteService, sub: 'Mayor recurrencia', icon: '⭐', color: '#7b1fa2' },
-            { label: 'Frecuencia Real', value: data.stats.visitFrequency ? `Cada ${data.stats.visitFrequency} días` : 'N/A', sub: 'Intervalo promedio', icon: '🔄', color: '#1976d2' }
+            { label: 'Gasto Total', value: `$${(data?.stats?.totalSpent || 0).toLocaleString()}`, sub: 'Vida del cliente', icon: '💰', color: T.primary },
+            { label: 'Ticket Promedio', value: `$${(data?.stats?.averageTicket || 0).toLocaleString()}`, sub: 'Por cada sesión', icon: '📊', color: T.onSurface },
+            { label: 'Servicio Estrella', value: data?.stats?.favoriteService || 'Ninguno', sub: 'Mayor recurrencia', icon: '⭐', color: '#7b1fa2' },
+            { label: 'Frecuencia Real', value: data?.stats?.visitFrequency ? `Cada ${data.stats.visitFrequency} días` : 'N/A', sub: 'Intervalo promedio', icon: '🔄', color: '#1976d2' }
           ].map((s, i) => (
             <div key={i} style={{ 
               backgroundColor: T.surfaceContainerLowest, padding: '24px', borderRadius: '16px', 
@@ -222,7 +231,7 @@ export default function AdminClientDetailPage() {
         <section style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '20px', boxShadow: '0 12px 40px rgba(0,0,0,0.05)', overflow: 'hidden', border: `1px solid ${T.surfaceContainerLow}` }}>
           <div style={{ padding: '24px 32px', borderBottom: `1px solid ${T.surfaceContainerLow}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.onSurface, margin: 0 }}>Historial Analítico de Servicios</h3>
-            <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{data.stats.totalVisits} registros válidos</span>
+            <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{data?.stats?.totalVisits || 0} registros válidos</span>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -234,7 +243,7 @@ export default function AdminClientDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.appointments.map((a) => (
+                {(data?.appointments || []).map((a) => (
                   <tr key={a._id} style={{ borderTop: `1px solid ${T.surfaceContainerLow}`, transition: 'background 0.2s' }}>
                     <td style={{ padding: '20px 32px' }}>
                       <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 600, color: T.onSurface, margin: 0 }}>{formatDate(a.date)}</p>
@@ -247,7 +256,7 @@ export default function AdminClientDetailPage() {
                     </td>
                     <td style={{ padding: '20px 32px' }}>
                        <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: a.isFinal ? T.primary : T.onSurfaceVariant, margin: 0 }}>
-                         ${a.price.toLocaleString()}{!a.isFinal && <span style={{ opacity: 0.5, fontSize: '10px', marginLeft: '4px' }}>*</span>}
+                         ${(a.price || 0).toLocaleString()}{!a.isFinal && <span style={{ opacity: 0.5, fontSize: '10px', marginLeft: '4px' }}>*</span>}
                        </p>
                        {!a.isFinal && a.status === 'completed' && <p style={{ fontSize: '9px', color: T.onSurfaceVariant, margin: 0, opacity: 0.6 }}>Precio sugerido</p>}
                     </td>
@@ -261,7 +270,7 @@ export default function AdminClientDetailPage() {
           </div>
           <div style={{ padding: '20px 32px', backgroundColor: `${T.surfaceContainerLow}20`, textAlign: 'center' }}>
             <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, fontStyle: 'italic' }}>
-              Última visita registrada hace {data.stats.daysSinceLastVisit || 0} días.
+              Última visita registrada hace {data?.stats?.daysSinceLastVisit || 0} días.
             </p>
           </div>
         </section>

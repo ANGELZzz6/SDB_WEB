@@ -39,7 +39,8 @@ const employeeSchema = new mongoose.Schema({
     }
   },
   disponibleHoy: { type: Boolean, default: true },
-  isActive: { type: Boolean, default: true },
+  tokenVersion:  { type: Number, default: 0, select: false },
+  isActive:      { type: Boolean, default: true },
 }, {
   timestamps: true,
 })

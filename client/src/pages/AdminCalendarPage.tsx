@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
-import { appointmentService, blockedSlotService, employeeService, availabilityService } from '../services/api';
-import type { Appointment, BlockedSlot, Employee } from '../types';
+import { appointmentService, blockedSlotService, employeeService, availabilityService, siteConfigService } from '../services/api';
+import type { Appointment, BlockedSlot, Employee, SiteConfig } from '../types';
+import { waLink, WA_MESSAGES, formatFecha, buildMessage } from '../utils/whatsappMessages';
 
 export default function AdminCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -25,9 +26,24 @@ export default function AdminCalendarPage() {
 
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [selectedApptToComplete, setSelectedApptToComplete] = useState<Appointment | null>(null);
-  const [finalPriceInput, setFinalPriceInput] = useState<number>(0);
+  const [finalPriceInput, setFinalPriceInput] = useState<string>('');
   const [isCompleting, setIsCompleting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled', appt: any } | null>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+  const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
+
+  // User auth info
+  const rawUser = localStorage.getItem('adminUser');
+  const user = rawUser ? JSON.parse(rawUser) : null;
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (lastAction) {
+      const timer = setTimeout(() => setLastAction(null), 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAction]);
 
   // Fetch data
   const loadData = async (showLoading = true) => {
@@ -37,16 +53,18 @@ export default function AdminCalendarPage() {
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-      const [_, resApps, resBlocks, resEmps] = await Promise.all([
+      const [_, resApps, resBlocks, resEmps, resConfig] = await Promise.all([
         appointmentService.getAll(), 
         appointmentService.getAll({ from: startOfMonth.toISOString(), to: endOfMonth.toISOString(), limit: 1000 } as any),
         blockedSlotService.getAll(),
-        employeeService.getAll()
+        employeeService.getAll(),
+        siteConfigService.get()
       ]);
 
       if (resApps.success) setAppointments((resApps.data as unknown as Appointment[]) || []);
       if (resBlocks.success) setBlockedSlots((resBlocks.data as unknown as BlockedSlot[]) || []);
       if (resEmps.success) setEmployees((resEmps.data as unknown as Employee[]) || []);
+      if (resConfig.success) setSiteConfig(resConfig.data || null);
 
       // Cargar citas pendientes globales para la restricción
       const resPend = await appointmentService.getAll({ status: 'pending' });
@@ -157,23 +175,74 @@ export default function AdminCalendarPage() {
       } as any);
       setShowRescheduleModal(false);
       setSelectedDayInfo(null);
+      
+      const updatedAppt = { ...rescheduleTarget, date: reschForm.date, timeSlot: reschForm.timeSlot };
+      setLastAction({ id: rescheduleTarget._id, type: 'rescheduled', appt: updatedAppt });
+      
       loadData(false);
     } catch (e: any) {
       alert(e.message || 'Error reagendando');
     }
   };
 
+  const handleStatusChange = async (appt: Appointment, newStatus: 'confirmed' | 'cancelled') => {
+    try {
+      const res = await appointmentService.updateStatus(appt._id, newStatus);
+      if (res.success) {
+        setLastAction({ id: appt._id, type: newStatus === 'confirmed' ? 'confirmed' : 'cancelled', appt });
+        loadData(false);
+        // Actualizar localmente la vista del modal
+        if (selectedDayInfo) {
+          setSelectedDayInfo({
+            ...selectedDayInfo,
+            appts: selectedDayInfo.appts.map(a => a._id === appt._id ? { ...a, status: newStatus } : a)
+          });
+        }
+      }
+    } catch (e: any) {
+      alert(e.message || 'Error actualizando estado');
+    }
+  };
+
+  const handleCancelar = async (appt: Appointment) => {
+    const ok = window.confirm(`¿Estás seguro de que deseas cancelar la cita de ${appt.clientName}? Esta acción no se puede deshacer.`);
+    if (!ok) return;
+
+    try {
+      const res = await appointmentService.cancel(appt._id);
+      if (res.success) {
+        setLastAction({ id: appt._id, type: 'cancelled', appt });
+        loadData(false);
+        
+        // Actualizar localmente la vista del modal (eliminar o cambiar status)
+        if (selectedDayInfo) {
+          setSelectedDayInfo({
+            ...selectedDayInfo,
+            appts: selectedDayInfo.appts.filter(a => a._id !== appt._id)
+          });
+        }
+      }
+    } catch (e: any) {
+      alert(e.message || 'Error al cancelar la cita');
+    }
+  };
+
   const openPriceModal = (appt: Appointment) => {
     setSelectedApptToComplete(appt);
-    setFinalPriceInput(appt.priceSnapshot || 0);
+    setFinalPriceInput(appt.priceSnapshot?.toString() || '');
     setShowPriceModal(true);
   };
 
   const handleFinalComplete = async () => {
     if (!selectedApptToComplete) return;
+    if (!finalPriceInput || Number(finalPriceInput) <= 0) {
+      alert('Por favor ingresa el valor cobrado');
+      return;
+    }
+
     try {
       setIsCompleting(true);
-      await appointmentService.complete(selectedApptToComplete._id, { finalPrice: finalPriceInput });
+      await appointmentService.complete(selectedApptToComplete._id, { finalPrice: Number(finalPriceInput) });
       setShowPriceModal(false);
       setSelectedDayInfo(null);
       loadData(false);
@@ -197,8 +266,46 @@ export default function AdminCalendarPage() {
           .calendar-matrix { min-width: 800px; }
         }
       `}</style>
-      <div className="admin-calendar-container" style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px' }}>
+      <div className="admin-calendar-container" style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px', position: 'relative' }}>
         
+        {/* Floating WhatsApp Banner */}
+        {lastAction && (
+          <div style={{
+            position: 'sticky', top: '0', zIndex: 90, marginBottom: '24px',
+            backgroundColor: '#25D366', color: 'white', padding: '16px 24px',
+            borderRadius: '16px', boxShadow: '0 8px 24px rgba(37, 211, 102, 0.25)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            fontFamily: T.fontBody, animation: 'fadeInDown 0.4s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '20px' }}>📲</span>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
+                {lastAction.type === 'confirmed' && `Cita de ${lastAction.appt.clientName} confirmada.`}
+                {lastAction.type === 'cancelled' && `Cita de ${lastAction.appt.clientName} rechazada.`}
+                {lastAction.type === 'rescheduled' && `Cita de ${lastAction.appt.clientName} reagendada.`}
+                {' '}¿Enviar mensaje por WhatsApp?
+              </p>
+            </div>
+            <a
+              href={
+                lastAction.type === 'confirmed' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.confirmacion(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
+                lastAction.type === 'cancelled' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazo(lastAction.appt.clientName, formatFecha(lastAction.appt.date))) :
+                waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.reagendamiento(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio'))
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                backgroundColor: 'white', color: '#25D366',
+                padding: '8px 20px', borderRadius: '9999px',
+                fontSize: '12px', fontWeight: 800, textDecoration: 'none',
+                textTransform: 'uppercase', letterSpacing: '0.05em'
+              }}
+            >
+              Enviar Mensaje
+            </a>
+          </div>
+        )}
+
         <div className="admin-calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
           <div>
             <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary }}>
@@ -270,7 +377,7 @@ export default function AdminCalendarPage() {
                       ))}
                       {dayAppts.map((a, idx) => (
                         <div key={`apt-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: a.status==='cancelled' ? T.surfaceVariant : T.primaryFixed, color: a.status==='cancelled'? T.onSurfaceVariant : T.primary, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: a.status==='cancelled'?'line-through':'none' }}>
-                          {a.timeSlot} {a.clientName}
+                          {a.bulkId ? '🔗 ' : ''}{a.timeSlot} {a.clientName}
                         </div>
                       ))}
                     </div>
@@ -348,38 +455,112 @@ export default function AdminCalendarPage() {
                           padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap'
                         }}
                       >
-                        {a.status === 'confirmed' ? 'Confirmada' : 
-                         a.status === 'completed' ? 'Completada' : 
-                         a.status === 'pending' ? 'Pendiente' : 
-                         'Cancelada'}
-                      </span>
+                          {a.status === 'confirmed' ? 'Confirmada' : 
+                          a.status === 'completed' ? 'Completada' : 
+                          a.status === 'pending' ? 'Pendiente' : 
+                          'Cancelada'}
+                        </span>
+                        {a.bulkId && (
+                          <span style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: T.primaryContainer, color: T.primary, padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>
+                            🔗 Sesión Múltiple
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {a.status === 'confirmed' && (
-                      <button 
-                        onClick={() => openPriceModal(a)}
-                        style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '8px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}
-                      >
-                        COMPLETAR
-                      </button>
-                    )}
-                    {a.status !== 'cancelled' && a.status !== 'completed' && (
-                      <button 
-                        onClick={() => openReschedule(a)} 
-                        disabled={hayPendientes}
-                        title={hayPendientes ? "Debes confirmar, rechazar o reagendar las citas pendientes antes de continuar" : ""}
-                        style={{ 
-                          fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, 
-                          backgroundColor: hayPendientes ? T.outlineVariant : T.secondaryContainer, 
-                          color: hayPendientes ? '#999' : T.onSecondaryContainer, 
-                          padding: '8px 16px', borderRadius: '9999px', border: 'none', 
-                          cursor: hayPendientes ? 'not-allowed' : 'pointer' 
-                        }}
-                      >
-                        REAGENDAR
-                      </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end', flexShrink: 0 }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: '6px', 
+                      justifyContent: 'flex-end',
+                      width: '100%',
+                      maxWidth: '100%',
+                      // Responsive grid for small mobile
+                      ...(window.innerWidth < 480 ? {
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, 1fr)',
+                      } : {})
+                    }}>
+                      {a.status === 'confirmed' && (
+                        <button 
+                          onClick={() => openPriceModal(a)}
+                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                        >
+                          ✓ COMPLETAR
+                        </button>
+                      )}
+                      
+                      {a.status === 'pending' && (
+                        <button 
+                          onClick={() => handleStatusChange(a, 'confirmed')}
+                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                        >
+                          ✓ CONFIRMAR
+                        </button>
+                      )}
+ 
+                      {(a.status === 'pending' || a.status === 'confirmed') && (
+                        <button 
+                          onClick={() => handleCancelar(a)} 
+                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                        >
+                          ✕ CANCELAR
+                        </button>
+                      )}
+ 
+                      {a.status !== 'cancelled' && a.status !== 'completed' && (
+                        <button 
+                          onClick={() => openReschedule(a)} 
+                          disabled={!isAdmin && hayPendientes && a.status !== 'pending'}
+                          title={!isAdmin && hayPendientes && a.status !== 'pending' ? "Debes gestionar las citas pendientes primero" : ""}
+                          style={{ 
+                            flexShrink: 1, minWidth: 0,
+                            fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, 
+                            backgroundColor: (!isAdmin && hayPendientes && a.status !== 'pending') ? T.outlineVariant : T.secondaryContainer, 
+                            color: (!isAdmin && hayPendientes && a.status !== 'pending') ? '#999' : T.onSecondaryContainer, 
+                            padding: '6px 12px', borderRadius: '9999px', border: 'none', 
+                            cursor: (!isAdmin && hayPendientes && a.status !== 'pending') ? 'not-allowed' : 'pointer',
+                            textTransform: 'uppercase', letterSpacing: '0.1em'
+                          }}
+                        >
+                          🕒 REAGENDAR
+                        </button>
+                      )}
+                    </div>
+
+                    {/* WhatsApp notification link inside modal */}
+                    {lastAction && lastAction.id === a._id && (
+                      <div className="animate-fadeIn" style={{ marginTop: '4px' }}>
+                        <button
+                          onClick={() => {
+                            let msg = "";
+                            if (lastAction.type === 'confirmed') {
+                              msg = siteConfig?.mensajeConfirmacion 
+                                ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio', fecha: formatFecha(a.date), hora: a.timeSlot })
+                                : WA_MESSAGES.confirmacion(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), a.timeSlot);
+                            } else if (lastAction.type === 'cancelled') {
+                              msg = siteConfig?.mensajeCancelacion
+                                ? buildMessage(siteConfig.mensajeCancelacion, { nombre: a.clientName, fecha: formatFecha(a.date) })
+                                : WA_MESSAGES.rechazo(a.clientName, formatFecha(a.date));
+                            } else {
+                              msg = siteConfig?.mensajeReagendamiento
+                                ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio' })
+                                : WA_MESSAGES.reagendamiento(a.clientName, (a.service as any)?.nombre || 'Servicio');
+                            }
+                            setWaModal({ link: waLink(a.clientPhone, msg), mensaje: msg });
+                          }}
+                          style={{ 
+                            backgroundColor: '#25D366', color: 'white', padding: '6px 12px', 
+                            borderRadius: '8px', fontSize: '10px', fontWeight: 800, 
+                            border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                          }}
+                        >
+                          📲 {lastAction.type === 'confirmed' ? 'Enviar Confirmación' : 
+                               lastAction.type === 'cancelled' ? 'Notificar Cancelación' : 
+                               'Notificar Reagendamiento'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -494,50 +675,35 @@ export default function AdminCalendarPage() {
 
       {/* PRICE COMPLETION MODAL */}
       {showPriceModal && selectedApptToComplete && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '400px', padding: '32px', borderRadius: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px' }}>Finalizar Servicio</h3>
-            <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '24px' }}>
-              Confirma el valor final cobrado a <strong>{selectedApptToComplete.clientName}</strong>.
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px' }}>¿Cuánto se cobró?</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              {(selectedApptToComplete.service as any)?.nombre || 'Servicio'} · {selectedApptToComplete.clientName}
             </p>
-
-            <div style={{ backgroundColor: `${T.primary}08`, padding: '16px', borderRadius: '16px', marginBottom: '24px', border: `1px solid ${T.primary}20` }}>
-              <label style={{ display: 'block', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
-                Precio Final ($)
-              </label>
-              <input 
-                type="number" 
-                value={finalPriceInput} 
-                onChange={e => setFinalPriceInput(Number(e.target.value))}
-                autoFocus
-                onKeyDown={e => e.key === 'Enter' && handleFinalComplete()}
-                style={{ 
-                  width: '100%', border: 'none', background: 'none', 
-                  fontFamily: T.fontHeadline, fontSize: '32px', color: T.onSurface,
-                  fontWeight: 700, outline: 'none'
-                }} 
-              />
-              <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
-                Precio base sugerido: ${(selectedApptToComplete.priceSnapshot || 0).toLocaleString()}
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <input 
+              type="number" 
+              value={finalPriceInput}
+              onChange={e => setFinalPriceInput(e.target.value)}
+              placeholder="Ej: 85000"
+              className="w-full border rounded-xl p-3 text-lg mb-4"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleFinalComplete()}
+            />
+            <div className="flex gap-3">
               <button 
                 onClick={() => setShowPriceModal(false)} 
+                className="flex-1 py-3 rounded-xl border font-bold"
+                style={{ fontFamily: T.fontBody }}
                 disabled={isCompleting}
-                style={{ flex: 1, padding: '14px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer' }}
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleFinalComplete} 
+                className="flex-1 py-3 rounded-xl bg-green-500 text-white font-bold"
+                style={{ fontFamily: T.fontBody }}
                 disabled={isCompleting}
-                style={{ 
-                  flex: 1, padding: '14px', backgroundColor: T.primary, color: 'white', 
-                  border: 'none', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700, 
-                  cursor: 'pointer', opacity: isCompleting ? 0.7 : 1 
-                }}
               >
                 {isCompleting ? 'Procesando...' : 'Confirmar'}
               </button>
@@ -546,6 +712,37 @@ export default function AdminCalendarPage() {
         </div>
       )}
 
+      {/* WHATSAPP CONFIRMATION MODAL */}
+      {waModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '400px', padding: '32px', borderRadius: '24px', boxShadow: '0 24px 80px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '12px' }}>¿Enviar mensaje?</h3>
+            <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '20px' }}>
+              Se abrirá WhatsApp con este mensaje:
+            </p>
+            <div style={{ backgroundColor: T.surfaceContainerLow, padding: '16px', borderRadius: '16px', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurface, fontStyle: 'italic', marginBottom: '24px', borderLeft: `4px solid #25D366` }}>
+              "{waModal.mensaje}"
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => setWaModal(null)}
+                style={{ flex: 1, padding: '14px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
+              >
+                No enviar
+              </button>
+              <a
+                href={waModal.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setWaModal(null)}
+                style={{ flex: 1, padding: '14px', backgroundColor: '#25D366', color: 'white', borderRadius: '9999px', textAlign: 'center', textDecoration: 'none', fontFamily: T.fontBody, fontWeight: 800, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                📲 Abrir WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

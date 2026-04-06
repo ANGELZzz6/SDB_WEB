@@ -23,26 +23,47 @@ const authMiddleware = async (req, res, next) => {
 
     let permissions = {}
 
-    // Si es empleada, cargamos sus permisos dinámicos desde la DB
+    // Si es empleada, cargamos sus permisos dinámicos y validamos la versión del token
     if (decoded.role === 'empleada' && mongoose.Types.ObjectId.isValid(decoded.id)) {
-      const user = await Employee.findById(decoded.id).select('permissions isActive')
+      const user = await Employee.findById(decoded.id).select('permissions isActive tokenVersion')
       if (!user || !user.isActive) {
         return res.status(401).json({
           success: false,
           message: 'Usuario no encontrado o inactivo',
         })
       }
+
+      // BLOCKER: Validar versión del token (Cierre de sesión dinámico)
+      if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+        return res.status(401).json({
+          success: false,
+          message: 'Sesión expirada o invalidada. Por favor, inicia sesión de nuevo.',
+        })
+      }
+
       permissions = user.permissions || {}
+    }
+
+    // ── IDENTIFICACIÓN DE ADMIN VIRTUAL ─────────────────────────────────────
+    // Si el token está marcado como 'virtual', no consultamos la base de datos
+    if (decoded.role === 'admin' && decoded.type === 'virtual') {
+      req.user = { 
+        id: 'virtual-admin', 
+        role: 'admin',
+        nombre: process.env.ADMIN_NOMBRE || 'Administradora',
+        email: process.env.ADMIN_EMAIL || '',
+        isVirtual: true,
+        permissions: {} // Admins tienen todos los permisos por defecto en la lógica de negocio
+      }
+      return next()
     }
 
     req.user = {
       id: decoded.id,
-      role: decoded.role, // 'admin' | 'empleada'
+      role: decoded.role,
       isObjectId: mongoose.Types.ObjectId.isValid(decoded.id),
       permissions
     }
-
-    console.log('👤 AUTH USER:', req.user)
 
     next()
   } catch (error) {

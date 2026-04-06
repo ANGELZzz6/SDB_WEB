@@ -11,51 +11,90 @@ exports.getAll = async (req, res) => {
     // 1. Obtener todos los registros de la colección Client (activos e inactivos)
     const clientsFromDB = await Client.find().lean()
 
-    // 2. Obtener clientes históricos desde Appointments (Agregación optimizada)
-    // Solo traemos phone y name para evitar problemas de performance
-    let appointmentsClients = await Appointment.aggregate([
-      {
+    // 2. Obtener estadísticas reales desde Appointments (Agregación BI)
+    // Filtramos solo citas con status 'completed' para las métricas
+    const clientStats = await Appointment.aggregate([
+      { $match: { status: 'completed' } },
+      { 
         $group: {
           _id: "$clientPhone",
           name: { $first: "$clientName" },
-          phone: { $first: "$clientPhone" }
+          visits: { $sum: 1 },
+          lastDate: { $max: "$date" },
+          ltv: { 
+            $sum: { $ifNull: ["$finalPrice", { $ifNull: ["$priceSnapshot", 0] }] } 
+          },
+          // Para el artista favorito: guardamos los conteos de especialistas en un array
+          specialists: { $push: "$employee" }
         }
       }
-    ])
+    ]);
 
-    // 2.1 Filtrar clientes "fantasma" (inactivos que no están en la colección Client pero sí en appointments)
-    const inactivePhones = new Set(
-      clientsFromDB.filter(c => c.isActive === false).map(c => normalizePhone(c.phone))
-    )
+    // Procesar especialistas favoritos (esto es más eficiente hacerlo en JS tras el group si el volumen es manejable, 
+    // o con otro pipeline. Lo haremos aquí para precisión).
+    // También obtenemos los nombres de los empleados para no mostrar IDs.
+    const allEmployeeIds = [...new Set(clientStats.flatMap(s => s.specialists.map(id => id?.toString()).filter(Boolean)))];
+    const employeesData = await require('../models/Employee').find({ _id: { $in: allEmployeeIds } }).select('nombre').lean();
+    const empMap = new Map(employeesData.map(e => [e._id.toString(), e.nombre]));
 
-    appointmentsClients = appointmentsClients.filter(
-      c => !inactivePhones.has(normalizePhone(c.phone))
-    )
+    const statsMap = new Map();
+    clientStats.forEach(s => {
+      // Calcular favorito de la lista
+      const counts = {};
+      let favoriteId = null;
+      let max = 0;
+      s.specialists.forEach(id => {
+        if (!id) return;
+        const idStr = id.toString();
+        counts[idStr] = (counts[idStr] || 0) + 1;
+        if (counts[idStr] > max) {
+          max = counts[idStr];
+          favoriteId = idStr;
+        }
+      });
+
+      statsMap.set(normalizePhone(s._id), {
+        visits: s.visits,
+        lastDate: s.lastDate,
+        ltv: s.ltv,
+        favoriteEmployee: favoriteId ? empMap.get(favoriteId) : 'S/I'
+      });
+    });
 
     // 3. Mezclar usando un Map (Identificador: teléfono normalizado)
     const clientMap = new Map()
 
-    // Primero poblamos con el historial (Fallback)
-    appointmentsClients.forEach(c => {
-      const phone = normalizePhone(c.phone)
+    // Primero poblamos con el historial y estadísticas
+    clientStats.forEach(c => {
+      const phone = normalizePhone(c._id)
       if (phone) {
+        const stats = statsMap.get(phone);
         clientMap.set(phone, {
           id: phone,
           phone: phone,
           name: c.name || 'Cliente sin nombre',
-          isActive: true // Por defecto asumimos activo si solo existe en appointments
+          visits: stats?.visits || 0,
+          lastDate: stats?.lastDate || null,
+          ltv: stats?.ltv || 0,
+          favoriteEmployee: stats?.favoriteEmployee || 'S/I',
+          isActive: true
         })
       }
     })
 
-    // Luego sobrescribimos con la colección Client (Prioridad DB)
+    // Luego sobrescribimos/complementamos con la colección Client (Prioridad DB)
     clientsFromDB.forEach(c => {
       const phone = normalizePhone(c.phone)
       if (phone) {
+        const existing = clientMap.get(phone);
         clientMap.set(phone, {
           id: phone,
           phone: phone,
-          name: c.name || (clientMap.get(phone)?.name) || 'Cliente sin nombre',
+          name: c.name || existing?.name || 'Cliente sin nombre',
+          visits: existing?.visits || 0,
+          lastDate: existing?.lastDate || null,
+          ltv: existing?.ltv || 0,
+          favoriteEmployee: existing?.favoriteEmployee || 'S/I',
           isActive: c.isActive
         })
       }
@@ -155,38 +194,54 @@ exports.getOne = async (req, res) => {
       )
     }
 
+    // 4.6 Business Intelligence (BI) Metrics — Final formatting
+    const finalData = {
+      // ─── Estructura Plana (Soporte para tests y listado) ───
+      id: phone,
+      phone: phone,
+      name: clientData?.name || appointments[0]?.clientName || 'Cliente sin nombre',
+      email: clientData?.email || appointments[0]?.clientEmail || '',
+      ltv: totalSpent,
+      tier: clientTier,
+      visits: totalVisits,
+      lastDate: lastVisitDate,
+      favoriteEmployee: favoriteService, // Reutilizamos favoriteService para consistencia
+      isActive: clientData ? clientData.isActive : true,
+
+      // ─── Estructura Anidada (Soporte para UI legado/actual) ───
+      client: {
+        phone: phone,
+        name: clientData?.name || appointments[0]?.clientName || 'Cliente sin nombre',
+        email: clientData?.email || appointments[0]?.clientEmail || '',
+        tier: clientTier,
+      },
+      stats: {
+        totalVisits,
+        lastVisit: lastVisitDate,
+        totalSpent,
+        averageTicket,
+        isFrequent: totalVisits >= 5 && totalSpent >= 100000,
+        isAtRisk,
+        daysSinceLastVisit,
+        clientTier,
+        visitFrequency,
+        favoriteService,
+        nextSuggestedVisit
+      },
+      appointments: appointments.map(a => ({
+        _id: a._id,
+        date: a.date,
+        serviceName: a.service?.nombre || 'Servicio eliminado',
+        employeeName: a.employee?.nombre || 'Especialista',
+        status: a.status,
+        price: a.finalPrice ?? a.priceSnapshot ?? a.service?.precio ?? 0,
+        isFinal: a.finalPrice !== undefined
+      }))
+    }
+
     res.json({
       success: true,
-      data: {
-        client: {
-          phone: phone,
-          name: clientData?.name || appointments[0]?.clientName || 'Cliente sin nombre',
-          email: appointments[0]?.clientEmail || '',
-          tier: clientTier
-        },
-        stats: {
-          totalVisits,
-          lastVisit: lastVisitDate,
-          totalSpent,
-          averageTicket,
-          isFrequent: totalVisits >= 5 && totalSpent >= 100000,
-          isAtRisk,
-          daysSinceLastVisit,
-          clientTier,
-          visitFrequency,
-          favoriteService,
-          nextSuggestedVisit
-        },
-        appointments: appointments.map(a => ({
-          _id: a._id,
-          date: a.date,
-          serviceName: a.service?.nombre || 'Servicio eliminado',
-          employeeName: a.employee?.nombre || 'Especialista',
-          status: a.status,
-          price: a.finalPrice ?? a.priceSnapshot ?? a.service?.precio ?? 0,
-          isFinal: a.finalPrice !== undefined
-        }))
-      }
+      data: finalData
     })
   } catch (error) {
     res.status(500).json({ success: false, message: error.message })

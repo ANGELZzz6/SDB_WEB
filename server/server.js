@@ -1,9 +1,10 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
-const helmet = require('helmet')
-const morgan = require('morgan')
 const connectDB = require('./config/db')
+const rateLimit = require('express-rate-limit')
+const sanitize = require('./utils/sanitize')
+const helmet = require('helmet')
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -42,9 +43,67 @@ app.use(cors({
 // ==============================
 // Middlewares globales
 // ==============================
-app.use(helmet())
+app.disable('x-powered-by');
+
+// HTTPS redirect en producción
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // unsafe-inline es común en React apps con estilos inyectados
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://images.unsplash.com", "https://i.pravatar.cc"],
+      connectSrc: ["'self'", "https://api.cloudinary.com"],
+    }
+  },
+  crossOriginEmbedderPolicy: false // Necesario para cargar imágenes de Cloudinary/Unsplash
+}));
+
+app.use((req, res, next) => {
+  sanitize(req.body)
+  sanitize(req.query)
+  sanitize(req.params)
+  next()
+})
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
+
+// ==============================
+// Rate Limiting
+// ==============================
+const isProd = process.env.NODE_ENV === 'production'
+
+// General API limit
+app.use('/api/', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isProd ? 100 : 10000,
+  skip: () => !isProd,
+  message: { success: false, message: 'Demasiadas peticiones desde esta IP, por favor intenta después de 15 minutos' }
+}))
+
+// Login — más estricto (10 intentos / 15 min)
+app.use('/api/auth/login', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isProd ? 10 : 1000,
+  skip: () => !isProd,
+  message: { success: false, message: 'Demasiados intentos de login. Por favor intenta de nuevo en 15 minutos' }
+}))
+
+// Agendamiento — protección contra spam (20 citas / 10 min por IP)
+app.use('/api/appointments', rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: isProd ? 20 : 1000,
+  skip: () => !isProd,
+  message: { success: false, message: 'Límite de agendamientos excedido. Intenta más tarde.' }
+}))
 
 // Logs desactivados por petición del usuario para limpiar terminal
 /*
@@ -109,6 +168,16 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 // ==============================
 // Iniciar servidor
 // ==============================
+
+// Validación crítica: ADMIN_PASSWORD debe ser un hash de BCrypt
+if (process.env.NODE_ENV === 'production') {
+  if (process.env.ADMIN_PASSWORD && !process.env.ADMIN_PASSWORD.startsWith('$2')) {
+    console.error('❌ ERROR CRÍTICO DE SEGURIDAD: ADMIN_PASSWORD debe ser un hash de BCrypt en producción.')
+    console.error('Genera uno con: node -e "require(\'bcryptjs\').hash(\'tuPassword\',12).then(console.log)"')
+    process.exit(1)
+  }
+}
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   console.log(`📋 Entorno: ${process.env.NODE_ENV}`)

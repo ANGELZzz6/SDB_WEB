@@ -18,30 +18,73 @@ export default function ProtectedRoute({ requiredPermission }: ProtectedRoutePro
         setIsAuthenticated(false);
         return;
       }
-      
+
+      // ── LOCAL JWT CHECK ───────────────────────────────────────────────────
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          console.warn('Sesión expirada localmente.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('adminUser');
+          setIsAuthenticated(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Token inválido estructuralmente.');
+        setIsAuthenticated(false);
+        return;
+      }
+
+      // ── PERMISSION CHECK (Local first for speed) ─────────────────────────
+      const cachedUser = localStorage.getItem('adminUser');
+      if (cachedUser) {
+        const userData = JSON.parse(cachedUser);
+        if (requiredPermission) {
+          const isAdmin = userData.role === 'admin';
+          const userPerms: Record<string, boolean> = userData.permissions || {};
+          if (!isAdmin && userPerms[requiredPermission] !== true) {
+            setHasPermission(false);
+          } else {
+            setHasPermission(true);
+          }
+        }
+        setIsAuthenticated(true);
+      }
+
+      // ── SERVER VERIFICATION (Sync latest data/permissions) ────────────────
       try {
         const res = await authService.getMe();
         if (res.data) {
           localStorage.setItem('adminUser', JSON.stringify(res.data));
           
-          // Check permissions if required
           if (requiredPermission) {
             const isAdmin = res.data.role === 'admin';
             const userPerms: Record<string, boolean> = res.data.permissions || {};
-            // Admin always has access; specialist needs explicit true
             if (!isAdmin && userPerms[requiredPermission] !== true) {
               setHasPermission(false);
             } else {
               setHasPermission(true);
             }
           } else {
-            // No specific permission required - all authenticated users get access
             setHasPermission(true);
           }
+          setIsAuthenticated(true);
         }
-        setIsAuthenticated(true);
-      } catch (error) {
-        setIsAuthenticated(false);
+      } catch (error: any) {
+        const errMsg = error.response?.data?.message || error.message;
+
+        // Fallback: Si el servidor falla temporalmente pero tenemos datos locales (ej: admin virtual ya logueado)
+        const cachedUser = localStorage.getItem('adminUser');
+        if (cachedUser) {
+          console.warn('getMe() falló, usando fallback local:', errMsg);
+          setIsAuthenticated(true);
+          setHasPermission(true); 
+        } else {
+          console.error('getMe() falló y no hay datos locales:', errMsg);
+          localStorage.removeItem('token');
+          localStorage.removeItem('adminUser');
+          setIsAuthenticated(false);
+        }
       }
     };
     verifyToken();

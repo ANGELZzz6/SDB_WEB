@@ -4,6 +4,7 @@ const appointmentSchema = new mongoose.Schema({
   clientName:  { type: String, required: true, trim: true },
   clientPhone: { type: String, required: true, trim: true, index: true },
   clientEmail: { type: String, trim: true, lowercase: true }, // opcional
+  bulkId:      { type: String, index: true }, // ID de agrupación para múltiples servicios
   priceSnapshot: { type: Number, default: 0 }, // Precio al agendar
   finalPrice:    { type: Number },              // Cobro real final
   settled:       { type: Boolean, default: false }, // ¿Ya liquidada a la empleada?
@@ -39,5 +40,15 @@ const appointmentSchema = new mongoose.Schema({
 appointmentSchema.index({ employee: 1, date: 1 })
 appointmentSchema.index({ date: 1, status: 1 })
 appointmentSchema.index({ clientPhone: 1, date: -1 })
+
+// BLOCKER 3: Prevenir doble cita simultánea (Race Condition)
+// Único por especialista + fecha + hora, EXCEPTO si la cita fue cancelada
+appointmentSchema.index(
+  { employee: 1, date: 1, timeSlot: 1 },
+  { 
+    unique: true, 
+    partialFilterExpression: { status: { $nin: ['cancelled'] } } 
+  }
+)
 
 module.exports = mongoose.model('Appointment', appointmentSchema)

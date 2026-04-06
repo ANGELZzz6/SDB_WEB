@@ -56,9 +56,6 @@ export default function AdminClientsPage() {
     fetchClients();
   }, []);
 
-  const handleDelete = async () => {
-    alert('No es posible eliminar un cliente. El historial de citas y el LTV deben preservarse por integridad del negocio.');
-  };
 
   const filteredClients = clients.filter(c => {
     const matchesSearch = 
@@ -98,7 +95,6 @@ export default function AdminClientsPage() {
         }
         .mobile-cards { display: none; }
       `}</style>
-
       <div className="admin-clients-container" style={{ padding: '40px 48px 80px' }}>
         {/* Header */}
         <header className="admin-clients-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px', flexWrap: 'wrap', gap: '16px' }}>
@@ -126,8 +122,8 @@ export default function AdminClientsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ backgroundColor: `${T.surfaceContainerLow}80` }}>
-                  {['Cliente', 'Contacto', 'Visitas', 'Última Cita', 'Artista Favorito', 'Acciones'].map((h, i) => (
-                    <th key={i} style={{ padding: '14px 24px', fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: T.onSurfaceVariant, textAlign: (i >= 2) ? 'center' : 'left' }}>{h}</th>
+                  {['Cliente', 'Contacto', 'Visitas', 'Última Cita', 'Especialista Favorita', 'Acciones'].map((h, i) => (
+                    <th key={i} style={{ padding: '14px 24px', fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: T.onSurfaceVariant, textAlign: (i >= 2 && i <= 4) ? 'center' : 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -175,46 +171,29 @@ export default function AdminClientsPage() {
                           {c.email && <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>✉ {c.email}</p>}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: c.email ? '3px' : '0' }}>
                             <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>📞 {c.phone}</p>
-                            {c.telefonoDuplicado && (
-                              <span 
-                                title="Este número de teléfono está asociado a otro cliente diferente."
-                                style={{ 
-                                  fontSize: '10px', backgroundColor: '#fef3c7', color: '#92400e', 
-                                  padding: '2px 8px', borderRadius: '4px', fontWeight: 700,
-                                  border: '1px solid #fde68a'
-                                }}
-                              >
-                                DUPLICADO
-                              </span>
-                            )}
+                            {(c as any).ltv > 0 && <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.primary, fontWeight: 700 }}>💰 ${(c as any).ltv?.toLocaleString()}</p>}
                           </div>
                         </td>
                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '9999px', backgroundColor: T.surfaceContainer, fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>{c.visits || 0}</span>
                         </td>
                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
-                          <p style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurface }}>{c.lastDate ? formatLastDate(c.lastDate) : 'S/I'}</p>
-                          <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, marginTop: '2px' }}>{c.lastService || 'Nueva'}</p>
+                          <p style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurface }}>{(c as any).lastDate ? formatLastDate((c as any).lastDate) : 'S/I'}</p>
+                          <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, marginTop: '2px' }}>{c.lastService || 'Sin servicio previo'}</p>
                         </td>
                         <td style={{ padding: '18px 24px', textAlign: 'center' }}>
                            <p style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.primary }}>{c.favoriteEmployee || 'S/I'}</p>
                         </td>
                          <td style={{ padding: '18px 24px', textAlign: 'center' }}>
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete();
-                              }}
-                              style={{ 
-                                border: 'none', background: 'none', cursor: 'not-allowed', 
-                                fontSize: '18px', color: T.error, padding: '8px', 
-                                borderRadius: '50%', transition: 'background-color 0.2s',
-                                opacity: 0.5
-                              }}
-                              title="No es posible eliminar un cliente por integridad de datos"
-                            >
-                               🗑️
-                            </button>
+                             <button 
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 navigate(`/admin/clientes/${c.phone}`);
+                               }}
+                               style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '16px' }}
+                             >
+                               👁️
+                             </button>
                          </td>
                       </tr>
                     )
@@ -232,7 +211,7 @@ export default function AdminClientsPage() {
         {/* MOBILE CARDS */}
         <section className="mobile-cards">
           {loading ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>Cargando...</div>
+            <div style={{ padding: '40px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>Cargando historial...</div>
           ) : filteredClients.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>Sin clientes.</div>
           ) : (
@@ -244,24 +223,44 @@ export default function AdminClientsPage() {
                   <div 
                     key={c.id} 
                     onClick={() => navigate(`/admin/clientes/${c.phone}`)}
-                    style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '16px', padding: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: `1px solid ${T.outlineVariant}20` }}
+                    style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '20px', padding: '20px', boxShadow: '0 8px 20px rgba(0,0,0,0.04)', border: `1px solid ${T.outlineVariant}20` }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                      <img src={`https://i.pravatar.cc/60?img=${avatarId}`} alt={c.name} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+                      <img src={`https://i.pravatar.cc/80?img=${avatarId}`} alt={c.name} style={{ width: '56px', height: '56px', borderRadius: '16px', objectFit: 'cover' }} />
                       <div style={{ flex: 1 }}>
-                        <h4 style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 700, color: T.onSurface, margin: 0 }}>{c.name}</h4>
-                        <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 800, color: tier.color, textTransform: 'uppercase' }}>{tier.label}</span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary }}>{c.visits} visitas</span>
+                        <h4 style={{ fontFamily: T.fontBody, fontSize: '17px', fontWeight: 700, color: T.onSurface, margin: 0 }}>{c.name}</h4>
+                        <span style={{ backgroundColor: tier.color, color: 'white', padding: '2px 8px', borderRadius: '4px', fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', marginTop: '4px', display: 'inline-block' }}>{tier.label}</span>
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: `1px solid ${T.outlineVariant}10`, paddingTop: '12px' }}>
-                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📞 {c.phone}</p>
-                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📅 Última: {c.lastDate ? formatLastDate(c.lastDate) : 'S/I'}</p>
-                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary, fontWeight: 600, margin: 0 }}>👩‍🎨 {c.favoriteEmployee || 'S/I'}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: `1px solid ${T.outlineVariant}10`, paddingTop: '16px' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>📞 Teléfono</span>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurface }}>{c.phone}</span>
+                       </div>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>💰 LTV</span>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>${(c as any).ltv?.toLocaleString() || '0'}</span>
+                       </div>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>✂️ Especialista</span>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurface }}>{c.favoriteEmployee || 'S/I'}</span>
+                       </div>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>📅 Última Cita</span>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurface }}>{(c as any).lastDate ? formatLastDate((c as any).lastDate) : 'S/I'}</span>
+                       </div>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>🔢 Visitas</span>
+                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>{c.visits} completadas</span>
+                       </div>
                     </div>
+
+                    <button 
+                      style={{ width: '100%', marginTop: '20px', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, backgroundColor: T.surface, color: T.onSurface, fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Ver Detalle Completo
+                    </button>
                   </div>
                 );
               })}

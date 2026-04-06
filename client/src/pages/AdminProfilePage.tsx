@@ -18,6 +18,7 @@ export default function AdminProfilePage() {
     email: '',
     foto: '',
     password: '',
+    currentPassword: '',
     disponibleHoy: true
   });
 
@@ -31,6 +32,7 @@ export default function AdminProfilePage() {
           email: res.data.email || '',
           foto: res.data.foto || '',
           password: '',
+          currentPassword: '',
           disponibleHoy: res.data.disponibleHoy !== false
         });
       }
@@ -174,6 +176,20 @@ export default function AdminProfilePage() {
                 style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px', boxSizing: 'border-box' }} 
               />
             </div>
+
+            {formData.password && (
+              <div style={{ animation: 'slideDown 0.3s ease-out' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.primary, marginBottom: '8px' }}>Contraseña Actual (Requerida para cambios)</label>
+                <input 
+                  required
+                  type="password" 
+                  value={formData.currentPassword} 
+                  onChange={e => setFormData({ ...formData, currentPassword: e.target.value })} 
+                  placeholder="Confirma tu identidad"
+                  style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid ${T.primary}40`, fontFamily: T.fontBody, fontSize: '14px', boxSizing: 'border-box' }} 
+                />
+              </div>
+            )}
 
             {/* Disponibilidad Hoy Toggle — Solo para Especialistas */}
             {formData.email !== (import.meta.env.VITE_ADMIN_EMAIL || 'admin@salon.com') && (

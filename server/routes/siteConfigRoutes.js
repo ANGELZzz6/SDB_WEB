@@ -7,6 +7,6 @@ const { authMiddleware, requireRole } = require('../middleware/auth');
 router.get('/', getConfig);
 
 // PUT /api/config — Solo Admin
-router.put('/', authMiddleware, requireRole(['admin']), updateConfig);
+router.put('/', authMiddleware, requireRole('admin'), updateConfig);
 
 module.exports = router;

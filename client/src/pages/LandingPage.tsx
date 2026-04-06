@@ -761,7 +761,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <p style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.45)', marginBottom: '6px' }}>Horario</p>
-                  <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#FFFFFF' }}>{config?.horario || "Lunes a Domingo 6:00 AM – 9:00 PM"}</p>
+                  <p style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: '#FFFFFF' }}>{config?.horario || "Lun-Sab 9am-7pm"}</p>
                 </div>
               </div>
             </div>
@@ -848,7 +848,7 @@ export default function LandingPage() {
             <p style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant }}>
               Atención hoy
             </p>
-            <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.primary, fontWeight: 600 }}>{config?.horario || "6:00 AM – 9:00 PM"}</p>
+            <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.primary, fontWeight: 600 }}>{config?.horario || "Lun-Sab 9am-7pm"}</p>
           </div>
         </div>
         <button

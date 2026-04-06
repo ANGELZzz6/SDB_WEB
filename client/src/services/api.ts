@@ -10,7 +10,7 @@ import type {
   SiteConfig
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 /**
  * Función auxiliar para manejar la respuesta del servidor.
@@ -99,9 +99,13 @@ export const api = {
 
 export const authService = {
   login: (credentials: any) => api.post<ApiResponse<{ token: string, user: any }>>('/auth/login', credentials),
-  logout: () => {
-    localStorage.removeItem('token');
-    return api.post<ApiResponse<null>>('/auth/logout', {});
+  logout: async () => {
+    try {
+      await api.post<ApiResponse<null>>('/auth/logout', {});
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('adminUser');
+    }
   },
   getMe: () => api.get<ApiResponse<any>>('/auth/me'),
   createEmployeeAccount: (data: any) => api.post<ApiResponse<any>>('/auth/create-employee-account', data),
@@ -151,9 +155,11 @@ export const appointmentService = {
   getById: (id: string) => api.get<ApiResponse<Appointment>>(`/appointments/${id}`),
   create: (data: Partial<Appointment>) => api.post<ApiResponse<Appointment>>('/appointments', data),
   updateStatus: (id: string, status: string, notes?: string) => api.put<ApiResponse<Appointment>>(`/appointments/${id}`, { status, notes }),
-  cancel: (id: string) => api.delete<ApiResponse<Appointment>>(`/appointments/${id}`),
+  cancel: (id: string) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}`, { status: 'cancelada' }),
   reschedule: (id: string, data: { date: string, timeSlot: string, employeeId: string, reason?: string }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/reschedule`, data),
   complete: (id: string, data?: { finalPrice: number }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/complete`, data || {}),
+  createBulk: (data: { clientName: string; clientPhone: string; clientEmail?: string; appointments: any[]; notes?: string }) => 
+    api.post<ApiResponse<Appointment[]>>('/appointments/bulk', data),
   getStats: () => api.get<ApiResponse<any>>('/appointments/stats'),
   getClients: () => api.get<ApiResponse<any[]>>('/appointments/clients'),
 };

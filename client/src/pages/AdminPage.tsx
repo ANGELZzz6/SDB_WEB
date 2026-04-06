@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
-import { appointmentService, employeeService, availabilityService } from '../services/api';
-import type { Employee } from '../types';
+import { appointmentService, employeeService, availabilityService, siteConfigService } from '../services/api';
+import type { Employee, SiteConfig } from '../types';
+import { waLink, WA_MESSAGES, formatFecha, buildMessage } from '../utils/whatsappMessages';
 
 /* ─────────────────────────────────────────────────
    Data
@@ -14,7 +15,7 @@ interface UIAppointment {
   service: string; serviceId: string; serviceIcon: string; 
   specialist: string; specialistId: string;
   duration: string; status: AppStatus;
-  date: string;
+  date: string; bulkId?: string;
 }
 
 const mapStatus = (apiStatus: string): AppStatus => {
@@ -66,6 +67,23 @@ export default function AdminPage() {
   const [reschForm, setReschForm] = useState({ date: '', timeSlot: '', employeeId: '', reason: '' });
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
+  
+  // Price Modal state
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [selectedApptToComplete, setSelectedApptToComplete] = useState<UIAppointment | null>(null);
+  const [finalPriceInput, setFinalPriceInput] = useState<string>('');
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled', appt: any } | null>(null);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+  const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
+
+  // Botón de WA desaparece después de 30 segundos
+  useEffect(() => {
+    if (lastAction) {
+      const timer = setTimeout(() => setLastAction(null), 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAction]);
 
   const formatISO = (d: Date | string) => {
     if (typeof d === 'string') return d.split('T')[0];
@@ -85,7 +103,8 @@ export default function AdminPage() {
     specialistId: a.employee?._id || '',
     duration: a.service?.duracion ? `${a.service.duracion}m` : '30m',
     status: mapStatus(a.status),
-    date: a.date
+    date: a.date,
+    bulkId: a.bulkId
   });
 
   const fetchData = async (showLoading = true) => {
@@ -104,7 +123,11 @@ export default function AdminPage() {
         appointmentService.getAll({ status: 'pending', ...(isEmpleada ? { employeeId: user?.id } : {}) })
       ];
 
-      const [apptsRes, statsRes, pendingRes, empsRes] = await Promise.all(promises.concat(employeeService.getAll()));
+      const [apptsRes, statsRes, pendingRes, empsRes, configRes] = await Promise.all(promises.concat([employeeService.getAll(), siteConfigService.get()]));
+
+      if (configRes?.success && configRes?.data) {
+        setSiteConfig(configRes.data);
+      }
 
       if (empsRes?.success && empsRes?.data) {
         setAllEmployees(empsRes.data);
@@ -180,6 +203,13 @@ export default function AdminPage() {
         }
         
         showNotif(newStatus === 'confirmed' ? '✅ Cita confirmada' : '❌ Cita rechazada', newStatus === 'confirmed' ? 'ok' : 'err');
+        
+        // WhatsApp notification trigger
+        const affectedAppt = pendingAppointments.find(a => a.id === id);
+        if (affectedAppt) {
+          setLastAction({ id, type: newStatus === 'confirmed' ? 'confirmed' : 'cancelled', appt: affectedAppt });
+        }
+
         fetchData(false); // Refrescar para asegurar sincronía
       }
     } catch (error) {
@@ -229,6 +259,7 @@ export default function AdminPage() {
             : a
         ));
         showNotif('✅ Cita reagendada exitosamente (sigue pendiente)');
+        setLastAction({ id: rescheduleTarget.id, type: 'rescheduled', appt: { ...rescheduleTarget, date: reschForm.date, time: reschForm.timeSlot } });
         fetchData(false);
       }
     } catch (e: any) {
@@ -236,19 +267,35 @@ export default function AdminPage() {
     }
   };
 
-  const handleComplete = async (id: string) => {
+  const handleComplete = (appt: UIAppointment) => {
+    setSelectedApptToComplete(appt);
+    setFinalPriceInput(''); 
+    setShowPriceModal(true);
+  };
+
+  const handleFinalComplete = async () => {
+    if (!selectedApptToComplete) return;
+    if (!finalPriceInput || Number(finalPriceInput) <= 0) {
+      showNotif('Por favor ingresa el valor cobrado', 'err');
+      return;
+    }
+
     try {
-      const res = await appointmentService.complete(id);
+      setIsCompleting(true);
+      const res = await appointmentService.complete(selectedApptToComplete.id, { finalPrice: Number(finalPriceInput) });
       if (res.success) {
         setAppointments(prev => prev.map(a => 
-          a.id === id ? { ...a, status: 'Completada' } : a
+          a.id === selectedApptToComplete.id ? { ...a, status: 'Completada' } : a
         ));
         showNotif('✅ Cita marcada como completada', 'ok');
+        setShowPriceModal(false);
         fetchData(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error completing appointment', error);
-      showNotif('Error al completar la cita', 'err');
+      showNotif(error.message || 'Error al completar la cita', 'err');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -360,7 +407,12 @@ export default function AdminPage() {
                 <div key={appt.id} className="w-full min-w-0 rounded-2xl p-4 md:p-5 min-h-0" style={{ backgroundColor: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderLeft: `4px solid ${T.primary}` }}>
                   <div className="flex flex-col gap-1 mb-3">
                     <h4 className="truncate" style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, margin: 0 }}>{appt.client}</h4>
-                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📞 {appt.clientPhone}</p>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📞 {appt.clientPhone}</p>
+                      {appt.bulkId && (
+                        <span style={{ fontSize: '10px', backgroundColor: T.primaryContainer, color: T.primary, padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>🔗 Sesión Múltiple</span>
+                      )}
+                    </div>
                     <p className="truncate" style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>💎 {appt.service} · {appt.duration}</p>
                     <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>👩‍🎨 {appt.specialist} · {appt.time}</p>
                   </div>
@@ -393,6 +445,51 @@ export default function AdminPage() {
                       Rechazar
                     </button>
                   </div>
+
+                  {/* WhatsApp Success Button */}
+                  {lastAction && lastAction.id === appt.id && (
+                    <div className="mt-4 animate-fadeIn">
+                      {lastAction.type === 'confirmed' && (
+                        <button
+                          onClick={() => {
+                            const msg = siteConfig?.mensajeConfirmacion 
+                              ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: appt.client, servicio: appt.service, fecha: formatFecha(appt.date), hora: appt.time })
+                              : WA_MESSAGES.confirmacion(appt.client, appt.service, formatFecha(appt.date), appt.time);
+                            setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
+                          }}
+                          style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
+                        >
+                          📲 Enviar confirmación por WhatsApp
+                        </button>
+                      )}
+                      {lastAction.type === 'cancelled' && (
+                        <button
+                          onClick={() => {
+                            const msg = siteConfig?.mensajeCancelacion
+                              ? buildMessage(siteConfig.mensajeCancelacion, { nombre: appt.client, fecha: formatFecha(appt.date) })
+                              : WA_MESSAGES.rechazo(appt.client, formatFecha(appt.date));
+                            setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
+                          }}
+                          style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
+                        >
+                          📲 Enviar cancelación por WhatsApp
+                        </button>
+                      )}
+                      {lastAction.type === 'rescheduled' && (
+                        <button
+                          onClick={() => {
+                            const msg = siteConfig?.mensajeReagendamiento
+                              ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: appt.client, servicio: appt.service })
+                              : WA_MESSAGES.reagendamiento(appt.client, appt.service);
+                            setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
+                          }}
+                          style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
+                        >
+                          📲 Coordinar reagendamiento por WhatsApp
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -455,7 +552,12 @@ export default function AdminPage() {
                           </div>
                           <div className="min-w-0 w-full">
                             <div className="flex items-center justify-between w-full mb-1">
-                              <h4 className="truncate" style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, marginBottom: 0 }}>{appt.client}</h4>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <h4 className="truncate" style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, marginBottom: 0 }}>{appt.client}</h4>
+                                {appt.bulkId && (
+                                  <span title="Parte de una sesión múltiple" style={{ fontSize: '12px', cursor: 'help' }}>🔗</span>
+                                )}
+                              </div>
                               <span className="shrink-0 sm:hidden" style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
@@ -476,29 +578,30 @@ export default function AdminPage() {
                           <span className="shrink-0 hidden sm:inline-block" style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '6px 14px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
                           
                           {(appt.status === 'Confirmada' || appt.status === 'Pendiente') && (
-                            <a
-                              href={`https://wa.me/${appt.clientPhone.replace(/\D/g, '').startsWith('57') ? appt.clientPhone.replace(/\D/g, '') : `57${appt.clientPhone.replace(/\D/g, '')}`}?text=${encodeURIComponent(`Hola ${appt.client} 👋, te escribimos desde L'Élixir Salon. ¡Tenemos un espacio disponible ahora mismo! ¿Puedes pasar antes de tu cita de las ${appt.time}? Te esperamos 💅`)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => {
+                                const msg = `Hola ${appt.client} 👋, te escribimos desde L'Élixir Salon. ¡Tenemos un espacio disponible ahora mismo! ¿Puedes pasar antes de tu cita de las ${appt.time}? Te esperamos 💅`;
+                                setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
+                              }}
                               style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                                 backgroundColor: '#25D366', color: 'white',
                                 padding: '6px 14px', borderRadius: '9999px',
                                 fontFamily: T.fontBody, fontSize: '11px', fontWeight: 800,
                                 textTransform: 'uppercase', letterSpacing: '0.1em',
-                                textDecoration: 'none', whiteSpace: 'nowrap',
+                                border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
                                 transition: 'opacity 0.2s'
                               }}
                               onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
                               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                             >
                               📲 Llamar
-                            </a>
+                            </button>
                           )}
 
                           {appt.status === 'Confirmada' && (
                             <button
-                              onClick={() => handleComplete(appt.id)}
+                              onClick={() => handleComplete(appt)}
                               className="text-[11px] font-bold uppercase tracking-wider bg-green-500 text-white px-4 py-2 rounded-full transform transition hover:scale-105 hover:bg-green-600"
                               style={{ border: 'none', cursor: 'pointer', fontFamily: T.fontBody }}
                             >
@@ -600,6 +703,73 @@ export default function AdminPage() {
               >
                 Confirmar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* FINAL PRICE MODAL */}
+      {showPriceModal && selectedApptToComplete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px' }}>¿Cuánto se cobró?</h3>
+            <p className="text-sm text-gray-500 mb-4">{selectedApptToComplete.service} · {selectedApptToComplete.client}</p>
+            <input 
+              type="number" 
+              value={finalPriceInput}
+              onChange={e => setFinalPriceInput(e.target.value)}
+              placeholder="Ej: 85000"
+              className="w-full border rounded-xl p-3 text-lg mb-4"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleFinalComplete()}
+            />
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowPriceModal(false)} 
+                className="flex-1 py-3 rounded-xl border font-bold"
+                style={{ fontFamily: T.fontBody }}
+                disabled={isCompleting}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleFinalComplete} 
+                className="flex-1 py-3 rounded-xl bg-green-500 text-white font-bold"
+                style={{ fontFamily: T.fontBody }}
+                disabled={isCompleting}
+              >
+                {isCompleting ? 'Procesando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* WHATSAPP CONFIRMATION MODAL */}
+      {waModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '400px', padding: '32px', borderRadius: '24px', boxShadow: '0 24px 80px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '12px' }}>¿Enviar mensaje?</h3>
+            <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '20px' }}>
+              Se abrirá WhatsApp con este mensaje:
+            </p>
+            <div style={{ backgroundColor: T.surfaceContainerLow, padding: '16px', borderRadius: '16px', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurface, fontStyle: 'italic', marginBottom: '24px', borderLeft: `4px solid #25D366` }}>
+              "{waModal.mensaje}"
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => setWaModal(null)}
+                style={{ flex: 1, padding: '14px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
+              >
+                No enviar
+              </button>
+              <a
+                href={waModal.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setWaModal(null)}
+                style={{ flex: 1, padding: '14px', backgroundColor: '#25D366', color: 'white', borderRadius: '9999px', textAlign: 'center', textDecoration: 'none', fontFamily: T.fontBody, fontWeight: 800, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                📲 Abrir WhatsApp
+              </a>
             </div>
           </div>
         </div>

@@ -41,10 +41,17 @@ export default function AdminLayout({
     return userPermissions[item.key] === true; // other sections require explicit permission
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('adminUser');
-    navigate('/admin/login');
+  const handleLogout = async () => {
+    try {
+      const { authService } = await import('../services/api');
+      await authService.logout();
+    } catch (e) {
+      console.error('Error during logout:', e);
+      localStorage.removeItem('token');
+      localStorage.removeItem('adminUser');
+    } finally {
+      navigate('/admin/login');
+    }
   };
 
   return (

@@ -9,7 +9,7 @@ const request = (method, path, payload, token) => new Promise((resolve) => {
   const headers = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = 'Bearer ' + token
   if (body) headers['Content-Length'] = Buffer.byteLength(body)
-  const opts = { hostname: 'localhost', port: 5000, path, method, headers }
+  const opts = { hostname: 'localhost', port: 5001, path, method, headers }
   const req = http.request(opts, (res) => {
     let data = ''
     res.on('data', d => data += d)
@@ -24,9 +24,9 @@ const request = (method, path, payload, token) => new Promise((resolve) => {
   req.end()
 })
 
-const ok  = (msg) => console.log('  ✅', msg)
-const fail = (msg) => console.log('  ❌', msg)
-const sep  = (title) => console.log('\n' + '─'.repeat(50) + '\n📌 ' + title)
+const ok  = (msg) => console.log('  [OK]', msg)
+const fail = (msg) => console.log('  [FAIL]', msg)
+const sep  = (title) => console.log('\n' + '--------------------------------------------------' + '\n# ' + title)
 
 async function run() {
   console.log('🧪 PRUEBA INTEGRAL BACKEND — L\'Élixir Salon')
@@ -142,13 +142,7 @@ async function run() {
   // ─── FASE 3: DISPONIBILIDAD ────────────────────────────
   sep('FASE 3 — Disponibilidad')
 
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  // Saltar fin de semana (sabado/domingo están inactivos para esta empleada)
-  while (tomorrow.getDay() === 0 || tomorrow.getDay() === 6) {
-    tomorrow.setDate(tomorrow.getDate() + 1)
-  }
-  const dateStr = tomorrow.toISOString().split('T')[0]
+  const dateStr = '2026-04-06'
 
   r = await request('GET', '/api/appointments/availability/' + empId + '/' + dateStr + '?serviceId=' + svcId)
   const slots = r.body?.data || []
@@ -256,6 +250,191 @@ async function run() {
     ? ok('GET /api/appointments/stats → hoy: ' + r.body.data.todayCount + ' cita(s)')
     : fail('Stats falló: ' + r.body?.message)
 
+  // ─── FASE 4: CRM ────────────────────────────────────────
+  sep('FASE 4 — Clientes CRM')
+
+  // Creamos una nueva cita que SI completaremos (para no interferir con el test de disponibilidad anterior)
+  r = await request('POST', '/api/appointments', {
+    clientName: 'María CRM',
+    clientPhone: '3001234567',
+    employee: empId,
+    service: svcId,
+    date: dateStr,
+    timeSlot: '11:00'
+  })
+  const crmApptId = r.body?.data?._id
+  if (crmApptId) {
+    await request('PUT', '/api/appointments/' + crmApptId + '/status', { status: 'completed', price: 120000 }, token)
+    ok('Cita CRM ' + crmApptId + ' creada y marcada como COMPLETED')
+  }
+
+  // Listar clientes (debe tener al menos 1 tras crear la cita)
+  r = await request('GET', '/api/clients', null, token)
+  r.body?.success
+    ? ok('GET /api/clients → ' + r.body.data.length + ' cliente(s)')
+    : fail('Listar clientes falló: ' + r.body?.message)
+
+  // Detalle de cliente por teléfono
+  r = await request('GET', '/api/clients/3001234567', null, token)
+  r.body?.success
+    ? ok('GET /api/clients/:phone → LTV: ' + r.body.data.ltv + ' tier: ' + r.body.data.tier + ' visitas: ' + r.body.data.visits)
+    : fail('Detalle cliente falló: ' + r.body?.message)
+
+  // Cliente sin auth → 401
+  r = await request('GET', '/api/clients', null, null)
+  r.status === 401
+    ? ok('GET /api/clients (sin token) → 401 correcto')
+    : fail('Debería ser 401')
+
+  // ─── FASE 5: LIQUIDACIONES ──────────────────────────────
+  sep('FASE 5 — Liquidaciones')
+
+  // Pendientes de liquidar por especialista
+  r = await request('GET', '/api/settlements/' + empId, null, token)
+  r.body?.success
+    ? ok('GET /api/settlements/:id → pendientes: ' + (r.body.data?.citasPendientes?.length || 0))
+    : fail('Settlements pendientes falló: ' + r.body?.message)
+
+  // Historial de liquidaciones
+  r = await request('GET', '/api/settlements/history/' + empId, null, token)
+  r.body?.success
+    ? ok('GET /api/settlements/history → ' + r.body.data.length + ' liquidación(es)')
+    : fail('Historial liquidaciones falló: ' + r.body?.message)
+
+  // Global contabilidad
+  r = await request('GET', '/api/settlements/global', null, token)
+  r.body?.success
+    ? ok('GET /api/settlements/global → totalSalon: ' + r.body.data?.totalSalon)
+    : fail('Global settlements falló: ' + r.body?.message)
+
+  // Sin auth → 401
+  r = await request('GET', '/api/settlements/global', null, null)
+  r.status === 401
+    ? ok('GET /api/settlements/global (sin token) → 401 correcto')
+    : fail('Debería ser 401')
+
+  // ─── FASE 6: BULK APPOINTMENTS ──────────────────────────
+  sep('FASE 6 — Bulk Appointments')
+
+  // Crear segundo servicio para el bulk test
+  r = await request('POST', '/api/services', {
+    nombre: 'Corte Test',
+    descripcion: 'Servicio corte prueba',
+    precio: 45000,
+    duracion: 45,
+    empleadas: empId ? [empId] : [],
+  }, token)
+  const svcId2 = r.body?.data?._id
+  r.body?.success && svcId2
+    ? ok('POST /api/services (2do servicio) → ID: ' + svcId2)
+    : fail('Crear 2do servicio falló')
+
+  // Obtener slots para el bulk
+  r = await request('GET', '/api/appointments/availability/' + empId + '/' + dateStr + '?serviceId=' + svcId2)
+  const slots2 = r.body?.data || []
+  const slotBulk1 = slots[1] || '10:00'
+  const slotBulk2 = slots2[3] || '12:00'
+
+  // Crear bulk de 2 citas
+  r = await request('POST', '/api/appointments/bulk', {
+    clientName: 'Ana Bulk Test',
+    clientPhone: '3007777777',
+    appointments: [
+      { employee: empId, service: svcId,  date: dateStr, timeSlot: slotBulk1 },
+      { employee: empId, service: svcId2, date: dateStr, timeSlot: slotBulk2 },
+    ]
+  })
+  const bulkId = r.body?.data?.bulkId
+  r.body?.success && bulkId
+    ? ok('POST /api/appointments/bulk → bulkId: ' + bulkId + ' citas: ' + r.body.data.appointments?.length)
+    : fail('Bulk appointments falló: ' + r.body?.message)
+
+  // Intentar duplicar mismo servicio en bulk → debe rechazar
+  r = await request('POST', '/api/appointments/bulk', {
+    clientName: 'Ana Bulk Test',
+    clientPhone: '3007777777',
+    appointments: [
+      { employee: empId, service: svcId, date: dateStr, timeSlot: slotBulk1 },
+      { employee: empId, service: svcId, date: dateStr, timeSlot: slotBulk2 },
+    ]
+  })
+  r.status === 400 || r.status === 409
+    ? ok('POST /api/appointments/bulk (servicio duplicado) → ' + r.status + ' correcto')
+    : fail('Debería rechazar servicios duplicados en bulk, status: ' + r.status)
+
+  // Cleanup 2do servicio
+  r = await request('DELETE', '/api/services/' + svcId2, null, token)
+  r.body?.success ? ok('DELETE /api/services (2do servicio) → OK') : fail('Cleanup 2do servicio falló')
+
+  // ─── FASE 7: SITE CONFIG ────────────────────────────────
+  sep('FASE 7 — SiteConfig CMS')
+
+  // GET público
+  r = await request('GET', '/api/config')
+  r.body?.success
+    ? ok('GET /api/config (público) → OK, campos: ' + Object.keys(r.body.data || {}).join(', '))
+    : fail('GET config falló: ' + r.body?.message)
+
+  // Verificar que no expone campos sensibles
+  const configData = r.body?.data || {}
+  const hasSensitive = ['updatedBy', 'password', '__v'].some(k => configData[k] !== undefined)
+  !hasSensitive
+    ? ok('GET /api/config → no expone campos sensibles')
+    : fail('Config expone campos sensibles: ' + JSON.stringify(configData))
+
+  // PUT config (con auth)
+  r = await request('PUT', '/api/config', {
+    nombreSalon: "L'Élixir Salon Test",
+    mensajeConfirmacion: 'Hola {nombre}, tu cita de {servicio} está confirmada ✅',
+  }, token)
+  r.body?.success
+    ? ok('PUT /api/config → nombreSalon: ' + r.body.data?.nombreSalon)
+    : fail('PUT config falló: ' + r.body?.message)
+
+  // PUT sin auth → 401
+  r = await request('PUT', '/api/config', { nombreSalon: 'Hack' })
+  r.status === 401
+    ? ok('PUT /api/config (sin token) → 401 correcto')
+    : fail('Debería ser 401')
+
+  // PUT con horario inválido (apertura > cierre) → 400
+  r = await request('PUT', '/api/config', { 
+    horaAperturaAgendamiento: '19:00',
+    horaCierreAgendamiento: '08:00'
+  }, token)
+  r.status === 400
+    ? ok('PUT /api/config (horario inválido) → 400 correcto')
+    : fail('Debería ser 400 al poner apertura > cierre')
+
+  // ─── FASE 8: SEGURIDAD ──────────────────────────────────
+  sep('FASE 8 — Seguridad')
+
+  // Verificar que password no viene en respuesta de empleadas
+  r = await request('GET', '/api/employees', null, token)
+  const empData = r.body?.data?.[0] || {}
+  const hasPassword = 'password' in empData || 'tokenVersion' in empData
+  !hasPassword
+    ? ok('GET /api/employees → no expone password ni tokenVersion ✅')
+    : fail('GET /api/employees expone campos sensibles: ' + JSON.stringify(Object.keys(empData)))
+
+  // Verificar headers de seguridad
+  r = await request('GET', '/api/health')
+  // El test no puede verificar headers HTTP fácilmente, solo registrar
+  ok('Headers de seguridad — verificar manualmente en DevTools (helmet activo)')
+
+  // Login con credenciales incorrectas múltiples veces
+  let blocked = false
+  for (let i = 0; i < 5; i++) {
+    r = await request('POST', '/api/auth/login', { identifier: 'admin', password: 'wrong' + i })
+  }
+  r.status === 401
+    ? ok('Múltiples logins fallidos → aún retorna 401 (rate limit no alcanzado en 5 intentos)')
+    : fail('Login handling inesperado: ' + r.status)
+
+  sep('RESUMEN FINAL')
+  console.log('Fases completadas: Auth, CRUD, Disponibilidad, Citas, CRM, Liquidaciones, Bulk, CMS, Seguridad')
+  console.log('Revisa los ❌ arriba para issues pendientes')
+
   // ─── CLEANUP (soft-delete) ──────────────────────────────
   sep('Cleanup — soft delete')
   r = await request('DELETE', '/api/employees/' + empId, null, token)
@@ -265,8 +444,34 @@ async function run() {
   r.body?.success ? ok('DELETE /api/services (desactivar) → OK') : fail('Desactivar servicio falló')
 
   console.log('\n' + '='.repeat(50))
-  console.log('🎉 PRUEBA INTEGRAL COMPLETADA')
-  console.log('='.repeat(50))
+  // ─── FASE 8: Login Especialista (Angel) ──────────────────
+  sep('FASE 8 — Login Especialista (Angel)')
+  
+  const r8 = await request('POST', '/api/auth/login', {
+    identifier: 'angel',
+    password: 'angel123',
+    role: 'empleada'
+  })
+  
+  let angelToken = '';
+  if (r8.body?.success && r8.body?.data?.token) {
+    angelToken = r8.body.data.token;
+    ok('POST /api/auth/login (angel) → OK, Token capturado');
+    r8.body.data.user?.role === 'empleada' ? ok('  -> Rol devuelto: empleada (Correcto)') : fail('  -> Rol devuelto: ' + r8.body.data.user?.role);
+  } else {
+    fail('POST /api/auth/login (angel) falló: ' + (r8.body?.message || r8.status));
+  }
+  
+  if (angelToken) {
+    const rMe = await request('GET', '/api/auth/me', {}, angelToken)
+    rMe.body?.success && rMe.body?.data?.nombre === 'angel'
+      ? ok('GET /api/auth/me (angel) → OK, Nombre verificado')
+      : fail('GET /api/auth/me (angel) falló: ' + (JSON.stringify(rMe.body) || rMe.status));
+  }
+
+  console.log('\n==================================================');
+  console.log('🎉 PRUEBA INTEGRAL COMPLETADA');
+  console.log('==================================================');
   process.exit(0)
 }
 

@@ -30,9 +30,19 @@ const SiteConfigSchema = new mongoose.Schema({
   heroImagenUrl: { type: String, default: "" },
   fondoImagenUrl: { type: String, default: "" },
 
+  // Mensajes WhatsApp (Plantillas editables)
+  mensajeConfirmacion: { type: String, default: "" },
+  mensajeCancelacion: { type: String, default: "" },
+  mensajeReagendamiento: { type: String, default: "" },
+  
+  // Horario de Agendamiento (Dynamic)
+  horaAperturaAgendamiento: { type: String, default: '08:00' },
+  horaCierreAgendamiento: { type: String, default: '19:00' },
+  duracionSlot: { type: Number, default: 30 },
+
   // Metadata
   updatedAt: { type: Date, default: Date.now },
-  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }
+  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: false, default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model('SiteConfig', SiteConfigSchema);

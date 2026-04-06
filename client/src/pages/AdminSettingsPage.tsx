@@ -3,11 +3,89 @@ import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
 import { settingsService, siteConfigService } from '../services/api';
 import type { Settings, SiteConfig } from '../types';
+import { WA_MESSAGES } from '../utils/whatsappMessages';
+
+/* ─────────────────────────────────────────────────
+   REUSABLE UTILITY COMPONENTS
+   (Defined outside to prevent re-mounting on state updates)
+───────────────────────────────────────────────── */
+const SectionCard = ({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) => (
+  <section style={{ backgroundColor: T.surfaceContainerLow, borderRadius: '16px', padding: '32px', ...style }}>
+    {children}
+  </section>
+);
+
+const SectionTitle = ({ icon, title }: { icon: string; title: string }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
+    <span style={{ fontSize: '20px' }}>{icon}</span>
+    <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, fontWeight: 600 }}>{title}</h3>
+  </div>
+);
+
+const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+  <label style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: T.onSurfaceVariant, display: 'block', marginBottom: '6px' }}>
+    {children}
+  </label>
+);
+
+const UnderlineInput = ({ value, onChange, type = "text", placeholder = "" }: { value: string | number, onChange: (v: string) => void, type?: string, placeholder?: string }) => (
+  <input
+    type={type}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    placeholder={placeholder}
+    style={{
+      width: '100%', backgroundColor: 'transparent', border: 'none',
+      borderBottom: `1px solid ${T.outlineVariant}40`, padding: '8px 0',
+      fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface,
+      transition: 'border-color 0.2s',
+    }}
+    onFocus={(e) => (e.currentTarget.style.borderBottomColor = T.primary)}
+    onBlur={(e) => (e.currentTarget.style.borderBottomColor = `${T.outlineVariant}40`)}
+  />
+);
+
+const UnderlineTextarea = ({ value, onChange, rows = 3, placeholder = "" }: { value: string, onChange: (v: string) => void, rows?: number, placeholder?: string }) => (
+  <textarea
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    rows={rows}
+    placeholder={placeholder}
+    style={{
+      width: '100%', backgroundColor: 'transparent', border: 'none',
+      borderBottom: `1px solid ${T.outlineVariant}40`, padding: '8px 0',
+      fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface,
+      transition: 'border-color 0.2s', resize: 'none'
+    }}
+    onFocus={(e) => (e.currentTarget.style.borderBottomColor = T.primary)}
+    onBlur={(e) => (e.currentTarget.style.borderBottomColor = `${T.outlineVariant}40`)}
+  />
+);
+
+const UnderlineSelect = ({ value, onChange, options }: { value: string | number, onChange: (v: string) => void, options: { value: string | number, label: string }[] }) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    style={{
+      width: '100%', backgroundColor: 'transparent', border: 'none',
+      borderBottom: `2px solid ${T.outlineVariant}40`, padding: '10px 0',
+      fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface,
+      cursor: 'pointer', appearance: 'none', outline: 'none',
+      transition: 'border-color 0.2s',
+    }}
+    onFocus={(e) => (e.currentTarget.style.borderBottomColor = T.primary)}
+    onBlur={(e) => (e.currentTarget.style.borderBottomColor = `${T.outlineVariant}40`)}
+  >
+    {options.map(opt => (
+      <option key={opt.value} value={opt.value}>{opt.label}</option>
+    ))}
+  </select>
+);
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [cmsTab, setCmsTab] = useState<'negocio' | 'redes' | 'textos' | 'imagenes' | 'colores'>('negocio');
+  const [cmsTab, setCmsTab] = useState<'negocio' | 'redes' | 'textos' | 'imagenes' | 'colores' | 'whatsapp'>('negocio');
   
   const [settings, setSettings] = useState<Settings>({
     _id: '',
@@ -40,7 +118,13 @@ export default function AdminSettingsPage() {
     colorSecundario: '#3e0215',
     colorAcento: '#fdf8f9',
     heroImagenUrl: '',
-    fondoImagenUrl: ''
+    fondoImagenUrl: '',
+    mensajeConfirmacion: '',
+    mensajeCancelacion: '',
+    mensajeReagendamiento: '',
+    horaAperturaAgendamiento: '08:00',
+    horaCierreAgendamiento: '19:00',
+    duracionSlot: 30
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -149,58 +233,6 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const SectionCard = ({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-    <section style={{ backgroundColor: T.surfaceContainerLow, borderRadius: '16px', padding: '32px', ...style }}>
-      {children}
-    </section>
-  );
-
-  const SectionTitle = ({ icon, title }: { icon: string; title: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
-      <span style={{ fontSize: '20px' }}>{icon}</span>
-      <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, fontWeight: 600 }}>{title}</h3>
-    </div>
-  );
-
-  const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-    <label style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: T.onSurfaceVariant, display: 'block', marginBottom: '6px' }}>
-      {children}
-    </label>
-  );
-
-  const UnderlineInput = ({ value, onChange, type = "text", placeholder = "" }: { value: string | number, onChange: (v: string) => void, type?: string, placeholder?: string }) => (
-    <input
-      type={type}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      style={{
-        width: '100%', backgroundColor: 'transparent', border: 'none',
-        borderBottom: `1px solid ${T.outlineVariant}40`, padding: '8px 0',
-        fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface,
-        transition: 'border-color 0.2s',
-      }}
-      onFocus={(e) => (e.currentTarget.style.borderBottomColor = T.primary)}
-      onBlur={(e) => (e.currentTarget.style.borderBottomColor = `${T.outlineVariant}40`)}
-    />
-  );
-
-  const UnderlineTextarea = ({ value, onChange, rows = 3 }: { value: string, onChange: (v: string) => void, rows?: number }) => (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      rows={rows}
-      style={{
-        width: '100%', backgroundColor: 'transparent', border: 'none',
-        borderBottom: `1px solid ${T.outlineVariant}40`, padding: '8px 0',
-        fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface,
-        transition: 'border-color 0.2s', resize: 'none'
-      }}
-      onFocus={(e) => (e.currentTarget.style.borderBottomColor = T.primary)}
-      onBlur={(e) => (e.currentTarget.style.borderBottomColor = `${T.outlineVariant}40`)}
-    />
-  );
-
   const openCloudinary = (field: 'heroImagenUrl' | 'fondoImagenUrl') => {
     if (!(window as any).cloudinary) {
       alert('Cloudinary widget is not loaded yet. Please wait.');
@@ -277,11 +309,6 @@ export default function AdminSettingsPage() {
                 <UnderlineInput value={settings.address} onChange={(v) => handleChange('address', v)} />
               </div>
               
-              <div>
-                <FieldLabel>Número WhatsApp (con código de país, ej: +57300...)</FieldLabel>
-                <UnderlineInput value={settings.whatsappNumber} onChange={(v) => handleChange('whatsappNumber', v)} type="tel" />
-              </div>
-
               <div>
                 <FieldLabel>Días Máximos de Reserva Adelantada</FieldLabel>
                 <UnderlineInput value={settings.maxDaysInAdvance} onChange={(v) => handleChange('maxDaysInAdvance', Number(v))} type="number" />
@@ -381,10 +408,12 @@ export default function AdminSettingsPage() {
                 { id: 'redes', label: 'Redes', icon: '📱' },
                 { id: 'textos', label: 'Textos Landing', icon: '✍️' },
                 { id: 'imagenes', label: 'Imágenes', icon: '🖼️' },
-                { id: 'colores', label: 'Colores', icon: '✨' }
+                { id: 'colores', label: 'Colores', icon: '✨' },
+                { id: 'whatsapp', label: 'WhatsApp', icon: '📲' }
               ].map(tab => (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setCmsTab(tab.id as any)}
                   className="whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold shrink-0"
                   style={{
@@ -407,7 +436,7 @@ export default function AdminSettingsPage() {
             <div className="settings-inner-grid">
               
               {/* TAB 1: NEGOCIO */}
-              {cmsTab === 'negocio' && (
+              <div style={{ display: cmsTab === 'negocio' ? 'block' : 'none', width: '100%' }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                   <div>
                     <FieldLabel>Nombre Comercial</FieldLabel>
@@ -429,11 +458,46 @@ export default function AdminSettingsPage() {
                     <FieldLabel>Horario de Atención (Texto)</FieldLabel>
                     <UnderlineTextarea value={siteConfig.horario} onChange={(v) => handleCmsChange('horario', v)} rows={2} />
                   </div>
+
+                  <div className="md:col-span-2" style={{ marginTop: '24px', borderTop: `1px solid ${T.outlineVariant}20`, paddingTop: '32px' }}>
+                    <SectionTitle icon="🕐" title="Horario de Agendamiento" />
+                    <p style={{ fontSize: '13px', color: T.onSurfaceVariant, marginBottom: '24px', marginTop: '-16px' }}>
+                      Define el rango de horas en que los clientes pueden agendar citas
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                      <div>
+                        <FieldLabel>Hora de Apertura</FieldLabel>
+                        <UnderlineInput type="time" value={siteConfig.horaAperturaAgendamiento || '08:00'} onChange={(v) => handleCmsChange('horaAperturaAgendamiento', v)} />
+                      </div>
+                      <div>
+                        <FieldLabel>Hora de Cierre</FieldLabel>
+                        <UnderlineInput type="time" value={siteConfig.horaCierreAgendamiento || '19:00'} onChange={(v) => handleCmsChange('horaCierreAgendamiento', v)} />
+                      </div>
+                      <div>
+                        <FieldLabel>Duración de cada Turno (Slot)</FieldLabel>
+                        <UnderlineSelect 
+                          value={siteConfig.duracionSlot || 30} 
+                          onChange={(v) => handleCmsChange('duracionSlot', Number(v))}
+                          options={[
+                            { value: 15, label: '15 minutos' },
+                            { value: 30, label: '30 minutos' },
+                            { value: 45, label: '45 minutos' },
+                            { value: 60, label: '60 minutos (1 hora)' },
+                          ]}
+                        />
+                      </div>
+                    </div>
+                    
+                    <p style={{ fontSize: '12px', color: T.onSurfaceVariant, marginTop: '20px', fontStyle: 'italic', opacity: 0.8 }}>
+                      ⚠️ Estos cambios afectan la generación de turnos disponibles. Las citas ya agendadas no se verán afectadas.
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
 
               {/* TAB 2: REDES */}
-              {cmsTab === 'redes' && (
+              <div style={{ display: cmsTab === 'redes' ? 'block' : 'none', width: '100%' }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                   <div>
                     <FieldLabel>Instagram (@handle)</FieldLabel>
@@ -448,10 +512,10 @@ export default function AdminSettingsPage() {
                     <UnderlineInput value={siteConfig.whatsappLink} onChange={(v) => handleCmsChange('whatsappLink', v)} placeholder="https://wa.me/..." />
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* TAB 3: TEXTOS LANDING */}
-              {cmsTab === 'textos' && (
+              <div style={{ display: cmsTab === 'textos' ? 'block' : 'none', width: '100%' }}>
                 <div className="grid grid-cols-1 gap-6 w-full">
                   <div>
                     <FieldLabel>Título Principal (Hero)</FieldLabel>
@@ -480,10 +544,10 @@ export default function AdminSettingsPage() {
                     <UnderlineTextarea value={siteConfig.footerTexto} onChange={(v) => handleCmsChange('footerTexto', v)} rows={2} />
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* TAB 4: IMÁGENES */}
-              {cmsTab === 'imagenes' && (
+              <div style={{ display: cmsTab === 'imagenes' ? 'block' : 'none', width: '100%' }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
                   <div>
                     <FieldLabel>Imagen Hero (Principal)</FieldLabel>
@@ -494,7 +558,7 @@ export default function AdminSettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin imagen</div>
                       )}
                     </div>
-                    <button onClick={() => openCloudinary('heroImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                    <button type="button" onClick={() => openCloudinary('heroImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
                       {siteConfig.heroImagenUrl ? 'Reemplazar Hero' : 'Subir Hero'}
                     </button>
                   </div>
@@ -507,15 +571,15 @@ export default function AdminSettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin imagen</div>
                       )}
                     </div>
-                    <button onClick={() => openCloudinary('fondoImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                    <button type="button" onClick={() => openCloudinary('fondoImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
                       {siteConfig.fondoImagenUrl ? 'Reemplazar Fondo' : 'Subir Fondo'}
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* TAB 5: COLORES */}
-              {cmsTab === 'colores' && (
+              <div style={{ display: cmsTab === 'colores' ? 'block' : 'none', width: '100%' }}>
                 <div className="w-full">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
                     <div>
@@ -535,7 +599,51 @@ export default function AdminSettingsPage() {
                   <FieldLabel>Vista previa de marca</FieldLabel>
                   <div style={{ padding: '24px', borderRadius: '16px', backgroundColor: siteConfig.colorAcento, border: `1px solid ${T.outlineVariant}20`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
                      <h4 style={{ color: siteConfig.colorSecundario, fontFamily: T.fontHeadline, fontSize: '24px', margin: 0 }}>{siteConfig.nombreSalon}</h4>
-                     <button style={{ backgroundColor: siteConfig.colorPrimario, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700 }}>{siteConfig.heroBotonTexto}</button>
+                     <button type="button" style={{ backgroundColor: siteConfig.colorPrimario, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700 }}>{siteConfig.heroBotonTexto}</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* TAB 6: WHATSAPP MESSAGES */}
+              {cmsTab === 'whatsapp' && (
+                <div className="grid grid-cols-1 gap-8 w-full animate-fadeIn">
+                  <div>
+                    <FieldLabel>📲 Mensaje de Confirmación</FieldLabel>
+                    <UnderlineTextarea 
+                      value={siteConfig.mensajeConfirmacion} 
+                      onChange={(v) => handleCmsChange('mensajeConfirmacion', v)} 
+                      rows={3}
+                      placeholder={WA_MESSAGES.confirmacion('{nombre}', '{servicio}', '{fecha}', '{hora}')}
+                    />
+                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
+                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{servicio}'}</strong>, <strong>{'{fecha}'}</strong>, <strong>{'{hora}'}</strong>
+                    </p>
+                  </div>
+
+                  <div>
+                    <FieldLabel>📲 Mensaje de Cancelación</FieldLabel>
+                    <UnderlineTextarea 
+                      value={siteConfig.mensajeCancelacion} 
+                      onChange={(v) => handleCmsChange('mensajeCancelacion', v)} 
+                      rows={3}
+                      placeholder={WA_MESSAGES.rechazo('{nombre}', '{fecha}')}
+                    />
+                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
+                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{fecha}'}</strong>
+                    </p>
+                  </div>
+
+                  <div>
+                    <FieldLabel>📲 Mensaje de Reagendamiento</FieldLabel>
+                    <UnderlineTextarea 
+                      value={siteConfig.mensajeReagendamiento} 
+                      onChange={(v) => handleCmsChange('mensajeReagendamiento', v)} 
+                      rows={3}
+                      placeholder={WA_MESSAGES.reagendamiento('{nombre}', '{servicio}')}
+                    />
+                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
+                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{servicio}'}</strong>
+                    </p>
                   </div>
                 </div>
               )}
@@ -561,8 +669,8 @@ export default function AdminSettingsPage() {
           </div>
           <div style={{ width: '1px', height: '32px', backgroundColor: `${T.outlineVariant}40` }} />
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button disabled={saving} onClick={handleDiscard} style={{ padding: '10px 20px', borderRadius: '9999px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: T.fontBody, fontSize: '13px', fontWeight: 500, color: T.onSurfaceVariant }}>Descartar</button>
-            <button disabled={saving} onClick={handleSave} style={{
+            <button type="button" disabled={saving} onClick={handleDiscard} style={{ padding: '10px 20px', borderRadius: '9999px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: T.fontBody, fontSize: '13px', fontWeight: 500, color: T.onSurfaceVariant }}>Descartar</button>
+            <button type="button" disabled={saving} onClick={(e) => { e.preventDefault(); handleSave(); }} style={{
               padding: '10px 28px', borderRadius: '9999px', border: 'none', cursor: 'pointer',
               backgroundColor: T.primary, color: '#fff', fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700,
               boxShadow: `0 6px 20px rgba(148,69,85,0.30)`, transition: 'transform 0.2s', opacity: saving ? 0.7 : 1

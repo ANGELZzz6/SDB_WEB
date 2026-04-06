@@ -26,14 +26,17 @@ export default function AdminLogin() {
       const resp = await authService.login({ identifier, password, role });
       if (resp.success && resp.data?.token) {
         localStorage.setItem('token', resp.data.token);
-        // Store full user data immediately so permissions are available on first load
         if (resp.data.user) {
           localStorage.setItem('adminUser', JSON.stringify(resp.data.user));
         }
-        navigate('/admin'); // Redirect a protected area
+        navigate('/admin');
       }
     } catch (err: any) {
-      setError(err.message || 'Credenciales incorrectas');
+      setError('Credenciales incorrectas');
+      setPassword(''); // Limpiar contraseña en caso de error
+      // Intentar enfocar el input de password si es posible (usando useRef en producción sería mejor)
+      const passInput = document.querySelector('input[type="password"]') as HTMLInputElement;
+      passInput?.focus();
     } finally {
       setLoading(false);
     }
@@ -134,6 +137,7 @@ export default function AdminLogin() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
+              autoComplete="current-password"
               style={{
                 width: '100%', padding: '14px 16px', borderRadius: '12px',
                 border: `1px solid ${T.outlineVariant}`,

@@ -3,6 +3,21 @@ const Service   = require('../models/Service')
 const Appointment = require('../models/Appointment')
 const BlockedSlot = require('../models/BlockedSlot')
 const Settings  = require('../models/Settings')
+const SiteConfig = require('../models/SiteConfig')
+
+// ─── Caché de Configuración (5 min) ───────────────────────────────────────────
+let configCache = null;
+let lastConfigFetch = 0;
+
+const getCachedConfig = async () => {
+  const now = Date.now();
+  // 5 minutos de cache
+  if (!configCache || (now - lastConfigFetch > 5 * 60 * 1000)) {
+    configCache = await SiteConfig.findOne({});
+    lastConfigFetch = now;
+  }
+  return configCache;
+};
 
 // ─── Utilidades de tiempo ─────────────────────────────────────────────────────
 
@@ -111,9 +126,15 @@ const getAvailability = async (req, res, next) => {
       })
     }
 
-    // Usar horario de empleada; fallback al horario del negocio
-    const dayStart = daySchedule.inicio || businessHours.inicio
-    const dayEnd   = daySchedule.fin    || businessHours.fin
+    // 🔴 FEATURE: Horario Dinámico desde SiteConfig (CMS)
+    const cmsConfig = await getCachedConfig();
+    const cmsStart = cmsConfig?.horaAperturaAgendamiento || '08:00';
+    const cmsEnd   = cmsConfig?.horaCierreAgendamiento   || '19:00';
+    const cmsSlotDuration = cmsConfig?.duracionSlot       || 30;
+
+    // Usar horario de empleada; fallback al CMS config, fallback final a Defaults
+    const dayStart = daySchedule.inicio || cmsStart;
+    const dayEnd   = daySchedule.fin    || cmsEnd;
 
     const startMinutes = timeToMinutes(dayStart)
     const endMinutes   = timeToMinutes(dayEnd)
@@ -175,11 +196,12 @@ const getAvailability = async (req, res, next) => {
       return { start: apptStart, end: apptEnd }
     })
 
-    // ── 10. Generar slots disponibles cada 30 minutos ────────────────────────
+    // ── 10. Generar slots disponibles según duración configurada ─────────────
     const serviceDuration = service.duracion
     const slots = []
+    const stepMinutes = cmsSlotDuration;
 
-    for (let slotStart = startMinutes; slotStart + serviceDuration <= endMinutes; slotStart += 30) {
+    for (let slotStart = startMinutes; slotStart + serviceDuration <= endMinutes; slotStart += stepMinutes) {
       const slotEnd = slotStart + serviceDuration + bufferBetweenAppointments
 
       // ¿El slot coincide con un bloqueo por hora?
@@ -200,14 +222,17 @@ const getAvailability = async (req, res, next) => {
       const isToday = date === nowBogota;
       
       if (isToday) {
-        // Obtenemos HH:mm actual en Bogotá
-        const timeStr = new Intl.DateTimeFormat('en-US', { 
-          timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false 
-        }).format(new Date());
-        
-        const [h, m] = timeStr.split(':').map(Number);
-        const nowMinutes = h * 60 + m;
-        
+        // Obtenemos HH:mm actual en Bogotá de forma robusta (en-GB usa HH:MM)
+        const ahoraBogota = new Date().toLocaleTimeString('en-GB', { 
+          timeZone: 'America/Bogota',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const [nowH, nowM] = ahoraBogota.split(':').map(Number);
+        const nowMinutes = nowH * 60 + nowM;
+
+        // Estrictamente mayor: si son las 10:00am, el turno de las 10:00 ya no sale, solo el de las 10:15+
         if (slotStart <= nowMinutes) continue;
       }
 
@@ -231,4 +256,12 @@ const getAvailability = async (req, res, next) => {
   }
 }
 
-module.exports = { getAvailability, timeToMinutes, minutesToTime, dateOnly, DAY_MAP }
+/**
+ * Invalida el caché de configuración (llamado desde siteConfigController)
+ */
+const clearConfigCache = () => {
+  configCache = null;
+  lastConfigFetch = 0;
+};
+
+module.exports = { getAvailability, timeToMinutes, minutesToTime, dateOnly, DAY_MAP, clearConfigCache }

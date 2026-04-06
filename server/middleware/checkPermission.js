@@ -2,15 +2,6 @@
  * Middleware para validar si el usuario tiene permiso para un módulo específico
  */
 const checkPermission = (moduleName) => (req, res, next) => {
-  console.log('🔐 PERMISSION CHECK:', {
-    userId: req.user?.id,
-    role: req.user?.role,
-    module: moduleName,
-    permissions: req.user?.permissions
-  });
-
-  console.log('CHECK:', moduleName, req.user?.permissions);
-
   // Admin tiene acceso total por defecto
   if (req.user?.role === 'admin') {
     return next();

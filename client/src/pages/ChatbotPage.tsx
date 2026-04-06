@@ -60,8 +60,10 @@ export default function ChatbotPage() {
   const [selectedServiceDuration, setSelectedServiceDuration] = useState(0);
 
   const [date, setDate] = useState(''); // YYYY-MM-DD
-  const [timeSlot, setTimeSlot] = useState(''); // HH:mm AM
 
+  // Cart States
+  const [cart, setCart] = useState<any[]>([]);
+  
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -117,7 +119,7 @@ export default function ChatbotPage() {
     setEmployeeId(emp._id);
     setSelectedEmployeeName(emp.nombre);
     setSelectedEmployeeImage(emp.foto || '');
-    setServiceId(''); setDate(''); setTimeSlot(''); // Reset downstream
+    setServiceId(''); setDate(''); // Reset downstream
     setStep(2);
   };
 
@@ -129,44 +131,93 @@ export default function ChatbotPage() {
     setSelectedServicePrecioDesde(svc.precioDesde || 0);
     setSelectedServicePrecioHasta(svc.precioHasta || 0);
     setSelectedServiceDuration(svc.duracion);
-    setDate(''); setTimeSlot('');
+    setDate('');
     setStep(3);
   };
 
   const handleSelectDate = (d: string) => {
     setDate(d);
-    setTimeSlot('');
     setStep(4);
   };
 
   const handleSelectTime = (t: string) => {
-    setTimeSlot(t);
-    setStep(5);
+    // Check for intra-cart overlap
+    const startMin = timeToMinutes(t);
+    const endMin = startMin + selectedServiceDuration;
+    
+    const overlap = cart.find(item => {
+      if (item.date !== date) return false;
+      const iStart = timeToMinutes(item.timeSlot);
+      const iEnd = iStart + item.duration;
+      return (startMin < iEnd && endMin > iStart);
+    });
+
+    if (overlap) {
+      alert(`Este horario se cruza con tu servicio de "${overlap.serviceName}". Por favor selecciona otra hora.`);
+      return;
+    }
+
+    // Add to cart
+    const newItem = {
+      employee: employeeId,
+      employeeName: selectedEmployeeName,
+      employeeImage: selectedEmployeeImage,
+      service: serviceId,
+      serviceName: selectedServiceName,
+      price: selectedServicePrice,
+      precioTipo: selectedServicePrecioTipo,
+      precioDesde: selectedServicePrecioDesde,
+      precioHasta: selectedServicePrecioHasta,
+      duration: selectedServiceDuration,
+      date,
+      timeSlot: t
+    };
+
+    setCart([...cart, newItem]);
+    setStep(4.5);
+  };
+
+  const handleRemoveFromCart = (index: number) => {
+    const newCart = [...cart];
+    newCart.splice(index, 1);
+    setCart(newCart);
+    if (newCart.length === 0) setStep(1);
+  };
+
+  const timeToMinutes = (timeStr: string) => {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
   };
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const res = await appointmentService.create({
-        employee: employeeId,
-        service: serviceId,
-        date,
-        timeSlot,
+      const res = await appointmentService.createBulk({
         clientName,
         clientPhone,
-        clientEmail
+        clientEmail,
+        appointments: cart.map(item => ({
+          employee: item.employee,
+          service: item.service,
+          date: item.date,
+          timeSlot: item.timeSlot,
+          serviceName: item.serviceName // For error messages
+        }))
       });
       if (res.success) {
         setStep(6);
       }
     } catch (err: any) {
       console.error(err);
-      if (err.response?.status === 429) {
-        alert(err.response.data?.message || 'Has alcanzado el límite de citas permitidas (4 cada 30 min). Por favor intenta más tarde.');
+      if (err.message?.includes('429')) {
+        alert('Has alcanzado el límite de citas permitidas (4 cada 30 min).');
       } else {
         alert(err.message || 'Error al agendar. Es posible que el horario ya esté ocupado.');
       }
-      setStep(4); // Regresar al selector de horas
+      setStep(4.5); // Regresar al carrito para ajustar
     } finally {
       setSubmitting(false);
     }
@@ -174,7 +225,8 @@ export default function ChatbotPage() {
 
   const restartWizard = () => {
     setStep(1);
-    setEmployeeId(''); setServiceId(''); setDate(''); setTimeSlot('');
+    setCart([]);
+    setEmployeeId(''); setServiceId(''); setDate('');
     setClientName(''); setClientPhone(''); setClientEmail('');
   };
 
@@ -226,7 +278,7 @@ export default function ChatbotPage() {
         
         {step < 6 ? (
           <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurfaceVariant }}>
-            Paso {step}/5
+            Paso {step === 4.5 ? '4.5' : (step > 4 ? step - 0.5 : step)}/5.5
           </span>
         ) : <div style={{ width: '24px' }} />}
       </header>
@@ -235,7 +287,7 @@ export default function ChatbotPage() {
       {step < 6 && (
         <div style={{ width: '100%', height: '4px', backgroundColor: T.surfaceContainerHigh }}>
           <div style={{ 
-            width: `${(step / 5) * 100}%`, height: '100%', 
+            width: `${((step > 4 ? step - 0.5 : step) / 5.5) * 100}%`, height: '100%', 
             backgroundColor: T.primary, transition: 'width 0.4s ease-in-out' 
           }} />
         </div>
@@ -299,7 +351,13 @@ export default function ChatbotPage() {
                 {services.map(svc => (
                   <button
                     key={svc._id}
-                    onClick={() => handleSelectService(svc)}
+                    onClick={() => {
+                      if (cart.find(item => item.service === svc._id)) {
+                        alert('Ya has seleccionado este servicio en tu carrito.');
+                        return;
+                      }
+                      handleSelectService(svc);
+                    }}
                     style={{
                       display: 'flex', gap: '20px', padding: '16px',
                       backgroundColor: '#fff', border: `1px solid ${T.outlineVariant}`, borderRadius: '16px',
@@ -395,6 +453,79 @@ export default function ChatbotPage() {
           </div>
         )}
 
+        {/* STEP 4.5: CARRITO / RESUMEN */}
+        {step === 4.5 && (
+          <div className="fade-in">
+            <h2 style={{ fontFamily: T.fontBody, fontSize: '22px', fontWeight: 700, color: T.onSurface, marginBottom: '8px', textAlign: 'center' }}>
+              Tu Selección
+            </h2>
+            <p style={{ textAlign: 'center', fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '24px' }}>
+              Puedes añadir hasta 3 servicios por sesión.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+              {cart.map((item, idx) => (
+                <div 
+                  key={idx}
+                  style={{ 
+                    backgroundColor: '#fff', padding: '16px', borderRadius: '16px', 
+                    border: `1px solid ${T.outlineVariant}`, display: 'flex', alignItems: 'center', gap: '16px',
+                    position: 'relative'
+                  }}
+                >
+                  <img src={item.employeeImage} alt={item.employeeName} style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' }} />
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '15px', color: T.onSurface }}>{item.serviceName}</h4>
+                    <p style={{ margin: '2px 0 0', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>
+                      con <b>{item.employeeName}</b>
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontFamily: T.fontBody, fontSize: '12px', color: T.primary, fontWeight: 700 }}>
+                      {formatFancyDate(item.date)} @ {item.timeSlot}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => handleRemoveFromCart(idx)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.error, padding: '8px' }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {cart.length < 3 && (
+                <button 
+                  onClick={() => setStep(1)}
+                  style={{
+                    width: '100%', padding: '16px', borderRadius: '9999px',
+                    backgroundColor: T.surfaceContainerHigh, color: T.onSurface,
+                    fontFamily: T.fontBody, fontWeight: 700, border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  + Añadir otro servicio
+                </button>
+              )}
+              
+              <button 
+                onClick={() => setStep(5)}
+                style={{
+                  width: '100%', padding: '18px', borderRadius: '9999px',
+                  backgroundColor: T.primary, color: '#fff',
+                  fontFamily: T.fontBody, fontWeight: 700, border: 'none', cursor: 'pointer',
+                  boxShadow: '0 8px 16px rgba(148,69,85,0.2)'
+                }}
+              >
+                Confirmar y continuar
+              </button>
+
+              <p style={{ textAlign: 'center', fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>
+                Tiempo estimado total: {cart.reduce((acc, curr) => acc + curr.duration, 0)} min
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* STEP 5: INFO CLIENTE */}
         {step === 5 && (
           <div className="fade-in">
@@ -450,16 +581,22 @@ export default function ChatbotPage() {
                 />
               </div>
 
-              <div style={{ backgroundColor: T.surfaceContainerLow, padding: '20px', borderRadius: '16px', display: 'flex', gap: '16px', alignItems: 'center', marginTop: '8px' }}>
-                <img src={selectedEmployeeImage} alt={selectedEmployeeName} style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
-                <div>
-                   <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>Resumen de cita:</p>
-                   <p style={{ margin: '4px 0 0', fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '16px', color: T.onSurface, fontWeight: 700 }}>
-                     {selectedServiceName}
-                   </p>
-                   <p style={{ margin: '2px 0 0', fontFamily: T.fontBody, fontSize: '13px', color: T.primary, fontWeight: 700 }}>
-                     {formatFancyDate(date)} a las {timeSlot}
-                   </p>
+              <div style={{ backgroundColor: T.surfaceContainerLow, padding: '20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+                <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, fontWeight: 700 }}>Resumen de tu sesión:</p>
+                {cart.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: idx < cart.length-1 ? `1px solid ${T.outlineVariant}` : 'none', paddingBottom: idx < cart.length-1 ? '8px' : 0 }}>
+                    <div>
+                      <p style={{ margin: 0, fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '14px', color: T.onSurface }}>{item.serviceName}</p>
+                      <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{item.employeeName} - {item.timeSlot}</p>
+                    </div>
+                    <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>
+                      {renderPriceInfo(item.precioTipo, item.price, item.precioDesde, item.precioHasta)}
+                    </span>
+                  </div>
+                ))}
+                <div style={{ borderTop: `2px solid ${T.outlineVariant}`, paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                   <span style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 800 }}>Total Servicios:</span>
+                   <span style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 800 }}>{cart.length}</span>
                 </div>
               </div>
 
@@ -492,41 +629,36 @@ export default function ChatbotPage() {
               La confirmaremos en los próximos minutos. Recibirás una notificación cuando esté confirmada.
             </p>
 
-            <div style={{ backgroundColor: '#fff', padding: '32px', borderRadius: '24px', boxShadow: '0 12px 32px rgba(0,0,0,0.06)', textAlign: 'left', marginBottom: '40px' }}>
-               <h3 style={{ fontFamily: T.fontBody, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, marginBottom: '16px' }}>Detalles de la Cita</h3>
-               
-               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-                  <img src={selectedEmployeeImage} alt="Staff" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
-                  <div>
-                    <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>Profesional</span>
-                    <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface }}>{selectedEmployeeName}</span>
-                  </div>
-               </div>
-               
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                 <div>
-                    <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>Servicio</span>
-                    <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '15px', fontWeight: 700, color: T.onSurface }}>{selectedServiceName}</span>
-                    <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '14px', fontWeight: 600, color: T.primary }}>{renderPriceInfo(selectedServicePrecioTipo, selectedServicePrice, selectedServicePrecioDesde, selectedServicePrecioHasta)}</span>
-                 </div>
-                 <div>
-                    <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>Horario</span>
-                    <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '15px', fontWeight: 700, color: T.onSurface, textTransform: 'capitalize' }}>{formatFancyDate(date)}</span>
-                    <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '15px', fontWeight: 600, color: T.onSurface }}>{timeSlot} ({selectedServiceDuration} min)</span>
-                 </div>
-               </div>
-            </div>
+             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 12px 32px rgba(0,0,0,0.06)', textAlign: 'left', marginBottom: '40px' }}>
+                <h3 style={{ fontFamily: T.fontBody, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, marginBottom: '20px' }}>Tus Servicios Agendados</h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {cart.map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: '16px', borderBottom: idx < cart.length-1 ? `1px solid ${T.outlineVariant}` : 'none', paddingBottom: idx < cart.length-1 ? '16px' : 0 }}>
+                      <img src={item.employeeImage} alt="Staff" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <div style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface }}>{item.serviceName}</span>
+                        <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>con {item.employeeName}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                          <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary }}>{formatFancyDate(item.date)} @ {item.timeSlot}</span>
+                          <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{item.duration} min</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <a 
-                href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Cita+Salon+L'Elixir+-+${encodeURIComponent(selectedServiceName)}&dates=${formatGoogleCalendarDate(date, timeSlot, selectedServiceDuration)}&details=Cita+para+${encodeURIComponent(clientName)}+con+la+profesional+${encodeURIComponent(selectedEmployeeName)}`}
+                href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Cita+Salon+L'Elixir&dates=${formatGoogleCalendarDate(cart[0]?.date || '', cart[0]?.timeSlot || '', cart[0]?.duration || 30)}&details=Reserva+multiple+en+Salon+L'Elixir`}
                 target="_blank" rel="noopener noreferrer"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
                   padding: '16px', borderRadius: '9999px', backgroundColor: T.surfaceContainerLowest,
                   color: T.onSurface, border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody,
                   fontSize: '15px', fontWeight: 700, textDecoration: 'none', transition: 'background 0.2s',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)', textAlign: 'center'
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainer)}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainerLowest)}

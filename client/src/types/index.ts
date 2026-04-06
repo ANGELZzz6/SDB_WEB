@@ -56,6 +56,7 @@ export interface Appointment {
   timeSlot: string   // "HH:MM"
   endTime: string    // "HH:MM"
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  bulkId?: string
   notes?: string
   reminderSent: boolean
   createdAt: string
@@ -110,6 +111,12 @@ export interface SiteConfig {
   colorAcento: string
   heroImagenUrl: string
   fondoImagenUrl: string
+  mensajeConfirmacion: string
+  mensajeCancelacion: string
+  mensajeReagendamiento: string
+  horaAperturaAgendamiento: string
+  horaCierreAgendamiento: string
+  duracionSlot: number
 }
 
 // Respuesta genérica de la API
