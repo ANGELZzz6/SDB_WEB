@@ -4,6 +4,7 @@ const Service = require('../models/Service')
 const Employee = require('../models/Employee')
 const Settings = require('../models/Settings')
 const Client = require('../models/Client')
+const SiteConfig = require('../models/SiteConfig')
 const { getAvailability: _getAvailability, timeToMinutes, minutesToTime, dateOnly } = require('./availabilityController')
 const { normalizePhone } = require('../utils/normalize')
 
@@ -13,7 +14,7 @@ const { normalizePhone } = require('../utils/normalize')
  * Verifica en tiempo real si un slot está disponible para la cita que se va a crear.
  * Usa la misma lógica de availabilityController para garantizar consistencia.
  */
-const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, excludeAppointmentId = null) => {
+const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, excludeAppointmentId = null, session = null) => {
   const settings = await Settings.getSettings()
   const { bufferBetweenAppointments } = settings
 
@@ -28,7 +29,7 @@ const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, exclude
     employee: { $in: [employeeId, 'all'] },
     isFullDay: true,
     date: { $gte: target, $lt: new Date(target.getTime() + 24 * 60 * 60 * 1000) },
-  })
+  }).session(session)
   if (fullDayBlock) throw new Error('El día está completamente bloqueado')
 
   // Verificar bloqueo de hora específica
@@ -37,7 +38,7 @@ const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, exclude
     isFullDay: false,
     timeSlot,
     date: { $gte: target, $lt: new Date(target.getTime() + 24 * 60 * 60 * 1000) },
-  })
+  }).session(session)
   if (hourBlock) throw new Error('Ese horario está bloqueado')
 
   // Verificar solapamiento con citas existentes
@@ -47,13 +48,13 @@ const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, exclude
   const query = {
     employee: employeeId,
     date: { $gte: target, $lt: new Date(target.getTime() + 24 * 60 * 60 * 1000) },
-    status: { $nin: ['cancelled'] },
+    status: { $in: ['confirmed', 'completed'] },
   }
   if (excludeAppointmentId) {
     query._id = { $ne: excludeAppointmentId }
   }
 
-  const existing = await Appointment.find(query).populate('service', 'duracion')
+  const existing = await Appointment.find(query).populate('service', 'duracion').session(session)
 
   for (const appt of existing) {
     const apptStart = timeToMinutes(appt.timeSlot)
@@ -147,10 +148,10 @@ const getOne = async (req, res, next) => {
 }
 
 // ─── POST /api/appointments/bulk ──────────────────────────────────────────────
-// Crea múltiples citas de forma atómica (lógica dry-run)
+// Crea múltiples citas de forma atómica (lógica dry-run) o flexibles
 const createBulk = async (req, res, next) => {
   try {
-    const { clientName, clientPhone, clientEmail, appointments, notes } = req.body
+    const { clientName, clientPhone, clientEmail, appointments, isFlexible, flexibleAvailabilities, notes } = req.body
     
     if (!appointments || !Array.isArray(appointments) || appointments.length === 0) {
       return res.status(400).json({ success: false, message: 'Se requiere una lista de citas' })
@@ -187,6 +188,28 @@ const createBulk = async (req, res, next) => {
       const { employee, service, date, timeSlot } = item;
       
       let svc;
+      
+      // Si es FLEXIBLE, saltamos el dry-run de disponibilidad de slots
+      if (isFlexible) {
+        // Solo necesitamos cargar el servicio para el precio
+        const Service = require('../models/Service');
+        svc = await Service.findById(service);
+        if (!svc) throw new Error(`Servicio no encontrado: ${service}`);
+
+        preparedData.push({
+          clientName, clientPhone: normalizedPhone, clientEmail,
+          employee, service,
+          isFlexible: true,
+          flexibleAvailabilities: flexibleAvailabilities || [],
+          // Los campos de tiempo quedan vacíos para el flujo flexible
+          notes, bulkId,
+          status: 'pending',
+          priceSnapshot: svc.precio || 0
+        });
+        continue;
+      }
+
+      // Proceso normal (no es flexible)
       try {
         svc = await checkSlotAvailable(employee, service, date, timeSlot);
       } catch (err) {
@@ -253,16 +276,16 @@ const createBulk = async (req, res, next) => {
 // Público — clientes agendan desde el chatbot
 const create = async (req, res, next) => {
   try {
-    let { clientName, clientPhone, clientEmail, employee, service, date, timeSlot, notes } = req.body
+    let { clientName, clientPhone, clientEmail, employee, service, date, timeSlot, isFlexible, flexibleAvailabilities, notes } = req.body
 
     // Normalizar teléfono inmediatamente
     clientPhone = normalizePhone(clientPhone)
 
-    // Validaciones básicas
-    if (!clientName || !clientPhone || !employee || !service || !date || !timeSlot) {
+    // Validaciones básicas (se relajan si es flexible)
+    if (!clientName || !clientPhone || !employee || !service || (!isFlexible && (!date || !timeSlot))) {
       return res.status(400).json({
         success: false,
-        message: 'Faltan campos requeridos: clientName, clientPhone, employee, service, date, timeSlot',
+        message: 'Faltan campos requeridos: clientName, clientPhone, employee, service' + (!isFlexible ? ', date, timeSlot' : ''),
       })
     }
 
@@ -298,27 +321,35 @@ const create = async (req, res, next) => {
       })
     }
 
-    // Verificar disponibilidad real en tiempo real (puede lanzar Error si no disponible)
-    let svc
-    try {
-      svc = await checkSlotAvailable(employee, service, date, timeSlot)
-    } catch (err) {
-      return res.status(409).json({ success: false, message: err.message })
-    }
+    let svc, priceSnapshot, endTime;
 
-    // Calcular endTime
-    const startMin = timeToMinutes(timeSlot)
-    const endMin = startMin + svc.duracion
-    const endTime = minutesToTime(endMin)
+    if (!isFlexible) {
+      // Verificar disponibilidad real en tiempo real (puede lanzar Error si no disponible)
+      try {
+        svc = await checkSlotAvailable(employee, service, date, timeSlot)
+        priceSnapshot = svc.precio || 0;
+        const startMin = timeToMinutes(timeSlot)
+        endTime = minutesToTime(startMin + svc.duracion)
+      } catch (err) {
+        return res.status(409).json({ success: false, message: err.message })
+      }
+    } else {
+      // Si es flexible, solo cargamos el servicio para el precio
+      const Service = require('../models/Service');
+      svc = await Service.findById(service);
+      priceSnapshot = svc?.precio || 0;
+    }
 
     const appt = await Appointment.create({
       clientName, clientPhone, clientEmail,
       employee, service,
-      date: dateOnly(new Date(date)),
+      date: date ? dateOnly(new Date(date)) : undefined,
       timeSlot, endTime,
+      isFlexible, 
+      flexibleAvailabilities: flexibleAvailabilities || [],
       notes,
       status: 'pending',
-      priceSnapshot: svc.precio || 0 // Capturar precio actual
+      priceSnapshot
     })
 
     // Sincronizar con colección Client (Persistent)
@@ -363,67 +394,150 @@ const create = async (req, res, next) => {
 // ─── PUT /api/appointments/:id ───────────────────────────────────────────────
 // Admin puede cambiar cualquier campo; empleada solo puede confirmar/completar sus citas
 const update = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const appt = await Appointment.findById(req.params.id)
+    const appt = await Appointment.findById(req.params.id).session(session);
     if (!appt) {
-      return res.status(404).json({ success: false, message: 'Cita no encontrada' })
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ success: false, message: 'Cita no encontrada' });
     }
 
     // Restricción de empleada
     if (req.user?.role === 'empleada' && appt.employee.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Acceso denegado' })
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(403).json({ success: false, message: 'Acceso denegado' });
     }
 
-    const allowedForEmpleada = ['status', 'notes']
-    const allowedForAdmin = ['status', 'notes', 'clientName', 'clientPhone', 'clientEmail', 'timeSlot', 'date', 'employee', 'service']
+    // Extraer campos permitidos
+    const allowedForEmpleada = ['status', 'notes'];
+    const allowedForAdmin = ['status', 'notes', 'clientName', 'clientPhone', 'clientEmail', 'timeSlot', 'date', 'employee', 'service'];
+    const fields = req.user?.role === 'admin' ? allowedForAdmin : allowedForEmpleada;
 
-    const fields = req.user?.role === 'admin' ? allowedForAdmin : allowedForEmpleada
-
-    const updates = {}
+    const updates = {};
     fields.forEach(f => {
       if (req.body[f] !== undefined) {
-        updates[f] = req.body[f]
-        // Si se actualiza el teléfono, normalizarlo
-        if (f === 'clientPhone') updates[f] = normalizePhone(updates[f])
+        updates[f] = req.body[f];
+        if (f === 'clientPhone') updates[f] = normalizePhone(updates[f]);
       }
-    })
+    });
 
-    // Si admin cambia el horario, recalcular endTime y verificar disponibilidad
-    if (updates.timeSlot || updates.service) {
-      const newTimeSlot = updates.timeSlot || appt.timeSlot
-      const newServiceId = updates.service || appt.service
-      const newEmployeeId = updates.employee || appt.employee
-      const newDate = updates.date || appt.date
+    // ── LÓGICA DE CONFIRMACIÓN ──
+    // IMPORTANTE: Leemos de req.body directamente para asegurar que los valores del payload estén presentes
+    const isTransitioningToConfirmed = (req.body.status === 'confirmed' || updates.status === 'confirmed') && appt.status !== 'confirmed';
+    
+    if (isTransitioningToConfirmed) {
+      const targetDate = req.body.date || updates.date || appt.date;
+      const targetTime = req.body.timeSlot || updates.timeSlot || appt.timeSlot;
 
-      let svc
+      if (!targetDate) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ success: false, message: 'La fecha de la cita es obligatoria para confirmar.' });
+      }
+
+      if (!targetTime) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({ success: false, message: 'El horario de la cita es obligatorio para confirmar.' });
+      }
+
+      // Asegurar que updates contenga estos valores para el guardado final
+      updates.date = targetDate;
+      updates.timeSlot = targetTime;
+      updates.status = 'confirmed';
+
       try {
-        svc = await checkSlotAvailable(newEmployeeId, newServiceId, newDate, newTimeSlot, appt._id)
+        await checkSlotAvailable(
+          req.body.employee || updates.employee || appt.employee,
+          req.body.service || updates.service || appt.service,
+          targetDate,
+          targetTime,
+          appt._id.toString(),
+          session
+        );
       } catch (err) {
-        return res.status(409).json({ success: false, message: err.message })
-      }
+        if (err.name === 'CastError' || err.message.includes('Cast to date failed') || err.name === 'ValidationError') {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(400).json({ success: false, message: `Error de validación: ${err.message}` });
+        }
 
-      const startMin = timeToMinutes(newTimeSlot)
-      updates.endTime = minutesToTime(startMin + svc.duracion)
-      
-      // Actualizar priceSnapshot solo si el servicio cambió
-      if (req.body.service && req.body.service !== appt.service.toString()) {
-        updates.priceSnapshot = svc.precio || 0
+        appt.status = 'rejected';
+        const config = await SiteConfig.findOne({}).session(session);
+        const template = config?.mensajeRechazoConflicto || 'Lo sentimos {nombre}, el espacio para {fecha} a las {hora} ya no está disponible por un conflicto de agenda.';
+        
+        const fechaStr = targetDate;
+        const msg = template
+          .replace(/{nombre}/g, appt.clientName)
+          .replace(/{fecha}/g, fechaStr)
+          .replace(/{hora}/g, targetTime);
+        
+        if (!appt.whatsappLog) appt.whatsappLog = [];
+        appt.whatsappLog.push({ message: msg, date: new Date(), status: 'pending_whatsapp' });
+        
+        await appt.save({ session });
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.status(409).json({
+          success: false,
+          message: `Conflicto: ${err.message}. Esta solicitud ha sido marcada como Rechazada y el cliente notificado.`,
+          data: appt
+        });
       }
     }
 
-    Object.assign(appt, updates)
-    await appt.save()
+    // ── LÓGICA DE ENDTIME Y PRECIO ──
+    if (updates.timeSlot || updates.service || updates.date || updates.employee) {
+      if (!isTransitioningToConfirmed) {
+        const newTimeSlot = updates.timeSlot || appt.timeSlot;
+        const newServiceId = updates.service || appt.service;
+        const newEmployeeId = updates.employee || appt.employee;
+        const newDate = updates.date || appt.date;
+
+        try {
+          const svc = await checkSlotAvailable(newEmployeeId, newServiceId, newDate, newTimeSlot, appt._id, session);
+          const startMin = timeToMinutes(newTimeSlot);
+          updates.endTime = minutesToTime(startMin + svc.duracion);
+          
+          if (req.body.service && req.body.service !== appt.service.toString()) {
+            updates.priceSnapshot = svc.precio || 0;
+          }
+        } catch (err) {
+          await session.abortTransaction();
+          session.endSession();
+          return res.status(409).json({ success: false, message: err.message });
+        }
+      } else {
+        const svcId = updates.service || appt.service;
+        const svc = await Service.findById(svcId).session(session);
+        const startMin = timeToMinutes(updates.timeSlot || appt.timeSlot);
+        if (svc) {
+          updates.endTime = minutesToTime(startMin + svc.duracion);
+        }
+      }
+    }
+
+    Object.assign(appt, updates);
+    await appt.save({ session });
+    await session.commitTransaction();
+    session.endSession();
 
     await appt.populate([
       { path: 'employee', select: 'nombre foto' },
       { path: 'service', select: 'nombre precio duracion' },
-    ])
+    ]);
 
-    res.json({ success: true, data: appt })
+    res.json({ success: true, data: appt });
   } catch (error) {
-    next(error)
+    if (session.inTransaction()) await session.abortTransaction();
+    session.endSession();
+    next(error);
   }
-}
+};
 
 // ─── DELETE /api/appointments/:id (cancelar) ─────────────────────────────────
 // Sin restricción de horas (cancellationHoursLimit = 0)
@@ -713,4 +827,154 @@ const complete = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, getOne, create, createBulk, update, cancel, reschedule, getStats, getClients, complete }
+
+/**
+ * GET /api/appointments/itinerary/:employeeId/:date
+ * Retorna el itinerario completo de un especialista para un día específico,
+ * calculando gaps y unificando citas con bloqueos manuales.
+ */
+const getItinerary = async (req, res, next) => {
+  try {
+    const { employeeId, date } = req.params;
+    
+    // 1. Permisos: Especialista solo ve lo suyo, Admin ve todo
+    if (req.user?.role === 'empleada' && employeeId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Acceso denegado a itinerarios ajenos.' });
+    }
+
+    // 2. Normalización de zona horaria (Bogotá UTC-5)
+    // El helper dateOnly construye el inicio del día en UTC para evitar saltos de fecha
+    const targetDate = dateOnly(new Date(date));
+    const nextDay = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+
+    // 3. Consultas en paralelo para optimizar performance
+    const [appointments, blockedSlots, settings] = await Promise.all([
+      Appointment.find({
+        employee: employeeId,
+        date: { $gte: targetDate, $lt: nextDay }
+      }).populate('service', 'nombre duracion precio'),
+      
+      require('../models/BlockedSlot').find({
+        $or: [
+          { employee: employeeId },
+          { employee: 'all' },
+          { isGlobal: true }
+        ],
+        date: { $gte: targetDate, $lt: nextDay }
+      }),
+      
+      Settings.getSettings()
+    ]);
+
+    const timelineItems = [];
+
+    // 4. Procesar Citas
+    appointments.forEach(appt => {
+      const startMin = timeToMinutes(appt.timeSlot);
+      const duration = appt.service?.duracion || 60; // Fallback defensivo: 60min
+      timelineItems.push({
+        id: appt._id,
+        type: 'appointment',
+        status: appt.status,
+        startTime: appt.timeSlot,
+        startMin,
+        duration,
+        endTime: minutesToTime(startMin + duration),
+        endMin: startMin + duration,
+        title: appt.service?.nombre || 'Servicio',
+        client: appt.clientName || appt.client?.nombre || 'Cliente',
+        clientPhone: appt.clientPhone || appt.client?.telefono,
+        price: appt.finalPrice || appt.service?.precio,
+        // Solo confirmed y completed ocupan espacio real para gaps
+        isGapReducer: ['confirmed', 'completed'].includes(appt.status)
+      });
+    });
+
+    // 5. Procesar Bloqueos Manuales
+    blockedSlots.forEach(block => {
+      if (block.isFullDay) {
+        timelineItems.push({
+          id: block._id,
+          type: 'block',
+          isFullDay: true,
+          reason: block.reason || 'Bloqueo día completo',
+          isGapReducer: true
+        });
+      } else if (block.timeSlot) {
+        const startMin = timeToMinutes(block.timeSlot);
+        const duration = 60; // Bloqueo manual estándar de 1 hora
+        timelineItems.push({
+          id: block._id,
+          type: 'block',
+          isFullDay: false,
+          startTime: block.timeSlot,
+          startMin,
+          duration,
+          endTime: minutesToTime(startMin + duration),
+          endMin: startMin + duration,
+          reason: block.reason || 'Bloqueo manual',
+          isGapReducer: true
+        });
+      }
+    });
+
+    // Ordenar cronológicamente
+    timelineItems.sort((a, b) => (a.startMin || 0) - (b.startMin || 0));
+
+    // 6. Cálculo de Gaps (Tiempos Libres Disponibles)
+    // Filtrar solo los elementos que consumen tiempo y no son de día completo
+    const gapReducers = timelineItems
+      .filter(item => item.isGapReducer && !item.isFullDay)
+      .sort((a, b) => a.startMin - b.startMin);
+
+    const gaps = [];
+    const { inicio: bizStart, fin: bizEnd } = settings.businessHours;
+    let currentCursor = timeToMinutes(bizStart);
+    const dayEndLimit = timeToMinutes(bizEnd);
+
+    const isGlobalBlock = timelineItems.some(item => item.type === 'block' && item.isFullDay);
+    
+    if (!isGlobalBlock) {
+      gapReducers.forEach(reducer => {
+        // Si hay espacio entre el cursor actual y el inicio de la cita/bloqueo, es un gap
+        if (reducer.startMin > currentCursor) {
+          gaps.push({
+            start: minutesToTime(currentCursor),
+            end: minutesToTime(reducer.startMin),
+            duration: reducer.startMin - currentCursor
+          });
+        }
+        // Avanzar el cursor al final de la ocupación
+        if (reducer.endMin > currentCursor) {
+          currentCursor = reducer.endMin;
+        }
+      });
+
+      // Gap final: desde el último movimiento hasta el cierre del salón
+      if (currentCursor < dayEndLimit) {
+        gaps.push({
+          start: minutesToTime(currentCursor),
+          end: minutesToTime(dayEndLimit),
+          duration: dayEndLimit - currentCursor
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        date: targetDate.toISOString().split('T')[0],
+        employeeId,
+        timeline: timelineItems,
+        gaps,
+        businessHours: settings.businessHours,
+        isFullDayBlocked: isGlobalBlock
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, getOne, create, createBulk, update, cancel, reschedule, getStats, getClients, complete, getItinerary }

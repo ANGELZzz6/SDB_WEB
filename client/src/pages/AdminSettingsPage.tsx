@@ -122,6 +122,7 @@ export default function AdminSettingsPage() {
     mensajeConfirmacion: '',
     mensajeCancelacion: '',
     mensajeReagendamiento: '',
+    mensajeRechazoConflicto: '',
     horaAperturaAgendamiento: '08:00',
     horaCierreAgendamiento: '19:00',
     duracionSlot: 30
@@ -643,6 +644,19 @@ export default function AdminSettingsPage() {
                     />
                     <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
                       Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{servicio}'}</strong>
+                    </p>
+                  </div>
+
+                  <div>
+                    <FieldLabel>📲 Mensaje de Rechazo por Conflicto</FieldLabel>
+                    <UnderlineTextarea 
+                      value={siteConfig.mensajeRechazoConflicto} 
+                      onChange={(v) => handleCmsChange('mensajeRechazoConflicto', v)} 
+                      rows={3}
+                      placeholder="Lo sentimos {nombre}, el espacio para {fecha} a las {hora} ya no está disponible..."
+                    />
+                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
+                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{fecha}'}</strong>, <strong>{'{hora}'}</strong>
                     </p>
                   </div>
                 </div>

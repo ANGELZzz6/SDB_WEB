@@ -31,7 +31,8 @@ export const T = {
 ───────────────────────────────────────────────── */
 export const ADMIN_NAV = [
   { icon: '⭐', label: 'Resumen',        path: '/admin',               key: 'citas' },
-  { icon: '📅', label: 'Calendario',     path: '/admin/calendario',    key: 'calendario' },
+  { icon: '📋', label: 'Itinerario',     path: '/admin/itinerario',    key: 'itinerario' },
+  { icon: '📅', label: 'Agenda',         path: '/admin/calendario',    key: 'calendario' },
   { icon: '✂️', label: 'Servicios',      path: '/admin/servicios',     key: 'servicios' },
   { icon: '👩‍🎨', label: 'Especialistas', path: '/admin/especialistas', key: 'especialistas' },
   { icon: '👥', label: 'Clientes',       path: '/admin/clientes',      key: 'clientes' },

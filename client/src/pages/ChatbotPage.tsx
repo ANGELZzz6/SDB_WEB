@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { T } from '../lib/adminTokens';
 import {
   employeeService,
@@ -10,24 +10,29 @@ import {
 import type { Employee, Service, Settings } from '../types';
 
 function formatGoogleCalendarDate(dateStr: string, timeStr: string, durationMin: number) {
-  const [yyyy, MM, dd] = dateStr.split('-');
-  
-  const isPM = timeStr.toLowerCase().includes('pm');
-  const isAM = timeStr.toLowerCase().includes('am');
-  let hhRaw = parseInt(timeStr.split(':')[0]);
-  const mmRaw = parseInt(timeStr.split(':')[1].replace(/\D/g, ''));
+  if (!dateStr || !timeStr) return ''; // Defensive check for flexible flow
+  try {
+    const [yyyy, MM, dd] = dateStr.split('-');
+    
+    const isPM = timeStr.toLowerCase().includes('pm');
+    const isAM = timeStr.toLowerCase().includes('am');
+    let hhRaw = parseInt(timeStr.split(':')[0]);
+    const mmRaw = parseInt(timeStr.split(':')[1].replace(/\D/g, ''));
 
-  if (isPM && hhRaw < 12) hhRaw += 12;
-  if (isAM && hhRaw === 12) hhRaw = 0;
+    if (isPM && hhRaw < 12) hhRaw += 12;
+    if (isAM && hhRaw === 12) hhRaw = 0;
 
-  const start = new Date(parseInt(yyyy), parseInt(MM) - 1, parseInt(dd), hhRaw, mmRaw);
-  const end = new Date(start.getTime() + durationMin * 60000);
+    const start = new Date(parseInt(yyyy), parseInt(MM) - 1, parseInt(dd), hhRaw, mmRaw);
+    const end = new Date(start.getTime() + durationMin * 60000);
 
-  const fmt = (d: Date) => {
-    const tpad = (n: number) => n.toString().padStart(2, '0');
-    return `${d.getFullYear()}${tpad(d.getMonth() + 1)}${tpad(d.getDate())}T${tpad(d.getHours())}${tpad(d.getMinutes())}00`;
-  };
-  return `${fmt(start)}/${fmt(end)}`;
+    const fmt = (d: Date) => {
+      const tpad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}${tpad(d.getMonth() + 1)}${tpad(d.getDate())}T${tpad(d.getHours())}${tpad(d.getMinutes())}00`;
+    };
+    return `${fmt(start)}/${fmt(end)}`;
+  } catch (e) {
+    return '';
+  }
 }
 
 export default function ChatbotPage() {
@@ -46,7 +51,7 @@ export default function ChatbotPage() {
   const [blockMessage, setBlockMessage] = useState('');
 
   // Wizard States
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0); // Start at flow selection
   const [employeeId, setEmployeeId] = useState('');
   const [selectedEmployeeName, setSelectedEmployeeName] = useState('');
   const [selectedEmployeeImage, setSelectedEmployeeImage] = useState('');
@@ -60,6 +65,11 @@ export default function ChatbotPage() {
   const [selectedServiceDuration, setSelectedServiceDuration] = useState(0);
 
   const [date, setDate] = useState(''); // YYYY-MM-DD
+  
+  // --- Flexible Flow States ---
+  const [flowType, setFlowType] = useState<'standard' | 'flexible'>('standard');
+  const [selectedFlexDates, setSelectedFlexDates] = useState<string[]>([]);
+  const [flexibleAvailabilities, setFlexibleAvailabilities] = useState<any[]>([]);
 
   // Cart States
   const [cart, setCart] = useState<any[]>([]);
@@ -140,6 +150,30 @@ export default function ChatbotPage() {
     setStep(4);
   };
 
+  const handleSelectFlexDates = (dates: string[]) => {
+    setSelectedFlexDates(dates);
+    // Inicializar flexibleAvailabilities
+    const initial = dates.map(d => ({
+      date: d,
+      isFullDay: true,
+      startTime: '08:00',
+      endTime: '18:00'
+    }));
+    setFlexibleAvailabilities(initial);
+  };
+
+  const toggleFullDay = (index: number) => {
+    const updated = [...flexibleAvailabilities];
+    updated[index].isFullDay = !updated[index].isFullDay;
+    setFlexibleAvailabilities(updated);
+  };
+
+  const updateFlexTime = (index: number, field: 'startTime' | 'endTime', value: string) => {
+    const updated = [...flexibleAvailabilities];
+    updated[index][field] = value;
+    setFlexibleAvailabilities(updated);
+  };
+
   const handleSelectTime = (t: string) => {
     // Check for intra-cart overlap
     const startMin = timeToMinutes(t);
@@ -177,6 +211,28 @@ export default function ChatbotPage() {
     setStep(4.5);
   };
 
+  const handleAddFlexToCart = () => {
+    setSubmitting(true); // Immediate visual feedback
+    setTimeout(() => {
+      const newItem = {
+        employee: employeeId,
+        employeeName: selectedEmployeeName,
+        employeeImage: selectedEmployeeImage,
+        service: serviceId,
+        serviceName: selectedServiceName,
+        price: selectedServicePrice,
+        precioTipo: selectedServicePrecioTipo,
+        precioDesde: selectedServicePrecioDesde,
+        precioHasta: selectedServicePrecioHasta,
+        duration: selectedServiceDuration,
+        isFlexible: true
+      };
+      setCart([...cart, newItem]);
+      setStep(4.5);
+      setSubmitting(false);
+    }, 10); // Yield to main thread for a frame
+  };
+
   const handleRemoveFromCart = (index: number) => {
     const newCart = [...cart];
     newCart.splice(index, 1);
@@ -205,7 +261,9 @@ export default function ChatbotPage() {
           date: item.date,
           timeSlot: item.timeSlot,
           serviceName: item.serviceName // For error messages
-        }))
+        })),
+        isFlexible: flowType === 'flexible',
+        flexibleAvailabilities: flowType === 'flexible' ? flexibleAvailabilities : []
       });
       if (res.success) {
         setStep(6);
@@ -296,6 +354,57 @@ export default function ChatbotPage() {
       {/* Main Content Area */}
       <main style={{ flex: 1, padding: '32px 24px', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
         
+        {/* STEP 0: FLUJO SELECTION */}
+        {step === 0 && (
+          <div className="fade-in">
+            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '28px', color: T.primary, marginBottom: '12px', textAlign: 'center' }}>
+              ¡Hola! ✨
+            </h2>
+            <p style={{ textAlign: 'center', fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant, marginBottom: '32px' }}>
+              ¿Cómo prefieres agendar tu cita hoy?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <button
+                onClick={() => { setFlowType('standard'); setStep(1); }}
+                style={{
+                  padding: '24px', backgroundColor: '#fff', border: `1px solid ${T.outlineVariant}`,
+                  borderRadius: '20px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.outlineVariant; e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '24px' }}>📅</span>
+                  <h3 style={{ margin: 0, fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface }}>Horario Específico</h3>
+                </div>
+                <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>
+                  Elige un día y hora exacta en el calendario. Ideal si ya sabes cuándo venir.
+                </p>
+              </button>
+
+              <button
+                onClick={() => { setFlowType('flexible'); setStep(1); }}
+                style={{
+                  padding: '24px', backgroundColor: '#fff', border: `1px solid ${T.outlineVariant}`,
+                  borderRadius: '20px', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.outlineVariant; e.currentTarget.style.transform = 'translateY(0)'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '24px' }}>✨</span>
+                  <h3 style={{ margin: 0, fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface }}>Disponibilidad Flexible</h3>
+                </div>
+                <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>
+                  Dinos qué días podrías venir y nosotros te asignamos el mejor espacio. ¡Sin complicaciones!
+                </p>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* STEP 1: EMBLEADAS */}
         {step === 1 && (
           <div className="fade-in">
@@ -388,23 +497,54 @@ export default function ChatbotPage() {
           </div>
         )}
 
-        {/* STEP 3: FECHA */}
+        {/* STEP 3: FECHA (Standard vs Flexible) */}
         {step === 3 && (
           <div className="fade-in">
-             <h2 style={{ fontFamily: T.fontBody, fontSize: '22px', fontWeight: 700, color: T.onSurface, marginBottom: '24px', textAlign: 'center' }}>
-              ¿Qué día te gustaría venir?
+             <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px', textAlign: 'center' }}>
+              {flowType === 'flexible' ? '¿Qué días estás disponible?' : '¿Qué día quieres venir?'}
             </h2>
+            <p style={{ textAlign: 'center', fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '24px' }}>
+              {flowType === 'flexible' ? 'Puedes seleccionar varios días' : 'Selecciona una fecha en el calendario'}
+            </p>
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.04)' }}>
-               <Calendar 
-                 onSelect={handleSelectDate} 
-                 maxDaysInAdvance={settings?.maxDaysInAdvance || 30} 
-               />
+              {flowType === 'flexible' ? (
+                <div>
+                  <MultiCalendar 
+                    selectedDates={selectedFlexDates}
+                    onToggleDate={(d) => {
+                      const newDates = selectedFlexDates.includes(d) 
+                        ? selectedFlexDates.filter(x => x !== d)
+                        : [...selectedFlexDates, d];
+                      handleSelectFlexDates(newDates);
+                    }}
+                    maxDaysInAdvance={settings?.maxDaysInAdvance || 30}
+                  />
+                  <div style={{ marginTop: '24px' }}>
+                    <button
+                      disabled={selectedFlexDates.length === 0}
+                      onClick={() => setStep(4)}
+                      style={{
+                        width: '100%', padding: '16px', borderRadius: '9999px', border: 'none',
+                        backgroundColor: T.primary, color: '#fff', fontFamily: T.fontBody, fontWeight: 700,
+                        cursor: 'pointer', opacity: selectedFlexDates.length === 0 ? 0.5 : 1
+                      }}
+                    >
+                      Continuar ({selectedFlexDates.length} días)
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Calendar 
+                  onSelect={handleSelectDate} 
+                  maxDaysInAdvance={settings?.maxDaysInAdvance || 30} 
+                />
+              )}
             </div>
           </div>
         )}
 
-        {/* STEP 4: HORA */}
-        {step === 4 && (
+        {/* STEP 4: HORA (Standard) vs AJUSTE (Flexible) */}
+        {step === 4 && flowType === 'standard' && (
           <div className="fade-in">
             <h2 style={{ fontFamily: T.fontBody, fontSize: '22px', fontWeight: 700, color: T.onSurface, marginBottom: '12px', textAlign: 'center' }}>
               ¿A qué hora?
@@ -453,6 +593,79 @@ export default function ChatbotPage() {
           </div>
         )}
 
+        {/* STEP 4: AJUSTE FLEXIBLE */}
+        {step === 4 && flowType === 'flexible' && (
+          <div className="fade-in">
+            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px', textAlign: 'center' }}>
+              Ajusta tus horarios
+            </h2>
+            <p style={{ textAlign: 'center', fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '32px' }}>
+              Dinos en qué rango horario podrías venir cada día.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {flexibleAvailabilities.map((item, idx) => (
+                <div key={idx} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '20px', border: `1px solid ${T.outlineVariant}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '18px', color: T.onSurface }}>
+                      {formatFancyDate(item.date)}
+                    </span>
+                    <button
+                      onClick={() => toggleFullDay(idx)}
+                      style={{
+                        padding: '6px 14px', borderRadius: '9999px', border: 'none',
+                        backgroundColor: item.isFullDay ? T.primaryFixed : T.surfaceContainerHigh,
+                        color: item.isFullDay ? T.primary : T.onSurfaceVariant,
+                        fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, cursor: 'pointer'
+                      }}
+                    >
+                      {item.isFullDay ? 'Todo el día' : 'Rango específico'}
+                    </button>
+                  </div>
+
+                  {!item.isFullDay && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: T.onSurfaceVariant, marginBottom: '4px' }}>Desde</label>
+                        <select 
+                          value={item.startTime}
+                          onChange={(e) => updateFlexTime(idx, 'startTime', e.target.value)}
+                          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody }}
+                        >
+                          {['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: T.onSurfaceVariant, marginBottom: '4px' }}>Hasta</label>
+                        <select 
+                          value={item.endTime}
+                          onChange={(e) => updateFlexTime(idx, 'endTime', e.target.value)}
+                          style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody }}
+                        >
+                          {['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'].map(h => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+               onClick={handleAddFlexToCart}
+               disabled={submitting}
+               style={{
+                 width: '100%', padding: '18px', borderRadius: '9999px', border: 'none',
+                 backgroundColor: T.primary, color: '#fff', fontFamily: T.fontBody, fontWeight: 700,
+                 cursor: 'pointer', marginTop: '32px', boxShadow: '0 8px 16px rgba(148,69,85,0.2)',
+                 opacity: submitting ? 0.7 : 1
+               }}
+            >
+              {submitting ? 'Procesando...' : 'Confirmar estos horarios'}
+            </button>
+          </div>
+        )}
+
         {/* STEP 4.5: CARRITO / RESUMEN */}
         {step === 4.5 && (
           <div className="fade-in">
@@ -473,14 +686,24 @@ export default function ChatbotPage() {
                     position: 'relative'
                   }}
                 >
-                  <img src={item.employeeImage} alt={item.employeeName} style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' }} />
+                  {item.employeeImage ? (
+                    <img src={item.employeeImage} alt={item.employeeName} style={{ width: '45px', height: '45px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '45px', height: '45px', borderRadius: '50%', backgroundColor: T.surfaceContainerHigh, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: T.onSurfaceVariant }}>
+                      {item.employeeName?.charAt(0)}
+                    </div>
+                  )}
                   <div style={{ flex: 1 }}>
                     <h4 style={{ margin: 0, fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '15px', color: T.onSurface }}>{item.serviceName}</h4>
                     <p style={{ margin: '2px 0 0', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>
                       con <b>{item.employeeName}</b>
                     </p>
                     <p style={{ margin: '4px 0 0', fontFamily: T.fontBody, fontSize: '12px', color: T.primary, fontWeight: 700 }}>
-                      {formatFancyDate(item.date)} @ {item.timeSlot}
+                      {item.isFlexible ? (
+                        <span>✨ Horario Flexible ({flexibleAvailabilities.length} días)</span>
+                      ) : (
+                        <span>{formatFancyDate(item.date)} @ {item.timeSlot}</span>
+                      )}
                     </p>
                   </div>
                   <button 
@@ -587,7 +810,9 @@ export default function ChatbotPage() {
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: idx < cart.length-1 ? `1px solid ${T.outlineVariant}` : 'none', paddingBottom: idx < cart.length-1 ? '8px' : 0 }}>
                     <div>
                       <p style={{ margin: 0, fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '14px', color: T.onSurface }}>{item.serviceName}</p>
-                      <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{item.employeeName} - {item.timeSlot}</p>
+                      <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>
+                        {item.employeeName} - {item.isFlexible ? 'Horario Flexible' : item.timeSlot}
+                      </p>
                     </div>
                     <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>
                       {renderPriceInfo(item.precioTipo, item.price, item.precioDesde, item.precioHasta)}
@@ -622,11 +847,11 @@ export default function ChatbotPage() {
             <div style={{ width: '80px', height: '80px', backgroundColor: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', margin: '0 auto 24px' }}>
               ✨
             </div>
-            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '32px', color: T.primary, marginBottom: '16px' }}>
-              ¡Tu cita fue agendada exitosamente, {clientName.split(' ')[0]}!
+            <h2 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '28px', color: T.primary, marginBottom: '16px' }}>
+              ¡Solicitud recibida, {clientName.split(' ')[0]}! ✨
             </h2>
             <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant, marginBottom: '40px' }}>
-              La confirmaremos en los próximos minutos. Recibirás una notificación cuando esté confirmada.
+              Tu reserva está <b>PENDIENTE DE CONFIRMACIÓN</b>. Nuestro equipo validará el espacio y te enviaremos una notificación por WhatsApp en breve con la respuesta final.
             </p>
 
              <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '24px', boxShadow: '0 12px 32px rgba(0,0,0,0.06)', textAlign: 'left', marginBottom: '40px' }}>
@@ -635,12 +860,20 @@ export default function ChatbotPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {cart.map((item, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: '16px', borderBottom: idx < cart.length-1 ? `1px solid ${T.outlineVariant}` : 'none', paddingBottom: idx < cart.length-1 ? '16px' : 0 }}>
-                      <img src={item.employeeImage} alt="Staff" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
-                      <div style={{ flex: 1 }}>
+                  {item.employeeImage ? (
+                    <img src={item.employeeImage} alt="Staff" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: T.surfaceContainerLow, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: T.onSurfaceVariant }}>
+                      {item.employeeName?.charAt(0)}
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
                         <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface }}>{item.serviceName}</span>
                         <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>con {item.employeeName}</span>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                          <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary }}>{formatFancyDate(item.date)} @ {item.timeSlot}</span>
+                          <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary }}>
+                            {item.isFlexible ? '✨ Solicitud Flexible' : `${formatFancyDate(item.date)} @ ${item.timeSlot}`}
+                          </span>
                           <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{item.duration} min</span>
                         </div>
                       </div>
@@ -650,22 +883,24 @@ export default function ChatbotPage() {
              </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <a 
-                href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Cita+Salon+L'Elixir&dates=${formatGoogleCalendarDate(cart[0]?.date || '', cart[0]?.timeSlot || '', cart[0]?.duration || 30)}&details=Reserva+multiple+en+Salon+L'Elixir`}
-                target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                  padding: '16px', borderRadius: '9999px', backgroundColor: T.surfaceContainerLowest,
-                  color: T.onSurface, border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody,
-                  fontSize: '15px', fontWeight: 700, textDecoration: 'none', transition: 'background 0.2s',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)', textAlign: 'center'
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainer)}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainerLowest)}
-              >
-                <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Google Calendar" style={{ width: '24px', height: '24px' }} />
-                Añadir a Google Calendar
-              </a>
+              {(!flowType || flowType === 'standard') && !cart[0]?.isFlexible && (
+                <a 
+                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Cita+Salon+L'Elixir&dates=${formatGoogleCalendarDate(cart[0]?.date || '', cart[0]?.timeSlot || '', cart[0]?.duration || 30)}&details=Reserva+multiple+en+Salon+L'Elixir`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                    padding: '16px', borderRadius: '9999px', backgroundColor: T.surfaceContainerLowest,
+                    color: T.onSurface, border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody,
+                    fontSize: '15px', fontWeight: 700, textDecoration: 'none', transition: 'background 0.2s',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)', textAlign: 'center'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainer)}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = T.surfaceContainerLowest)}
+                >
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Google Calendar" style={{ width: '24px', height: '24px' }} />
+                  Añadir a Google Calendar
+                </a>
+              )}
 
               <button
                 onClick={() => window.location.href = '/'}
@@ -703,6 +938,77 @@ export default function ChatbotPage() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+    </div>
+  );
+}
+
+// ─── CUSTOM VISUAL CALENDAR (MULTI) ──────────────────────────────────────────────────
+
+function MultiCalendar({ selectedDates, onToggleDate, maxDaysInAdvance }: { selectedDates: string[], onToggleDate: (d: string) => void, maxDaysInAdvance: number }) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const [baseDate, setBaseDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + maxDaysInAdvance);
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const paddingDays = firstDay === 0 ? 6 : firstDay - 1; 
+
+  const daysArr = useMemo(() => {
+    const days = Array(paddingDays).fill(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+    return days;
+  }, [paddingDays, daysInMonth, year, month]);
+
+  const toISOLocal = (dateObj: Date) => {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
+  };
+
+  const monthName = baseDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <button onClick={() => setBaseDate(new Date(year, month - 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.onSurfaceVariant }}>‹</button>
+        <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '18px', color: T.onSurface, textTransform: 'capitalize' }}>{monthName}</span>
+        <button onClick={() => setBaseDate(new Date(year, month + 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.onSurfaceVariant }}>›</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+        {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'].map(dw => (
+          <div key={dw} style={{ textAlign: 'center', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant, marginBottom: '8px' }}>{dw}</div>
+        ))}
+        {daysArr.map((d, i) => {
+          if (!d) return <div key={i} />;
+          const hoyBogota = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+          const dStr = toISOLocal(d);
+          const isPast = dStr < hoyBogota;
+          const isTooFar = d.getTime() > maxDate.getTime();
+          const disabled = isPast || isTooFar;
+          const isSelected = selectedDates.includes(dStr);
+
+          return (
+            <button
+              key={i}
+              disabled={disabled}
+              onClick={() => onToggleDate(dStr)}
+              style={{
+                aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '50%', border: 'none',
+                background: isSelected ? T.primary : 'none',
+                fontFamily: T.fontBody, fontSize: '14px', fontWeight: isSelected ? 800 : 500,
+                color: disabled ? `${T.onSurfaceVariant}40` : (isSelected ? '#fff' : T.onSurface),
+                cursor: disabled ? 'default' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {d.getDate()}
+            </button>
+          )
+        })}
+      </div>
     </div>
   );
 }

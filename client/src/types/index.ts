@@ -55,8 +55,15 @@ export interface Appointment {
   date: string  // ISO date string
   timeSlot: string   // "HH:MM"
   endTime: string    // "HH:MM"
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rejected'
   bulkId?: string
+  isFlexible?: boolean
+  flexibleAvailabilities?: {
+    date: string
+    isFullDay: boolean
+    startTime?: string
+    endTime?: string
+  }[]
   notes?: string
   reminderSent: boolean
   createdAt: string
@@ -114,6 +121,7 @@ export interface SiteConfig {
   mensajeConfirmacion: string
   mensajeCancelacion: string
   mensajeReagendamiento: string
+  mensajeRechazoConflicto: string
   horaAperturaAgendamiento: string
   horaCierreAgendamiento: string
   duracionSlot: number

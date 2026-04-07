@@ -16,13 +16,14 @@ import AdminGalleryPage from './pages/AdminGalleryPage';
 import AdminSettingsPage from './pages/AdminSettingsPage';
 import AdminLiquidacionesPage from './pages/AdminLiquidacionesPage';
 import ChatbotPage from './pages/ChatbotPage';
+import AdminItineraryPage from './pages/AdminItineraryPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
@@ -37,6 +38,7 @@ function App() {
         {/* Protected Admin Routes */}
         <Route element={<ProtectedRoute />}>
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/itinerario" element={<AdminItineraryPage />} />
           <Route path="/admin/calendario" element={<AdminCalendarPage />} />
           <Route path="/admin/perfil" element={<AdminProfilePage />} />
         </Route>

@@ -23,6 +23,9 @@ router.get('/clients', authMiddleware, checkPermission('clientes'), apptCtrl.get
 // GET /api/appointments — autenticado (admin ve todas, empleada solo las suyas)
 router.get('/', authMiddleware, apptCtrl.getAll)
 
+// GET /api/appointments/itinerary/:employeeId/:date
+router.get('/itinerary/:employeeId/:date', authMiddleware, apptCtrl.getItinerary)
+
 // GET /api/appointments/:id
 router.get('/:id', authMiddleware, apptCtrl.getOne)
 

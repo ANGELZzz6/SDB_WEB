@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
 import { appointmentService, blockedSlotService, employeeService, availabilityService, siteConfigService } from '../services/api';
+import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Appointment, BlockedSlot, Employee, SiteConfig } from '../types';
 import { waLink, WA_MESSAGES, formatFecha, buildMessage } from '../utils/whatsappMessages';
 
@@ -29,9 +30,12 @@ export default function AdminCalendarPage() {
   const [finalPriceInput, setFinalPriceInput] = useState<string>('');
   const [isCompleting, setIsCompleting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled', appt: any } | null>(null);
+  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled' | 'rejected', appt: any } | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
+  
+  // Flexible confirmation state
+  const [selectedFlexibleAppt, setSelectedFlexibleAppt] = useState<Appointment | null>(null);
 
   // User auth info
   const rawUser = localStorage.getItem('adminUser');
@@ -105,7 +109,8 @@ export default function AdminCalendarPage() {
   const blanks = Array.from({ length: offset });
 
   // Helpers
-  const formatISO = (d: Date | string) => {
+  const formatISO = (d: Date | string | null | undefined) => {
+    if (!d) return '';
     if (typeof d === 'string') return d.split('T')[0];
     // Forzado a Bogotá para evitar desfases de medianoche
     return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
@@ -185,21 +190,27 @@ export default function AdminCalendarPage() {
     }
   };
 
-  const handleStatusChange = async (appt: Appointment, newStatus: 'confirmed' | 'cancelled') => {
+  const handleStatusChange = async (appt: Appointment, newStatus: 'confirmed' | 'cancelled' | 'rejected') => {
     try {
       const res = await appointmentService.updateStatus(appt._id, newStatus);
       if (res.success) {
-        setLastAction({ id: appt._id, type: newStatus === 'confirmed' ? 'confirmed' : 'cancelled', appt });
+        setLastAction({ id: appt._id, type: newStatus as any, appt: res.data || appt });
         loadData(false);
         // Actualizar localmente la vista del modal
         if (selectedDayInfo) {
           setSelectedDayInfo({
             ...selectedDayInfo,
-            appts: selectedDayInfo.appts.map(a => a._id === appt._id ? { ...a, status: newStatus } : a)
+            appts: selectedDayInfo.appts.map(a => a._id === appt._id ? { ...(res.data || a), status: newStatus } : a)
           });
         }
       }
     } catch (e: any) {
+      if (e.response?.status === 409) {
+        alert(e.response.data?.message || 'Conflicto: El horario ya no está disponible.');
+        loadData(true);
+        if (selectedDayInfo) setSelectedDayInfo(null);
+        return;
+      }
       alert(e.message || 'Error actualizando estado');
     }
   };
@@ -259,14 +270,34 @@ export default function AdminCalendarPage() {
     <AdminLayout searchPlaceholder="Buscar fecha o cita...">
       <style>{`
         @media (max-width: 768px) {
-          .admin-calendar-container { padding: 24px 16px 120px !important; }
-          .admin-calendar-header { flex-direction: column; align-items: flex-start !important; gap: 24px; margin-bottom: 24px !important; }
-          .admin-calendar-nav { width: 100% !important; justify-content: space-between !important; }
-          .calendar-scroll-wrapper { overflow-x: auto; padding-bottom: 10px; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
-          .calendar-matrix { min-width: 800px; }
+          .admin-calendar-container { padding: 12px 12px 100px !important; width: 100% !important; max-width: 100% !important; }
+          .admin-calendar-header { margin-bottom: 24px !important; }
+          .admin-calendar-header h1 { font-size: 24px !important; font-weight: 800 !important; }
+          .admin-calendar-nav { border-radius: 12px !important; }
+          .calendar-scroll-wrapper { 
+            overflow-x: auto; 
+            margin: 0 -12px; 
+            padding: 0 12px 12px; 
+            -webkit-overflow-scrolling: touch; 
+            display: flex !important;
+            flex-direction: column;
+            width: calc(100% + 24px) !important;
+          }
+          .calendar-matrix { min-width: 900px; gap: 4px !important; flex-shrink: 0; }
+          .calendar-day-cell { min-height: 120px !important; padding: 6px !important; border-radius: 10px !important; }
+          .day-modal-content { 
+            width: 100% !important; 
+            height: auto !important;
+            max-height: 90vh !important;
+            margin-top: auto !important;
+            border-radius: 24px 24px 0 0 !important;
+            padding: 24px 16px !important;
+          }
+          .day-modal-overlay { align-items: flex-end !important; padding: 0 !important; }
         }
       `}</style>
-      <div className="admin-calendar-container" style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px', position: 'relative' }}>
+      <div style={{ display: 'flex', minHeight: 'calc(100vh - 72px)' }}>
+        <div className="admin-calendar-container" style={{ flex: 1, maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px', position: 'relative' }}>
         
         {/* Floating WhatsApp Banner */}
         {lastAction && (
@@ -281,7 +312,7 @@ export default function AdminCalendarPage() {
               <span style={{ fontSize: '20px' }}>📲</span>
               <p style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
                 {lastAction.type === 'confirmed' && `Cita de ${lastAction.appt.clientName} confirmada.`}
-                {lastAction.type === 'cancelled' && `Cita de ${lastAction.appt.clientName} rechazada.`}
+                {(lastAction.type === 'cancelled' || lastAction.type === 'rejected') && `Cita de ${lastAction.appt.clientName} rechazada/cancelada.`}
                 {lastAction.type === 'rescheduled' && `Cita de ${lastAction.appt.clientName} reagendada.`}
                 {' '}¿Enviar mensaje por WhatsApp?
               </p>
@@ -289,6 +320,7 @@ export default function AdminCalendarPage() {
             <a
               href={
                 lastAction.type === 'confirmed' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.confirmacion(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
+                lastAction.type === 'rejected' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazoConflicto(lastAction.appt.clientName, formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
                 lastAction.type === 'cancelled' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazo(lastAction.appt.clientName, formatFecha(lastAction.appt.date))) :
                 waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.reagendamiento(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio'))
               }
@@ -350,14 +382,27 @@ export default function AdminCalendarPage() {
               
               {daysThisMonth.map((day, i) => {
                 const iso = formatISO(day);
-                const dayAppts = appointments.filter(a => formatISO(a.date) === iso);
-                const dayBlocks = blockedSlots.filter(b => formatISO(b.date) === iso);
                 
+                // LÓGICA MULTI-DÍA: Filtrar citas normales y flexibles que coincidan con este día
+                const dayAppts = appointments.filter(a => {
+                  // Citas confirmadas o completadas en su fecha específica
+                  if (!a.isFlexible && a.date && formatISO(a.date) === iso) return true;
+                  
+                  // Citas flexibles PENDIENTES que tengan este día como opción
+                  if (a.isFlexible && a.status === 'pending') {
+                    return a.flexibleAvailabilities?.some(opt => formatISO(opt.date) === iso);
+                  }
+                  
+                  return false;
+                });
+
+                const dayBlocks = blockedSlots.filter(b => formatISO(b.date) === iso);
                 const isToday = formatISO(new Date()) === iso;
 
                 return (
                   <div 
                     key={i} 
+                    className="calendar-day-cell"
                     onClick={() => setSelectedDayInfo({ date: day, appts: dayAppts, blocks: dayBlocks })}
                     style={{ 
                       minHeight: '120px', backgroundColor: T.surfaceContainerLowest, borderRadius: '16px',
@@ -375,11 +420,25 @@ export default function AdminCalendarPage() {
                           🚫 {b.isFullDay ? 'DÍA BLOQUEADO' : b.timeSlot}
                         </div>
                       ))}
-                      {dayAppts.map((a, idx) => (
-                        <div key={`apt-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: a.status==='cancelled' ? T.surfaceVariant : T.primaryFixed, color: a.status==='cancelled'? T.onSurfaceVariant : T.primary, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textDecoration: a.status==='cancelled'?'line-through':'none' }}>
-                          {a.bulkId ? '🔗 ' : ''}{a.timeSlot} {a.clientName}
-                        </div>
-                      ))}
+                      {dayAppts.map((a, idx) => {
+                        const isFlex = a.isFlexible && a.status === 'pending';
+                        return (
+                          <div 
+                            key={`apt-${idx}`} 
+                            style={{ 
+                              fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, 
+                              backgroundColor: a.status==='cancelled' ? T.surfaceVariant : (isFlex ? '#fff9e6' : T.primaryFixed), 
+                              color: a.status==='cancelled'? T.onSurfaceVariant : (isFlex ? '#b08b00' : T.primary), 
+                              padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', 
+                              textDecoration: a.status==='cancelled'?'line-through':'none',
+                              border: isFlex ? '1px dashed #ffdca8' : 'none'
+                            }}
+                          >
+                            {isFlex ? '✨ ' : (a.bulkId ? '🔗 ' : '')}
+                            {isFlex ? 'Flexible' : a.timeSlot} {a.clientName}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )
@@ -388,13 +447,13 @@ export default function AdminCalendarPage() {
             </div>
           </div>
         )}
-
       </div>
+    </div>
 
       {/* DAY MODAL */}
       {selectedDayInfo && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(28,27,26,0.6)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ backgroundColor: T.surface, width: '100%', maxWidth: '560px', borderRadius: '24px', padding: '32px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)' }}>
+        <div className="day-modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(28,27,26,0.6)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div className="day-modal-content" style={{ backgroundColor: T.surface, width: '100%', maxWidth: '560px', borderRadius: '24px', padding: '32px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
@@ -413,7 +472,7 @@ export default function AdminCalendarPage() {
               </button>
             </div>
 
-            <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
               {selectedDayInfo.blocks.length === 0 && selectedDayInfo.appts.length === 0 && (
                 <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant }}>No hay movimientos este día.</p>
               )}
@@ -431,12 +490,37 @@ export default function AdminCalendarPage() {
               ))}
 
               {/* Citas */}
-              {selectedDayInfo.appts.map(a => (
-                <div key={a._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: T.surfaceContainerLowest, padding: '16px', borderRadius: '16px', opacity: a.status === 'cancelled' ? 0.6 : 1 }}>
-                  <div>
-                    <span style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 800, color: T.primary }}>{a.timeSlot}</span>
-                    <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, fontWeight: 600 }}>{a.clientName}</p>
-                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>{(a.service as any)?.nombre || 'Servicio'} con {(a.employee as any)?.nombre}</p>
+              {selectedDayInfo.appts.map(a => {
+                const isFlex = a.isFlexible && a.status === 'pending';
+                // Encontrar la disponibilidad específica para este día
+                const currentDayISO = formatISO(selectedDayInfo.date);
+                const dayOpt = a.flexibleAvailabilities?.find(opt => formatISO(opt.date) === currentDayISO);
+                const availabilityText = dayOpt ? (dayOpt.isFullDay ? 'Todo el día' : `${dayOpt.startTime || ''} - ${dayOpt.endTime || ''}`) : 'Flexible';
+
+                return (
+                  <div 
+                    key={a._id} 
+                    style={{ 
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                      backgroundColor: isFlex ? '#fffcf0' : T.surfaceContainerLowest, 
+                      padding: '16px', borderRadius: '16px', 
+                      opacity: a.status === 'cancelled' ? 0.6 : 1,
+                      border: isFlex ? '1px dashed #ffdca8' : 'none'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 800, color: isFlex ? '#b08b00' : T.primary }}>
+                          {isFlex ? `✨ ${availabilityText}` : a.timeSlot}
+                        </span>
+                        {isFlex && (
+                          <span style={{ fontSize: '10px', backgroundColor: '#ffdca8', color: '#623f1b', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700, textTransform: 'uppercase' }}>
+                            Solicitud Flexible
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, fontWeight: 600 }}>{a.clientName}</p>
+                      <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>{(a.service as any)?.nombre || 'Servicio'} con {(a.employee as any)?.nombre}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span 
                         style={{ 
@@ -458,6 +542,7 @@ export default function AdminCalendarPage() {
                           {a.status === 'confirmed' ? 'Confirmada' : 
                           a.status === 'completed' ? 'Completada' : 
                           a.status === 'pending' ? 'Pendiente' : 
+                          a.status === 'rejected' ? 'Rechazada' :
                           'Cancelada'}
                         </span>
                         {a.bulkId && (
@@ -491,10 +576,22 @@ export default function AdminCalendarPage() {
                         </button>
                       )}
                       
-                      {a.status === 'pending' && (
+                      {isFlex && (
+                        <button 
+                          onClick={() => {
+                            setSelectedDayInfo(null);
+                            setSelectedFlexibleAppt(a);
+                          }}
+                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: T.primary, color: 'white', padding: '10px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                        >
+                          ✨ AGENDAR
+                        </button>
+                      )}
+
+                      {a.status === 'pending' && !isFlex && (
                         <button 
                           onClick={() => handleStatusChange(a, 'confirmed')}
-                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '10px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
                         >
                           ✓ CONFIRMAR
                         </button>
@@ -503,13 +600,13 @@ export default function AdminCalendarPage() {
                       {(a.status === 'pending' || a.status === 'confirmed') && (
                         <button 
                           onClick={() => handleCancelar(a)} 
-                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '10px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
                         >
                           ✕ CANCELAR
                         </button>
                       )}
  
-                      {a.status !== 'cancelled' && a.status !== 'completed' && (
+                      {a.status !== 'cancelled' && a.status !== 'completed' && !isFlex && (
                         <button 
                           onClick={() => openReschedule(a)} 
                           disabled={!isAdmin && hayPendientes && a.status !== 'pending'}
@@ -519,7 +616,7 @@ export default function AdminCalendarPage() {
                             fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, 
                             backgroundColor: (!isAdmin && hayPendientes && a.status !== 'pending') ? T.outlineVariant : T.secondaryContainer, 
                             color: (!isAdmin && hayPendientes && a.status !== 'pending') ? '#999' : T.onSecondaryContainer, 
-                            padding: '6px 12px', borderRadius: '9999px', border: 'none', 
+                            padding: '10px 16px', borderRadius: '9999px', border: 'none', 
                             cursor: (!isAdmin && hayPendientes && a.status !== 'pending') ? 'not-allowed' : 'pointer',
                             textTransform: 'uppercase', letterSpacing: '0.1em'
                           }}
@@ -564,12 +661,12 @@ export default function AdminCalendarPage() {
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* CREATE BLOCK MODAL */}
       {showBlockModal && (
@@ -742,6 +839,27 @@ export default function AdminCalendarPage() {
             </div>
           </div>
         </div>
+      )}
+        
+      {/* FLEXIBLE CONFIRMATION MODAL */}
+      {selectedFlexibleAppt && (
+        <FlexibleConfirmationModal 
+          isOpen={!!selectedFlexibleAppt}
+          appointment={{
+            id: selectedFlexibleAppt._id,
+            client: selectedFlexibleAppt.clientName,
+            clientPhone: selectedFlexibleAppt.clientPhone,
+            service: (selectedFlexibleAppt.service as any)?.nombre || 'Servicio',
+            serviceId: typeof selectedFlexibleAppt.service === 'string' ? selectedFlexibleAppt.service : selectedFlexibleAppt.service._id,
+            specialistId: typeof selectedFlexibleAppt.employee === 'string' ? selectedFlexibleAppt.employee : selectedFlexibleAppt.employee._id,
+            flexibleAvailabilities: selectedFlexibleAppt.flexibleAvailabilities as any
+          }} 
+          onClose={() => setSelectedFlexibleAppt(null)} 
+          onSuccess={() => {
+            setSelectedFlexibleAppt(null);
+            loadData(false);
+          }} 
+        />
       )}
     </AdminLayout>
   );

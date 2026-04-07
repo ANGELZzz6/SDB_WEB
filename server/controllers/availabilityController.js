@@ -185,7 +185,7 @@ const getAvailability = async (req, res, next) => {
         $gte: dateOnly(targetDate),
         $lt: new Date(dateOnly(targetDate).getTime() + 24 * 60 * 60 * 1000),
       },
-      status: { $nin: ['cancelled'] },
+      status: { $in: ['confirmed', 'completed'] },
     }).populate('service', 'duracion')
 
     // Construir intervalos ocupados: [startMin, endMin + buffer]

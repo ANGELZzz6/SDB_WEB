@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
 import { appointmentService, employeeService, availabilityService, siteConfigService } from '../services/api';
+import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Employee, SiteConfig } from '../types';
 import { waLink, WA_MESSAGES, formatFecha, buildMessage } from '../utils/whatsappMessages';
 
 /* ─────────────────────────────────────────────────
    Data
 ───────────────────────────────────────────────── */
-type AppStatus = 'Confirmada' | 'Completada' | 'Pendiente' | 'Cancelada';
+type AppStatus = 'Confirmada' | 'Completada' | 'Pendiente' | 'Cancelada' | 'Rechazada';
 
 interface UIAppointment {
   id: string; time: string; client: string; clientPhone: string; clientPhoto: string;
@@ -16,6 +17,8 @@ interface UIAppointment {
   specialist: string; specialistId: string;
   duration: string; status: AppStatus;
   date: string; bulkId?: string;
+  isFlexible?: boolean;
+  flexibleAvailabilities?: any[];
 }
 
 const mapStatus = (apiStatus: string): AppStatus => {
@@ -23,6 +26,7 @@ const mapStatus = (apiStatus: string): AppStatus => {
     case 'confirmed': return 'Confirmada';
     case 'completed': return 'Completada';
     case 'cancelled': return 'Cancelada';
+    case 'rejected': return 'Rechazada';
     default: return 'Pendiente';
   }
 }
@@ -32,6 +36,7 @@ const STATUS_STYLES: Record<AppStatus, { bg: string; color: string }> = {
   'Completada': { bg: 'rgba(107, 114, 128, 0.1)', color: '#6b7280' },
   'Pendiente':  { bg: 'rgba(240,189,143,0.3)', color: '#623f1b' },
   'Cancelada':  { bg: 'rgba(186,26,26,0.08)',  color: '#ba1a1a' },
+  'Rechazada':  { bg: 'rgba(186,26,26,0.08)',  color: '#ba1a1a' },
 };
 
 /* ─────────────────────────────────────────────────
@@ -73,9 +78,15 @@ export default function AdminPage() {
   const [selectedApptToComplete, setSelectedApptToComplete] = useState<UIAppointment | null>(null);
   const [finalPriceInput, setFinalPriceInput] = useState<string>('');
   const [isCompleting, setIsCompleting] = useState(false);
-  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled', appt: any } | null>(null);
+  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled' | 'rejected', appt: any } | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
+  
+
+
+  // Flexible Modal state (Refactored to shared component)
+  const [showFlexModal, setShowFlexModal] = useState(false);
+  const [flexTarget, setFlexTarget] = useState<UIAppointment | null>(null);
 
   // Botón de WA desaparece después de 30 segundos
   useEffect(() => {
@@ -104,7 +115,9 @@ export default function AdminPage() {
     duration: a.service?.duracion ? `${a.service.duracion}m` : '30m',
     status: mapStatus(a.status),
     date: a.date,
-    bulkId: a.bulkId
+    bulkId: a.bulkId,
+    isFlexible: a.isFlexible,
+    flexibleAvailabilities: a.flexibleAvailabilities
   });
 
   const fetchData = async (showLoading = true) => {
@@ -188,7 +201,7 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, [user?.id, user?.role]);
 
-  const handleAction = async (id: string, newStatus: 'confirmed' | 'cancelled') => {
+  const handleAction = async (id: string, newStatus: 'confirmed' | 'rejected') => {
     try {
       const res = await appointmentService.updateStatus(id, newStatus);
       if (res.success) {
@@ -202,17 +215,22 @@ export default function AdminPage() {
           setStats(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1), cancelled: prev.cancelled + 1 }));
         }
         
-        showNotif(newStatus === 'confirmed' ? '✅ Cita confirmada' : '❌ Cita rechazada', newStatus === 'confirmed' ? 'ok' : 'err');
+        showNotif(newStatus === 'confirmed' ? '✅ Cita confirmada' : '❌ Solicitud rechazada', newStatus === 'confirmed' ? 'ok' : 'err');
         
         // WhatsApp notification trigger
         const affectedAppt = pendingAppointments.find(a => a.id === id);
         if (affectedAppt) {
-          setLastAction({ id, type: newStatus === 'confirmed' ? 'confirmed' : 'cancelled', appt: affectedAppt });
+          setLastAction({ id, type: newStatus === 'confirmed' ? 'confirmed' : 'rejected', appt: affectedAppt });
         }
 
         fetchData(false); // Refrescar para asegurar sincronía
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        showNotif(error.response.data?.message || 'Conflicto: El horario ya no está disponible.', 'err');
+        fetchData(true);
+        return;
+      }
       console.error('Error updating appointment', error);
       showNotif('Error al actualizar la cita', 'err');
     }
@@ -297,6 +315,11 @@ export default function AdminPage() {
     } finally {
       setIsCompleting(false);
     }
+  };
+
+  const handleOpenFlexModal = (appt: UIAppointment) => {
+    setFlexTarget(appt);
+    setShowFlexModal(true);
   };
 
   const confirmedCount = appointments.filter((a) => a.status === 'Confirmada').length;
@@ -413,18 +436,23 @@ export default function AdminPage() {
                         <span style={{ fontSize: '10px', backgroundColor: T.primaryContainer, color: T.primary, padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>🔗 Sesión Múltiple</span>
                       )}
                     </div>
-                    <p className="truncate" style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>💎 {appt.service} · {appt.duration}</p>
-                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>👩‍🎨 {appt.specialist} · {appt.time}</p>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <p className="truncate" style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>💎 {appt.service} · {appt.duration}</p>
+                      {appt.isFlexible && <span style={{ fontSize: '10px', backgroundColor: T.primaryFixed, color: T.primary, padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>✨ Flexible</span>}
+                    </div>
+                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>
+                       👩‍🎨 {appt.specialist} · {appt.isFlexible ? 'Horario a convenir' : appt.time}
+                    </p>
                   </div>
                   <div className="grid grid-cols-3 gap-1.5 w-full mt-3">
                     <button
-                      onClick={() => handleAction(appt.id, 'confirmed')}
+                      onClick={() => appt.isFlexible ? handleOpenFlexModal(appt) : handleAction(appt.id, 'confirmed')}
                       className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
-                      style={{ backgroundColor: '#22c55e', color: 'white', border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
+                      style={{ backgroundColor: appt.isFlexible ? T.primary : '#22c55e', color: 'white', border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
                       onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
                       onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                     >
-                      Confirmar
+                      {appt.isFlexible ? 'Agendar' : 'Confirmar'}
                     </button>
                     <button
                       onClick={() => openReschedule(appt)}
@@ -436,7 +464,7 @@ export default function AdminPage() {
                       Reagendar
                     </button>
                     <button
-                      onClick={() => handleAction(appt.id, 'cancelled')}
+                      onClick={() => handleAction(appt.id, 'rejected')}
                       className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
                       style={{ backgroundColor: T.errorContainer, color: T.error, border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
                       onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
@@ -462,17 +490,21 @@ export default function AdminPage() {
                           📲 Enviar confirmación por WhatsApp
                         </button>
                       )}
-                      {lastAction.type === 'cancelled' && (
+                      {(lastAction.type === 'cancelled' || lastAction.type === 'rejected') && (
                         <button
                           onClick={() => {
-                            const msg = siteConfig?.mensajeCancelacion
-                              ? buildMessage(siteConfig.mensajeCancelacion, { nombre: appt.client, fecha: formatFecha(appt.date) })
-                              : WA_MESSAGES.rechazo(appt.client, formatFecha(appt.date));
+                            const msg = lastAction.type === 'rejected' && siteConfig?.mensajeRechazoConflicto
+                              ? buildMessage(siteConfig.mensajeRechazoConflicto, { nombre: appt.client, fecha: formatFecha(appt.date), hora: appt.time })
+                              : siteConfig?.mensajeCancelacion
+                                ? buildMessage(siteConfig.mensajeCancelacion, { nombre: appt.client, fecha: formatFecha(appt.date) })
+                                : lastAction.type === 'rejected'
+                                  ? WA_MESSAGES.rechazoConflicto(appt.client, formatFecha(appt.date), appt.time)
+                                  : WA_MESSAGES.rechazo(appt.client, formatFecha(appt.date));
                             setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
                           }}
                           style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
                         >
-                          📲 Enviar cancelación por WhatsApp
+                          📲 Enviar {lastAction.type === 'rejected' ? 'rechazo por conflicto' : 'cancelación'} por WhatsApp
                         </button>
                       )}
                       {lastAction.type === 'rescheduled' && (
@@ -774,6 +806,15 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      <FlexibleConfirmationModal 
+        isOpen={showFlexModal}
+        onClose={() => setShowFlexModal(false)}
+        appointment={flexTarget}
+        onSuccess={() => {
+          showNotif('✅ Cita confirmada exitosamente.');
+          fetchData(false);
+        }}
+      />
     </AdminLayout>
   );
 }

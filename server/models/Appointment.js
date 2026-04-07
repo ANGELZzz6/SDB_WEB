@@ -12,13 +12,35 @@ const appointmentSchema = new mongoose.Schema({
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
   service:  { type: mongoose.Schema.Types.ObjectId, ref: 'Service',  required: true },
 
-  date:     { type: Date, required: true },
-  timeSlot: { type: String, required: true }, // "HH:MM" formato 24h
-  endTime:  { type: String, required: true }, // calculado: timeSlot + duración del servicio
+  // --- Campos para Flexibilidad ---
+  isFlexible: { type: Boolean, default: false },
+  flexibleAvailabilities: {
+    type: [{
+      date: Date,
+      isFullDay: { type: Boolean, default: true },
+      startTime: String, // "HH:MM"
+      endTime: String    // "HH:MM"
+    }],
+    default: []
+  },
+
+  // Estos campos pasan a ser condicionales: obligatorios solo si NO es flexible
+  date:     { 
+    type: Date, 
+    required: function() { return !this.isFlexible; } 
+  },
+  timeSlot: { 
+    type: String, 
+    required: function() { return !this.isFlexible; } 
+  },
+  endTime:  { 
+    type: String, 
+    required: function() { return !this.isFlexible; } 
+  },
 
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+    enum: ['pending', 'confirmed', 'completed', 'cancelled', 'rejected'],
     default: 'pending',
   },
 
@@ -36,18 +58,23 @@ const appointmentSchema = new mongoose.Schema({
   timestamps: true,
 })
 
-// Índices para consultas frecuentes: citas de una empleada en una fecha
+// Índices para consultas frecuentes
 appointmentSchema.index({ employee: 1, date: 1 })
 appointmentSchema.index({ date: 1, status: 1 })
 appointmentSchema.index({ clientPhone: 1, date: -1 })
 
-// BLOCKER 3: Prevenir doble cita simultánea (Race Condition)
-// Único por especialista + fecha + hora, EXCEPTO si la cita fue cancelada
+// BLOCKER: Prevenir doble cita simultánea (Race Condition)
+// Único por especialista + fecha + hora, EXCEPTO si:
+// 1. La cita fue cancelada/rechazada
+// 2. La cita es flexible (aún no tiene horario definitivo)
 appointmentSchema.index(
   { employee: 1, date: 1, timeSlot: 1 },
   { 
     unique: true, 
-    partialFilterExpression: { status: { $nin: ['cancelled'] } } 
+    partialFilterExpression: { 
+      status: { $nin: ['cancelled', 'rejected'] },
+      isFlexible: { $ne: true } 
+    } 
   }
 )
 

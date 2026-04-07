@@ -14,7 +14,10 @@ export const WA_MESSAGES = {
     `Hola ${nombre} 🕒, necesitamos mover tu cita de *${servicio}*. ¿Tienes disponibilidad otro día? Escríbenos para coordinar 😊 — L'Élixir Salon`,
 
   nuevaCita: (nombre: string, servicio: string, fecha: string, hora: string) =>
-    `Hola ${nombre} 👋, recibimos tu solicitud de cita para *${servicio}* el *${fecha}* el *${fecha}* a las *${hora}*. Te confirmamos en breve 💅 — L'Élixir Salon`,
+    `Hola ${nombre} 👋, recibimos tu solicitud de cita para *${servicio}* el *${fecha}* a las *${hora}*. Te confirmamos en breve 💅 — L'Élixir Salon`,
+
+  rechazoConflicto: (nombre: string, fecha: string, hora: string) =>
+    `Hola ${nombre} 🥺, lamentablemente el espacio para el *${fecha}* a las *${hora}* acaba de ser tomado. ¿Te gustaría agendar en otro horario disponible? 🙏 — L'Élixir Salon`,
 };
 
 export const formatFecha = (fecha: string) => {

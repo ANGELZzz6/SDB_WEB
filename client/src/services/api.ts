@@ -158,10 +158,18 @@ export const appointmentService = {
   cancel: (id: string) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}`, { status: 'cancelada' }),
   reschedule: (id: string, data: { date: string, timeSlot: string, employeeId: string, reason?: string }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/reschedule`, data),
   complete: (id: string, data?: { finalPrice: number }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/complete`, data || {}),
-  createBulk: (data: { clientName: string; clientPhone: string; clientEmail?: string; appointments: any[]; notes?: string }) => 
-    api.post<ApiResponse<Appointment[]>>('/appointments/bulk', data),
+  createBulk: (data: { 
+    clientName: string; 
+    clientPhone: string; 
+    clientEmail?: string; 
+    appointments: any[]; 
+    notes?: string;
+    isFlexible?: boolean;
+    flexibleAvailabilities?: any[];
+  }) => api.post<ApiResponse<Appointment[]>>('/appointments/bulk', data),
   getStats: () => api.get<ApiResponse<any>>('/appointments/stats'),
   getClients: () => api.get<ApiResponse<any[]>>('/appointments/clients'),
+  getItinerary: (employeeId: string, date: string) => api.get<ApiResponse<any>>(`/appointments/itinerary/${employeeId}/${date}`),
 };
 
 export const availabilityService = {

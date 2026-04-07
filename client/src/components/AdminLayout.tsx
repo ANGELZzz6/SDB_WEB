@@ -33,7 +33,7 @@ export default function AdminLayout({
   const userPermissions: Record<string, boolean> = user?.permissions ?? {};
 
   // Keys always visible to specialists (can't be removed by admin)
-  const ALWAYS_VISIBLE = new Set(['citas', 'calendario']);
+  const ALWAYS_VISIBLE = new Set(['citas', 'calendario', 'itinerario']);
 
   const filteredNav = ADMIN_NAV.filter(item => {
     if (isAdmin) return true; // admin sees everything
@@ -290,6 +290,7 @@ export default function AdminLayout({
                 {key === 'settlements' ? 'Pagos' : 
                  key === 'citas' ? 'Inicio' : 
                  key === 'calendario' ? 'Agenda' :
+                 key === 'itinerario' ? 'Ruta' :
                  key === 'clientes' ? 'Clientes' :
                  key === 'specialists' ? 'Staff' : label.split(' ')[0]}
               </span>
