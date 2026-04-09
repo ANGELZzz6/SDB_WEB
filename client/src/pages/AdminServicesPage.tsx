@@ -26,6 +26,7 @@ export default function AdminServicesPage() {
     precioDesde: 0,
     precioHasta: 0,
     duracion: 30, // Default 30 min
+    allowSimultaneous: false,
     imagen: '',
     empleadas: [] // Array of employee IDs
   });
@@ -62,13 +63,14 @@ export default function AdminServicesPage() {
         precioDesde: svc.precioDesde || 0,
         precioHasta: svc.precioHasta || 0,
         duracion: svc.duracion,
+        allowSimultaneous: svc.allowSimultaneous || false,
         imagen: svc.imagen,
         // map full employee objects to IDs for the form
         empleadas: svc.empleadas.map((e: any) => typeof e === 'string' ? e : e._id)
       });
     } else {
       setEditingId(null);
-      setFormData({ nombre: '', descripcion: '', precio: 0, precioTipo: 'fijo', precioDesde: 0, precioHasta: 0, duracion: 30, imagen: '', empleadas: [] });
+      setFormData({ nombre: '', descripcion: '', precio: 0, precioTipo: 'fijo', precioDesde: 0, precioHasta: 0, duracion: 30, allowSimultaneous: false, imagen: '', empleadas: [] });
     }
     setIsModalOpen(true);
   };
@@ -148,10 +150,12 @@ export default function AdminServicesPage() {
     return formatter.format(svc.precio || 0).replace(',00', '');
   };
 
-  const filteredServices = services.filter(svc => 
-    svc.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    svc.descripcion.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredServices = services
+    .filter(svc => 
+      svc.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      svc.descripcion.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => (a.isActive === b.isActive ? 0 : a.isActive ? -1 : 1));
 
   return (
     <AdminLayout
@@ -325,7 +329,23 @@ export default function AdminServicesPage() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.onSurfaceVariant, marginBottom: '6px' }}>Duración (minutos)</label>
-                  <input required type="number" min="5" step="5" value={formData.duracion} onChange={e => setFormData({ ...formData, duracion: Number(e.target.value) })} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px' }} />
+                  <input 
+                    required 
+                    type="number" 
+                    min="5" 
+                    step="5" 
+                    value={formData.duracion} 
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      setFormData({ 
+                        ...formData, 
+                        duracion: val,
+                        // Reset allowSimultaneous if duration is too short
+                        allowSimultaneous: val <= 30 ? false : formData.allowSimultaneous
+                      });
+                    }} 
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px' }} 
+                  />
                 </div>
               </div>
 
@@ -348,6 +368,37 @@ export default function AdminServicesPage() {
                   </div>
                 </div>
               )}
+
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px', 
+                padding: '16px', 
+                borderRadius: '16px', 
+                backgroundColor: (formData.duracion || 0) <= 30 ? T.surfaceContainer : T.surfaceContainerLow, 
+                border: `1px dashed ${T.outlineVariant}`,
+                opacity: (formData.duracion || 0) <= 30 ? 0.6 : 1,
+                transition: 'all 0.3s'
+              }}>
+                <input 
+                  type="checkbox" 
+                  id="allowSimultaneous" 
+                  disabled={(formData.duracion || 0) <= 30}
+                  checked={formData.allowSimultaneous} 
+                  onChange={e => setFormData({ ...formData, allowSimultaneous: e.target.checked })} 
+                  style={{ width: '22px', height: '22px', cursor: (formData.duracion || 0) <= 30 ? 'not-allowed' : 'pointer', accentColor: T.primary }}
+                />
+                <div style={{ cursor: (formData.duracion || 0) <= 30 ? 'not-allowed' : 'pointer' }}>
+                  <label htmlFor="allowSimultaneous" style={{ display: 'block', fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface, cursor: (formData.duracion || 0) <= 30 ? 'not-allowed' : 'pointer' }}>
+                    Permitir agendamiento simultáneo
+                  </label>
+                  <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, lineHeight: 1.4 }}>
+                    {(formData.duracion || 0) <= 30 
+                      ? "El servicio debe durar más de 30 min para permitir simultaneidad."
+                      : "Bloquea solo los primeros 30 min. Ideal para servicios con tiempo de pose (color, keratina)."}
+                  </p>
+                </div>
+              </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.onSurfaceVariant, marginBottom: '6px' }}>Especialistas Asignadas</label>

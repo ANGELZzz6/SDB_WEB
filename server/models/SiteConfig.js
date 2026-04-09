@@ -33,8 +33,9 @@ const SiteConfigSchema = new mongoose.Schema({
   // Mensajes WhatsApp (Plantillas editables)
   mensajeConfirmacion: { type: String, default: '¡Hola {nombre}! Tu cita para {servicio} el día {fecha} a las {hora} ha sido confirmada. Te esperamos.' },
   mensajeCancelacion: { type: String, default: '¡Hola {nombre}! Tu cita para el día {fecha} ha sido cancelada.' },
-  mensajeReagendamiento: { type: String, default: '¡Hola {nombre}! Tu cita para {servicio} ha sido reprogramada.' },
+  mensajeReagendamiento: { type: String, default: 'Hola {nombre} 🕒, te informamos que hemos reagendado tu cita de *{servicio}*. Tu nueva cita es el día *{fecha}* a las *{hora}*. ¡Te esperamos! 💅 — L´Élixir Salon' },
   mensajeRechazoConflicto: { type: String, default: 'Lo sentimos {nombre}, el espacio para {fecha} a las {hora} ya no está disponible. Por favor, intenta agendar en otro horario.' },
+  mensajeCompletada: { type: String, default: '¡Hola {nombre}! Gracias por visitarnos hoy para tu servicio de {servicio}. ¡Esperamos verte pronto!' },
   
   // Horario de Agendamiento (Dynamic)
   horaAperturaAgendamiento: { type: String, default: '08:00' },

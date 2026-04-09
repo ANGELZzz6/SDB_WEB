@@ -8,6 +8,7 @@ const serviceSchema = new mongoose.Schema({
   precioDesde:  { type: Number, min: 0 },
   precioHasta:  { type: Number, min: 0 },
   duracion:     { type: Number, required: true, min: 1 }, // minutos
+  allowSimultaneous: { type: Boolean, default: false },
   empleadas:   [{ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }],
   imagen:      { type: String, default: '' }, // URL Cloudinary
   isActive:    { type: Boolean, default: true },

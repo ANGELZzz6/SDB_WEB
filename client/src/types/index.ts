@@ -37,6 +37,7 @@ export interface Service {
   precioDesde?: number
   precioHasta?: number
   duracion: number  // minutos
+  allowSimultaneous?: boolean
   empleadas: Employee[] | string[]
   imagen: string
   isActive: boolean
@@ -122,6 +123,7 @@ export interface SiteConfig {
   mensajeCancelacion: string
   mensajeReagendamiento: string
   mensajeRechazoConflicto: string
+  mensajeCompletada: string
   horaAperturaAgendamiento: string
   horaCierreAgendamiento: string
   duracionSlot: number

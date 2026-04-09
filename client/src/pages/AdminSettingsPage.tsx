@@ -123,6 +123,7 @@ export default function AdminSettingsPage() {
     mensajeCancelacion: '',
     mensajeReagendamiento: '',
     mensajeRechazoConflicto: '',
+    mensajeCompletada: '',
     horaAperturaAgendamiento: '08:00',
     horaCierreAgendamiento: '19:00',
     duracionSlot: 30
@@ -607,57 +608,74 @@ export default function AdminSettingsPage() {
 
               {/* TAB 6: WHATSAPP MESSAGES */}
               {cmsTab === 'whatsapp' && (
-                <div className="grid grid-cols-1 gap-8 w-full animate-fadeIn">
-                  <div>
-                    <FieldLabel>📲 Mensaje de Confirmación</FieldLabel>
-                    <UnderlineTextarea 
-                      value={siteConfig.mensajeConfirmacion} 
-                      onChange={(v) => handleCmsChange('mensajeConfirmacion', v)} 
-                      rows={3}
-                      placeholder={WA_MESSAGES.confirmacion('{nombre}', '{servicio}', '{fecha}', '{hora}')}
-                    />
-                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
-                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{servicio}'}</strong>, <strong>{'{fecha}'}</strong>, <strong>{'{hora}'}</strong>
+                <div className="grid grid-cols-1 gap-10 w-full animate-fadeIn" style={{ paddingBottom: '20px' }}>
+                  <div style={{ backgroundColor: T.surfaceContainerHighest + '40', padding: '20px', borderRadius: '16px', borderLeft: `4px solid ${T.primary}` }}>
+                    <p style={{ fontSize: '13px', color: T.onSurface, fontWeight: 700, marginBottom: '8px' }}>🚀 Potencia tus mensajes con variables</p>
+                    <p style={{ fontSize: '12px', color: T.onSurfaceVariant, lineHeight: '1.5' }}>
+                      Copia y pega estos comodines en tus plantillas para personalizarlos automáticamente:<br/>
+                      <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px', marginRight: '4px' }}>{'{nombre}'}</code>
+                      <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px', marginRight: '4px' }}>{'{servicio}'}</code>
+                      <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px', marginRight: '4px' }}>{'{fecha}'}</code>
+                      <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px', marginRight: '4px' }}>{'{hora}'}</code>
+                      <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px' }}>{'{especialista}'}</code>
                     </p>
                   </div>
 
-                  <div>
-                    <FieldLabel>📲 Mensaje de Cancelación</FieldLabel>
-                    <UnderlineTextarea 
-                      value={siteConfig.mensajeCancelacion} 
-                      onChange={(v) => handleCmsChange('mensajeCancelacion', v)} 
-                      rows={3}
-                      placeholder={WA_MESSAGES.rechazo('{nombre}', '{fecha}')}
-                    />
-                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
-                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{fecha}'}</strong>
-                    </p>
-                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <FieldLabel>✅ Mensaje de Confirmación</FieldLabel>
+                      <UnderlineTextarea 
+                        value={siteConfig.mensajeConfirmacion} 
+                        onChange={(v) => handleCmsChange('mensajeConfirmacion', v)} 
+                        rows={3}
+                        placeholder={WA_MESSAGES.confirmacion('{nombre}', '{servicio}', '{fecha}', '{hora}')}
+                      />
+                      <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>Se envía al confirmar una cita pendiente.</p>
+                    </div>
 
-                  <div>
-                    <FieldLabel>📲 Mensaje de Reagendamiento</FieldLabel>
-                    <UnderlineTextarea 
-                      value={siteConfig.mensajeReagendamiento} 
-                      onChange={(v) => handleCmsChange('mensajeReagendamiento', v)} 
-                      rows={3}
-                      placeholder={WA_MESSAGES.reagendamiento('{nombre}', '{servicio}')}
-                    />
-                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
-                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{servicio}'}</strong>
-                    </p>
-                  </div>
+                    <div>
+                      <FieldLabel>🕒 Mensaje de Reagendamiento</FieldLabel>
+                      <UnderlineTextarea 
+                        value={siteConfig.mensajeReagendamiento} 
+                        onChange={(v) => handleCmsChange('mensajeReagendamiento', v)} 
+                        rows={3}
+                        placeholder={WA_MESSAGES.reagendamiento('{nombre}', '{servicio}')}
+                      />
+                      <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>Se envía al cambiar fecha, hora o especialista.</p>
+                    </div>
 
-                  <div>
-                    <FieldLabel>📲 Mensaje de Rechazo por Conflicto</FieldLabel>
-                    <UnderlineTextarea 
-                      value={siteConfig.mensajeRechazoConflicto} 
-                      onChange={(v) => handleCmsChange('mensajeRechazoConflicto', v)} 
-                      rows={3}
-                      placeholder="Lo sentimos {nombre}, el espacio para {fecha} a las {hora} ya no está disponible..."
-                    />
-                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>
-                      Variables disponibles: <strong>{'{nombre}'}</strong>, <strong>{'{fecha}'}</strong>, <strong>{'{hora}'}</strong>
-                    </p>
+                    <div>
+                      <FieldLabel>✕ Mensaje de Cancelación</FieldLabel>
+                      <UnderlineTextarea 
+                        value={siteConfig.mensajeCancelacion} 
+                        onChange={(v) => handleCmsChange('mensajeCancelacion', v)} 
+                        rows={3}
+                        placeholder={WA_MESSAGES.rechazo('{nombre}', '{fecha}')}
+                      />
+                      <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>Se envía cuando una cita es cancelada por el admin o usuario.</p>
+                    </div>
+
+                    <div>
+                      <FieldLabel>⚠️ Mensaje de Rechazo por Conflicto</FieldLabel>
+                      <UnderlineTextarea 
+                        value={siteConfig.mensajeRechazoConflicto} 
+                        onChange={(v) => handleCmsChange('mensajeRechazoConflicto', v)} 
+                        rows={3}
+                        placeholder="Lo sentimos {nombre}, el espacio para {fecha} a las {hora} ya no está disponible..."
+                      />
+                      <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>Se envía automáticamente si el espacio se ocupa antes de confirmar.</p>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <FieldLabel>✨ Mensaje de Cita Finalizada (Completada)</FieldLabel>
+                      <UnderlineTextarea 
+                        value={siteConfig.mensajeCompletada} 
+                        onChange={(v) => handleCmsChange('mensajeCompletada', v)} 
+                        rows={3}
+                        placeholder="¡Hola {nombre}! Gracias por visitarnos hoy..."
+                      />
+                      <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>Se envía al marcar una cita como finalizada/cobrada.</p>
+                    </div>
                   </div>
                 </div>
               )}

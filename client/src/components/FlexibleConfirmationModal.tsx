@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { T } from '../lib/adminTokens';
 import { availabilityService, api } from '../services/api';
+import { sendApptNotification } from '../utils/whatsappMessages';
 
 interface FlexibleAvailability {
   date: string;
@@ -16,6 +17,7 @@ interface UIAppointment {
   service: string;
   serviceId: string;
   specialistId: string;
+  specialist?: string;
   flexibleAvailabilities?: FlexibleAvailability[];
 }
 
@@ -23,10 +25,11 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   appointment: UIAppointment | null;
+  siteConfig: any;
   onSuccess: (data: any) => void;
 }
 
-export default function FlexibleConfirmationModal({ isOpen, onClose, appointment, onSuccess }: Props) {
+export default function FlexibleConfirmationModal({ isOpen, onClose, appointment, siteConfig, onSuccess }: Props) {
   const [flexForm, setFlexForm] = useState({ date: '', timeSlot: '' });
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -73,6 +76,14 @@ export default function FlexibleConfirmationModal({ isOpen, onClose, appointment
       const res = await api.put<any>(`/appointments/${appointment.id}`, payload);
 
       if (res.success) {
+        if (appointment) {
+          const updatedAppt = { 
+            ...appointment, 
+            date: res.data?.date || flexForm.date, 
+            time: res.data?.timeSlot || flexForm.timeSlot 
+          };
+          sendApptNotification('confirm', updatedAppt, siteConfig);
+        }
         onSuccess(res.data);
         onClose();
       }

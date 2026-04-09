@@ -246,14 +246,7 @@ export default function AdminLayout({
             }
           `}</style>
 
-          <button
-            style={{ position: 'relative', background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: T.onSurfaceVariant, padding: '4px' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = T.primary)}
-            onMouseLeave={(e) => (e.currentTarget.style.color = T.onSurfaceVariant)}
-          >
-            🔔
-            <span style={{ position: 'absolute', top: 0, right: 0, width: '8px', height: '8px', borderRadius: '9999px', backgroundColor: T.primary, border: '2px solid white' }} />
-          </button>
+
           <div 
             onClick={() => navigate('/admin/perfil')}
             style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '16px', borderLeft: `1px solid ${T.outlineVariant}30`, cursor: 'pointer' }}

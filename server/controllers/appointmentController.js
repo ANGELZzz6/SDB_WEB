@@ -54,12 +54,15 @@ const checkSlotAvailable = async (employeeId, serviceId, date, timeSlot, exclude
     query._id = { $ne: excludeAppointmentId }
   }
 
-  const existing = await Appointment.find(query).populate('service', 'duracion').session(session)
+  const existing = await Appointment.find(query).populate('service', 'duracion allowSimultaneous').session(session)
 
   for (const appt of existing) {
     const apptStart = timeToMinutes(appt.timeSlot)
     const apptDuration = appt.service?.duracion || 60
-    const apptEnd = apptStart + apptDuration + bufferBetweenAppointments
+    const isSimultaneous = appt.service?.allowSimultaneous || false
+
+    const effectiveDuration = isSimultaneous ? Math.min(30, apptDuration) : apptDuration
+    const apptEnd = apptStart + effectiveDuration + bufferBetweenAppointments
 
     if (slotStart < apptEnd && slotEnd > apptStart) {
       throw new Error(`Horario ocupado — existe una cita de ${appt.timeSlot} a ${appt.endTime}`)
@@ -96,11 +99,32 @@ const getAll = async (req, res, next) => {
 
     if (date) {
       const d = dateOnly(new Date(date))
-      filter.date = { $gte: d, $lt: new Date(d.getTime() + 24 * 60 * 60 * 1000) }
+      const nextDay = new Date(d.getTime() + 24 * 60 * 60 * 1000)
+      
+      filter.$or = [
+        { date: { $gte: d, $lt: nextDay } },
+        { 
+          isFlexible: true, 
+          status: 'pending', 
+          'flexibleAvailabilities.date': { $gte: d, $lt: nextDay } 
+        }
+      ]
     } else if (from || to) {
-      filter.date = {}
-      if (from) filter.date.$gte = new Date(from)
-      if (to) filter.date.$lte = new Date(to)
+      const dateRange = {}
+      if (from) dateRange.$gte = dateOnly(from)
+      if (to) {
+        const end = dateOnly(to)
+        dateRange.$lt = new Date(end.getTime() + 24 * 60 * 60 * 1000)
+      }
+      
+      filter.$or = [
+        { date: dateRange },
+        { 
+          isFlexible: true, 
+          status: 'pending', 
+          'flexibleAvailabilities.date': dateRange 
+        }
+      ]
     }
 
     const skip = (Number(page) - 1) * Number(limit)

@@ -4,7 +4,7 @@ import { T } from '../lib/adminTokens';
 import { appointmentService, employeeService, availabilityService, siteConfigService } from '../services/api';
 import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Employee, SiteConfig } from '../types';
-import { waLink, WA_MESSAGES, formatFecha, buildMessage } from '../utils/whatsappMessages';
+import { waLink, WA_MESSAGES, formatFecha, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
 
 /* ─────────────────────────────────────────────────
    Data
@@ -13,7 +13,7 @@ type AppStatus = 'Confirmada' | 'Completada' | 'Pendiente' | 'Cancelada' | 'Rech
 
 interface UIAppointment {
   id: string; time: string; client: string; clientPhone: string; clientPhoto: string;
-  service: string; serviceId: string; serviceIcon: string; 
+  service: string; serviceId: string; serviceIcon: string;
   specialist: string; specialistId: string;
   duration: string; status: AppStatus;
   date: string; bulkId?: string;
@@ -22,7 +22,7 @@ interface UIAppointment {
 }
 
 const mapStatus = (apiStatus: string): AppStatus => {
-  switch(apiStatus) {
+  switch (apiStatus) {
     case 'confirmed': return 'Confirmada';
     case 'completed': return 'Completada';
     case 'cancelled': return 'Cancelada';
@@ -34,9 +34,9 @@ const mapStatus = (apiStatus: string): AppStatus => {
 const STATUS_STYLES: Record<AppStatus, { bg: string; color: string }> = {
   'Confirmada': { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e' },
   'Completada': { bg: 'rgba(107, 114, 128, 0.1)', color: '#6b7280' },
-  'Pendiente':  { bg: 'rgba(240,189,143,0.3)', color: '#623f1b' },
-  'Cancelada':  { bg: 'rgba(186,26,26,0.08)',  color: '#ba1a1a' },
-  'Rechazada':  { bg: 'rgba(186,26,26,0.08)',  color: '#ba1a1a' },
+  'Pendiente': { bg: 'rgba(240,189,143,0.3)', color: '#623f1b' },
+  'Cancelada': { bg: 'rgba(186,26,26,0.08)', color: '#ba1a1a' },
+  'Rechazada': { bg: 'rgba(186,26,26,0.08)', color: '#ba1a1a' },
 };
 
 /* ─────────────────────────────────────────────────
@@ -45,7 +45,7 @@ const STATUS_STYLES: Record<AppStatus, { bg: string; color: string }> = {
 export default function AdminPage() {
   const [activeView, setActiveView] = useState<'agenda' | 'semana'>('agenda');
   const [search, setSearch] = useState('');
-  
+
   const [appointments, setAppointments] = useState<UIAppointment[]>([]);
   const [stats, setStats] = useState({ today: 0, pending: 0, completed: 0, cancelled: 0 });
   const [loading, setLoading] = useState(true);
@@ -72,7 +72,7 @@ export default function AdminPage() {
   const [reschForm, setReschForm] = useState({ date: '', timeSlot: '', employeeId: '', reason: '' });
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
-  
+
   // Price Modal state
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [selectedApptToComplete, setSelectedApptToComplete] = useState<UIAppointment | null>(null);
@@ -81,7 +81,7 @@ export default function AdminPage() {
   const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled' | 'rejected', appt: any } | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
-  
+
 
 
   // Flexible Modal state (Refactored to shared component)
@@ -124,7 +124,7 @@ export default function AdminPage() {
     try {
       if (showLoading) setLoading(true);
       const d = new Date();
-      const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
       const fetchParams: any = { date: dateStr };
       if (isEmpleada) fetchParams.employeeId = user?.id;
@@ -192,7 +192,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchData();
-    
+
     // Polling cada 30 segundos para evitar inconsistencias multisesión
     const interval = setInterval(() => {
       fetchData(false);
@@ -207,20 +207,24 @@ export default function AdminPage() {
       if (res.success) {
         setPendingAppointments(prev => prev.filter(a => a.id !== id));
         setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: mapStatus(newStatus) } : a));
-        
+
         // Actualizar stats locales
         if (newStatus === 'confirmed') {
           setStats(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1) }));
         } else {
           setStats(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1), cancelled: prev.cancelled + 1 }));
         }
-        
+
         showNotif(newStatus === 'confirmed' ? '✅ Cita confirmada' : '❌ Solicitud rechazada', newStatus === 'confirmed' ? 'ok' : 'err');
-        
+
         // WhatsApp notification trigger
         const affectedAppt = pendingAppointments.find(a => a.id === id);
         if (affectedAppt) {
-          setLastAction({ id, type: newStatus === 'confirmed' ? 'confirmed' : 'rejected', appt: affectedAppt });
+          sendApptNotification(
+            newStatus === 'confirmed' ? 'confirm' : 'reject',
+            affectedAppt,
+            siteConfig
+          );
         }
 
         fetchData(false); // Refrescar para asegurar sincronía
@@ -251,8 +255,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (showRescheduleModal && reschForm.date && reschForm.employeeId && rescheduleTarget) {
       availabilityService.getSlots(
-        reschForm.employeeId, 
-        rescheduleTarget.serviceId, 
+        reschForm.employeeId,
+        rescheduleTarget.serviceId,
         reschForm.date
       ).then(res => setAvailableSlots(res.data || []));
     }
@@ -267,17 +271,20 @@ export default function AdminPage() {
         employeeId: reschForm.employeeId,
         reason: reschForm.reason
       } as any);
-      
+
       if (res.success) {
         setShowRescheduleModal(false);
         // Actualizar la lista de pendientes localmente
-        setPendingAppointments(prev => prev.map(a => 
-          a.id === rescheduleTarget.id 
+        setPendingAppointments(prev => prev.map(a =>
+          a.id === rescheduleTarget.id
             ? { ...a, date: reschForm.date, time: reschForm.timeSlot, specialistId: reschForm.employeeId, specialist: allEmployees.find(e => e._id === reschForm.employeeId)?.nombre || a.specialist }
             : a
         ));
         showNotif('✅ Cita reagendada exitosamente (sigue pendiente)');
-        setLastAction({ id: rescheduleTarget.id, type: 'rescheduled', appt: { ...rescheduleTarget, date: reschForm.date, time: reschForm.timeSlot } });
+
+        const updatedAppt = { ...rescheduleTarget, date: reschForm.date, time: reschForm.timeSlot };
+        sendApptNotification('reschedule', updatedAppt, siteConfig);
+
         fetchData(false);
       }
     } catch (e: any) {
@@ -287,7 +294,7 @@ export default function AdminPage() {
 
   const handleComplete = (appt: UIAppointment) => {
     setSelectedApptToComplete(appt);
-    setFinalPriceInput(''); 
+    setFinalPriceInput('');
     setShowPriceModal(true);
   };
 
@@ -302,11 +309,14 @@ export default function AdminPage() {
       setIsCompleting(true);
       const res = await appointmentService.complete(selectedApptToComplete.id, { finalPrice: Number(finalPriceInput) });
       if (res.success) {
-        setAppointments(prev => prev.map(a => 
+        setAppointments(prev => prev.map(a =>
           a.id === selectedApptToComplete.id ? { ...a, status: 'Completada' } : a
         ));
         showNotif('✅ Cita marcada como completada', 'ok');
         setShowPriceModal(false);
+
+        sendApptNotification('complete', selectedApptToComplete, siteConfig);
+
         fetchData(false);
       }
     } catch (error: any) {
@@ -441,34 +451,28 @@ export default function AdminPage() {
                       {appt.isFlexible && <span style={{ fontSize: '10px', backgroundColor: T.primaryFixed, color: T.primary, padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>✨ Flexible</span>}
                     </div>
                     <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>
-                       👩‍🎨 {appt.specialist} · {appt.isFlexible ? 'Horario a convenir' : appt.time}
+                      👩‍🎨 {appt.specialist} · {appt.isFlexible ? 'Horario a convenir' : appt.time}
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-1.5 w-full mt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 w-full">
                     <button
                       onClick={() => appt.isFlexible ? handleOpenFlexModal(appt) : handleAction(appt.id, 'confirmed')}
-                      className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
-                      style={{ backgroundColor: appt.isFlexible ? T.primary : '#22c55e', color: 'white', border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      className="text-[13px] font-bold py-2.5 px-3 rounded-xl text-center transition-all active:scale-95 shadow-sm"
+                      style={{ backgroundColor: appt.isFlexible ? T.primary : '#22c55e', color: 'white', border: 'none', cursor: 'pointer', fontFamily: T.fontBody }}
                     >
                       {appt.isFlexible ? 'Agendar' : 'Confirmar'}
                     </button>
                     <button
                       onClick={() => openReschedule(appt)}
-                      className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
-                      style={{ backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      className="text-[13px] font-bold py-2.5 px-3 rounded-xl text-center transition-all active:scale-95 shadow-sm"
+                      style={{ backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, border: 'none', cursor: 'pointer', fontFamily: T.fontBody }}
                     >
                       Reagendar
                     </button>
                     <button
                       onClick={() => handleAction(appt.id, 'rejected')}
-                      className="text-[11px] font-bold py-2 px-1 rounded-lg text-center truncate"
-                      style={{ backgroundColor: T.errorContainer, color: T.error, border: 'none', cursor: 'pointer', fontFamily: T.fontBody, transition: 'opacity 0.2s' }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                      className="text-[13px] font-bold py-2.5 px-3 rounded-xl text-center transition-all active:scale-95 shadow-sm"
+                      style={{ backgroundColor: T.errorContainer, color: T.error, border: 'none', cursor: 'pointer', fontFamily: T.fontBody }}
                     >
                       Rechazar
                     </button>
@@ -480,7 +484,7 @@ export default function AdminPage() {
                       {lastAction.type === 'confirmed' && (
                         <button
                           onClick={() => {
-                            const msg = siteConfig?.mensajeConfirmacion 
+                            const msg = siteConfig?.mensajeConfirmacion
                               ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: appt.client, servicio: appt.service, fecha: formatFecha(appt.date), hora: appt.time })
                               : WA_MESSAGES.confirmacion(appt.client, appt.service, formatFecha(appt.date), appt.time);
                             setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
@@ -512,7 +516,7 @@ export default function AdminPage() {
                           onClick={() => {
                             const msg = siteConfig?.mensajeReagendamiento
                               ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: appt.client, servicio: appt.service })
-                              : WA_MESSAGES.reagendamiento(appt.client, appt.service);
+                              : WA_MESSAGES.reagendamiento(appt.client, appt.service, formatFecha(appt.date), appt.time);
                             setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
                           }}
                           style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
@@ -560,9 +564,9 @@ export default function AdminPage() {
 
           {/* Timeline */}
           {loading ? (
-             <div style={{ textAlign: 'center', padding: '64px', color: T.onSurfaceVariant }}>
-               <p style={{ fontFamily: T.fontBody, fontSize: '16px' }}>Cargando citas de hoy...</p>
-             </div>
+            <div style={{ textAlign: 'center', padding: '64px', color: T.onSurfaceVariant }}>
+              <p style={{ fontFamily: T.fontBody, fontSize: '16px' }}>Cargando citas de hoy...</p>
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
               {filtered.map((appt) => {
@@ -573,9 +577,9 @@ export default function AdminPage() {
                     <div className="hidden sm:block w-14 pt-5 text-right shrink-0">
                       <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: `${T.onSurfaceVariant}55`, letterSpacing: '0.05em' }}>{appt.time}</span>
                     </div>
-                    
+
                     <div className="appt-card-content w-full min-w-0 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ flex: 1, backgroundColor: appt.status === 'Completada' ? T.surfaceContainerLow : T.surfaceContainerLowest, borderLeft: `4px solid ${appt.status === 'Completada' ? T.surfaceContainerHighest : T.primary}`, boxShadow: `0 16px 40px rgba(62,2,21,${appt.status === 'Completada' ? '0.02' : '0.04'})`, opacity: appt.status === 'Completada' ? 0.85 : 1 }}>
-                      
+
                       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
                         <div className="flex items-center gap-4 min-w-0">
                           <div className="relative shrink-0">
@@ -608,7 +612,7 @@ export default function AdminPage() {
                             <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface }}>{appt.duration}</p>
                           </div>
                           <span className="shrink-0 hidden sm:inline-block" style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '6px 14px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
-                          
+
                           {(appt.status === 'Confirmada' || appt.status === 'Pendiente') && (
                             <button
                               onClick={() => {
@@ -660,7 +664,7 @@ export default function AdminPage() {
 
 
 
-      
+
       {/* RESCHEDULE MODAL */}
       {showRescheduleModal && rescheduleTarget && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', opacity: 1, backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
@@ -669,13 +673,13 @@ export default function AdminPage() {
             <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginBottom: '24px' }}>
               Cambia la fecha o profesional para <strong>{rescheduleTarget.client}</strong>.
             </p>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Especialista:</label>
                 <select
                   value={reschForm.employeeId}
-                  onChange={e => setReschForm({...reschForm, employeeId: e.target.value, timeSlot: ''})}
+                  onChange={e => setReschForm({ ...reschForm, employeeId: e.target.value, timeSlot: '' })}
                   style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, cursor: 'pointer' }}
                 >
                   <option value="">Selecciona especialista...</option>
@@ -687,12 +691,12 @@ export default function AdminPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Nueva Fecha:</label>
-                <input 
-                  type="date" 
-                  value={reschForm.date} 
-                  onChange={e => setReschForm({...reschForm, date: e.target.value, timeSlot: ''})} 
-                  min={formatISO(new Date())} 
-                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest }} 
+                <input
+                  type="date"
+                  value={reschForm.date}
+                  onChange={e => setReschForm({ ...reschForm, date: e.target.value, timeSlot: '' })}
+                  min={formatISO(new Date())}
+                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest }}
                 />
               </div>
 
@@ -700,7 +704,7 @@ export default function AdminPage() {
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Nueva Hora:</label>
                 <select
                   value={reschForm.timeSlot}
-                  onChange={e => setReschForm({...reschForm, timeSlot: e.target.value})}
+                  onChange={e => setReschForm({ ...reschForm, timeSlot: e.target.value })}
                   style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, cursor: 'pointer' }}
                 >
                   <option value="">Selecciona hora...</option>
@@ -711,25 +715,25 @@ export default function AdminPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, fontFamily: T.fontBody, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Motivo:</label>
-                <textarea 
-                  rows={2} 
-                  value={reschForm.reason} 
-                  onChange={e => setReschForm({...reschForm, reason: e.target.value})} 
-                  placeholder="Ej: Cambio solicitado por el cliente..." 
-                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, resize: 'none', fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest }} 
+                <textarea
+                  rows={2}
+                  value={reschForm.reason}
+                  onChange={e => setReschForm({ ...reschForm, reason: e.target.value })}
+                  placeholder="Ej: Cambio solicitado por el cliente..."
+                  style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, resize: 'none', fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
-              <button 
-                onClick={() => setShowRescheduleModal(false)} 
+              <button
+                onClick={() => setShowRescheduleModal(false)}
                 style={{ flex: 1, padding: '16px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer' }}
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleConfirmReschedule} 
+              <button
+                onClick={handleConfirmReschedule}
                 disabled={!reschForm.timeSlot}
                 style={{ flex: 1, padding: '16px', backgroundColor: reschForm.timeSlot ? T.primary : T.outlineVariant, color: 'white', border: 'none', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s', opacity: reschForm.timeSlot ? 1 : 0.6 }}
               >
@@ -745,8 +749,8 @@ export default function AdminPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px' }}>¿Cuánto se cobró?</h3>
             <p className="text-sm text-gray-500 mb-4">{selectedApptToComplete.service} · {selectedApptToComplete.client}</p>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={finalPriceInput}
               onChange={e => setFinalPriceInput(e.target.value)}
               placeholder="Ej: 85000"
@@ -755,16 +759,16 @@ export default function AdminPage() {
               onKeyDown={e => e.key === 'Enter' && handleFinalComplete()}
             />
             <div className="flex gap-3">
-              <button 
-                onClick={() => setShowPriceModal(false)} 
+              <button
+                onClick={() => setShowPriceModal(false)}
                 className="flex-1 py-3 rounded-xl border font-bold"
                 style={{ fontFamily: T.fontBody }}
                 disabled={isCompleting}
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleFinalComplete} 
+              <button
+                onClick={handleFinalComplete}
                 className="flex-1 py-3 rounded-xl bg-green-500 text-white font-bold"
                 style={{ fontFamily: T.fontBody }}
                 disabled={isCompleting}
@@ -787,7 +791,7 @@ export default function AdminPage() {
               "{waModal.mensaje}"
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 onClick={() => setWaModal(null)}
                 style={{ flex: 1, padding: '14px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
               >
@@ -806,10 +810,11 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      <FlexibleConfirmationModal 
+      <FlexibleConfirmationModal
         isOpen={showFlexModal}
         onClose={() => setShowFlexModal(false)}
         appointment={flexTarget}
+        siteConfig={siteConfig}
         onSuccess={() => {
           showNotif('✅ Cita confirmada exitosamente.');
           fetchData(false);

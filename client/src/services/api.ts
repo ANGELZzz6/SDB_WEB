@@ -1,9 +1,9 @@
-import type { 
-  Employee, 
-  Service, 
-  Appointment, 
-  BlockedSlot, 
-  Settings, 
+import type {
+  Employee,
+  Service,
+  Appointment,
+  BlockedSlot,
+  Settings,
   ApiResponse,
   GalleryCategory,
   GalleryItem,
@@ -24,7 +24,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
     if (!res.ok) {
       throw new Error(`Error de red o servidor (${res.status})`);
     }
-    return {} as T; 
+    return {} as T;
   }
 
   // Manejo de expiración de token o credenciales inválidas
@@ -52,7 +52,7 @@ export const api = {
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = localStorage.getItem('token');
-    
+
     const headers = new Headers(options.headers || {});
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
@@ -113,14 +113,14 @@ export const authService = {
 };
 
 export const employeeService = {
-  getAll: (includeInactive = false) => 
+  getAll: (includeInactive = false) =>
     api.get<ApiResponse<Employee[]>>(`/employees${includeInactive ? '?includeInactive=true' : ''}`),
   getById: (id: string) => api.get<ApiResponse<Employee>>(`/employees/${id}`),
   create: (data: Partial<Employee>) => api.post<ApiResponse<Employee>>('/employees', data),
   update: (id: string, data: Partial<Employee>) => api.put<ApiResponse<Employee>>(`/employees/${id}`, data),
   deactivate: (id: string) => api.delete<ApiResponse<Employee>>(`/employees/${id}`),
   reactivate: (id: string) => api.patch<ApiResponse<Employee>>(`/employees/${id}/reactivate`, {}),
-  updateAvailability: (id: string, disponibleHoy: boolean) => 
+  updateAvailability: (id: string, disponibleHoy: boolean) =>
     api.patch<ApiResponse<Employee>>(`/employees/${id}/disponibilidad`, { disponibleHoy }),
   updateProfile: (data: any) => api.put<ApiResponse<Employee>>('/employees/profile', data),
 };
@@ -148,21 +148,21 @@ export const appointmentService = {
     if (params?.employeeId) searchParams.append('employeeId', params.employeeId);
     if (params?.status) searchParams.append('status', params.status);
     if (params?.page) searchParams.append('page', params.page.toString());
-    
+
     const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
     return api.get<ApiResponse<Appointment[]> & { pagination?: any }>(`/appointments${query}`);
   },
   getById: (id: string) => api.get<ApiResponse<Appointment>>(`/appointments/${id}`),
   create: (data: Partial<Appointment>) => api.post<ApiResponse<Appointment>>('/appointments', data),
   updateStatus: (id: string, status: string, notes?: string) => api.put<ApiResponse<Appointment>>(`/appointments/${id}`, { status, notes }),
-  cancel: (id: string) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}`, { status: 'cancelada' }),
+  cancel: (id: string) => api.put<ApiResponse<Appointment>>(`/appointments/${id}`, { status: 'cancelled' }),
   reschedule: (id: string, data: { date: string, timeSlot: string, employeeId: string, reason?: string }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/reschedule`, data),
   complete: (id: string, data?: { finalPrice: number }) => api.patch<ApiResponse<Appointment>>(`/appointments/${id}/complete`, data || {}),
-  createBulk: (data: { 
-    clientName: string; 
-    clientPhone: string; 
-    clientEmail?: string; 
-    appointments: any[]; 
+  createBulk: (data: {
+    clientName: string;
+    clientPhone: string;
+    clientEmail?: string;
+    appointments: any[];
     notes?: string;
     isFlexible?: boolean;
     flexibleAvailabilities?: any[];
@@ -173,7 +173,7 @@ export const appointmentService = {
 };
 
 export const availabilityService = {
-  getSlots: (employeeId: string, serviceId: string, date: string) => 
+  getSlots: (employeeId: string, serviceId: string, date: string) =>
     api.get<ApiResponse<string[]>>(`/appointments/availability/${employeeId}/${date}?serviceId=${serviceId}`),
 };
 

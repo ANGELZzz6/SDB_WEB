@@ -4,11 +4,11 @@ import { T } from '../lib/adminTokens';
 import { appointmentService, blockedSlotService, employeeService, availabilityService, siteConfigService } from '../services/api';
 import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Appointment, BlockedSlot, Employee, SiteConfig } from '../types';
-import { waLink, WA_MESSAGES, formatFecha, buildMessage } from '../utils/whatsappMessages';
+import { waLink, WA_MESSAGES, formatFecha, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
 
 export default function AdminCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -16,7 +16,7 @@ export default function AdminCalendarPage() {
 
   // Modals state
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ date: Date, appts: Appointment[], blocks: BlockedSlot[] } | null>(null);
-  
+
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockForm, setBlockForm] = useState({ employee: 'all', isFullDay: true, timeSlot: '08:00', reason: '' });
 
@@ -33,7 +33,7 @@ export default function AdminCalendarPage() {
   const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled' | 'rejected', appt: any } | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
-  
+
   // Flexible confirmation state
   const [selectedFlexibleAppt, setSelectedFlexibleAppt] = useState<Appointment | null>(null);
 
@@ -58,7 +58,7 @@ export default function AdminCalendarPage() {
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
       const [_, resApps, resBlocks, resEmps, resConfig] = await Promise.all([
-        appointmentService.getAll(), 
+        appointmentService.getAll(),
         appointmentService.getAll({ from: startOfMonth.toISOString(), to: endOfMonth.toISOString(), limit: 1000 } as any),
         blockedSlotService.getAll(),
         employeeService.getAll(),
@@ -82,7 +82,7 @@ export default function AdminCalendarPage() {
 
   useEffect(() => {
     loadData();
-    
+
     // Polling cada 30 segundos
     const interval = setInterval(() => {
       loadData(false);
@@ -115,7 +115,7 @@ export default function AdminCalendarPage() {
     // Forzado a Bogotá para evitar desfases de medianoche
     return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   };
-  
+
   const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
@@ -136,7 +136,7 @@ export default function AdminCalendarPage() {
   };
 
   const handleRemoveBlock = async (id: string) => {
-    if(!confirm('¿Eliminar este bloqueo?')) return;
+    if (!confirm('¿Eliminar este bloqueo?')) return;
     try {
       await blockedSlotService.delete(id);
       loadData(false);
@@ -150,7 +150,7 @@ export default function AdminCalendarPage() {
   const openReschedule = (appt: Appointment) => {
     setRescheduleTarget(appt);
     setReschForm({
-      date: formatISO(new Date(appt.date)),
+      date: formatISO(new Date()), // Iniciar en hoy para evitar errores de fecha pasada 400
       timeSlot: appt.timeSlot,
       employeeId: typeof appt.employee === 'string' ? appt.employee : appt.employee._id,
       reason: ''
@@ -162,8 +162,8 @@ export default function AdminCalendarPage() {
   useEffect(() => {
     if (showRescheduleModal && reschForm.date && reschForm.employeeId && rescheduleTarget) {
       availabilityService.getSlots(
-        reschForm.employeeId, 
-        typeof rescheduleTarget.service === 'string' ? rescheduleTarget.service : rescheduleTarget.service._id, 
+        reschForm.employeeId,
+        typeof rescheduleTarget.service === 'string' ? rescheduleTarget.service : rescheduleTarget.service._id,
         reschForm.date
       ).then(res => setAvailableSlots(res.data || []));
     }
@@ -180,10 +180,12 @@ export default function AdminCalendarPage() {
       } as any);
       setShowRescheduleModal(false);
       setSelectedDayInfo(null);
-      
+
       const updatedAppt = { ...rescheduleTarget, date: reschForm.date, timeSlot: reschForm.timeSlot };
+
+      sendApptNotification('reschedule', updatedAppt, siteConfig);
+
       setLastAction({ id: rescheduleTarget._id, type: 'rescheduled', appt: updatedAppt });
-      
       loadData(false);
     } catch (e: any) {
       alert(e.message || 'Error reagendando');
@@ -194,7 +196,13 @@ export default function AdminCalendarPage() {
     try {
       const res = await appointmentService.updateStatus(appt._id, newStatus);
       if (res.success) {
-        setLastAction({ id: appt._id, type: newStatus as any, appt: res.data || appt });
+        const fullAppt = res.data || appt;
+        sendApptNotification(
+          newStatus === 'confirmed' ? 'confirm' : 'reject',
+          fullAppt,
+          siteConfig
+        );
+        setLastAction({ id: appt._id, type: newStatus, appt: fullAppt });
         loadData(false);
         // Actualizar localmente la vista del modal
         if (selectedDayInfo) {
@@ -220,11 +228,13 @@ export default function AdminCalendarPage() {
     if (!ok) return;
 
     try {
-      const res = await appointmentService.cancel(appt._id);
+      const res = await appointmentService.updateStatus(appt._id, 'cancelled');
       if (res.success) {
-        setLastAction({ id: appt._id, type: 'cancelled', appt });
+        const fullAppt = res.data || appt;
+        sendApptNotification('cancel', fullAppt, siteConfig);
+        setLastAction({ id: appt._id, type: 'cancelled', appt: fullAppt });
         loadData(false);
-        
+
         // Actualizar localmente la vista del modal (eliminar o cambiar status)
         if (selectedDayInfo) {
           setSelectedDayInfo({
@@ -255,6 +265,11 @@ export default function AdminCalendarPage() {
       setIsCompleting(true);
       await appointmentService.complete(selectedApptToComplete._id, { finalPrice: Number(finalPriceInput) });
       setShowPriceModal(false);
+
+      if (selectedApptToComplete) {
+        sendApptNotification('complete', selectedApptToComplete, siteConfig);
+      }
+
       setSelectedDayInfo(null);
       loadData(false);
     } catch (e: any) {
@@ -298,163 +313,169 @@ export default function AdminCalendarPage() {
       `}</style>
       <div style={{ display: 'flex', minHeight: 'calc(100vh - 72px)' }}>
         <div className="admin-calendar-container" style={{ flex: 1, maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px', position: 'relative' }}>
-        
-        {/* Floating WhatsApp Banner */}
-        {lastAction && (
-          <div style={{
-            position: 'sticky', top: '0', zIndex: 90, marginBottom: '24px',
-            backgroundColor: '#25D366', color: 'white', padding: '16px 24px',
-            borderRadius: '16px', boxShadow: '0 8px 24px rgba(37, 211, 102, 0.25)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            fontFamily: T.fontBody, animation: 'fadeInDown 0.4s ease'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '20px' }}>📲</span>
-              <p style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
-                {lastAction.type === 'confirmed' && `Cita de ${lastAction.appt.clientName} confirmada.`}
-                {(lastAction.type === 'cancelled' || lastAction.type === 'rejected') && `Cita de ${lastAction.appt.clientName} rechazada/cancelada.`}
-                {lastAction.type === 'rescheduled' && `Cita de ${lastAction.appt.clientName} reagendada.`}
-                {' '}¿Enviar mensaje por WhatsApp?
+
+          {/* Floating WhatsApp Banner */}
+          {lastAction && (
+            <div style={{
+              position: 'sticky', top: '0', zIndex: 90, marginBottom: '24px',
+              backgroundColor: '#25D366', color: 'white', padding: '16px 24px',
+              borderRadius: '16px', boxShadow: '0 8px 24px rgba(37, 211, 102, 0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontFamily: T.fontBody, animation: 'fadeInDown 0.4s ease'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '20px' }}>📲</span>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
+                  {lastAction.type === 'confirmed' && `Cita de ${lastAction.appt.clientName} confirmada.`}
+                  {(lastAction.type === 'cancelled' || lastAction.type === 'rejected') && `Cita de ${lastAction.appt.clientName} rechazada/cancelada.`}
+                  {lastAction.type === 'rescheduled' && `Cita de ${lastAction.appt.clientName} reagendada.`}
+                  {' '}¿Enviar mensaje por WhatsApp?
+                </p>
+              </div>
+              <a
+                href={
+                  lastAction.type === 'confirmed' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.confirmacion(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
+                    lastAction.type === 'rejected' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazoConflicto(lastAction.appt.clientName, formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
+                      lastAction.type === 'cancelled' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazo(lastAction.appt.clientName, formatFecha(lastAction.appt.date))) :
+                        waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.reagendamiento(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), lastAction.appt.timeSlot))
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  backgroundColor: 'white', color: '#25D366',
+                  padding: '8px 20px', borderRadius: '9999px',
+                  fontSize: '12px', fontWeight: 800, textDecoration: 'none',
+                  textTransform: 'uppercase', letterSpacing: '0.05em'
+                }}
+              >
+                Enviar Mensaje
+              </a>
+            </div>
+          )}
+
+          <div className="admin-calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <div>
+              <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary }}>
+                Calendario General
+              </h1>
+              <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant }}>
+                Administra todas las citas y bloqueos de agenda
               </p>
             </div>
-            <a
-              href={
-                lastAction.type === 'confirmed' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.confirmacion(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
-                lastAction.type === 'rejected' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazoConflicto(lastAction.appt.clientName, formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
-                lastAction.type === 'cancelled' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazo(lastAction.appt.clientName, formatFecha(lastAction.appt.date))) :
-                waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.reagendamiento(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio'))
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                backgroundColor: 'white', color: '#25D366',
-                padding: '8px 20px', borderRadius: '9999px',
-                fontSize: '12px', fontWeight: 800, textDecoration: 'none',
-                textTransform: 'uppercase', letterSpacing: '0.05em'
-              }}
-            >
-              Enviar Mensaje
-            </a>
-          </div>
-        )}
 
-        <div className="admin-calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <div>
-            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary }}>
-              Calendario General
-            </h1>
-            <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant }}>
-              Administra todas las citas y bloqueos de agenda
-            </p>
-          </div>
-          
-          <div className="admin-calendar-nav" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: T.surfaceContainerLowest, padding: '8px', borderRadius: '9999px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-            <button onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              ←
-            </button>
-            <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, minWidth: '120px', textAlign: 'center', textTransform: 'capitalize' }}>
-              {currentDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
-            </span>
-            <button onClick={handleNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              →
-            </button>
-          </div>
-        </div>
-
-        {/* Matrix */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '100px', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>
-            Cargando calendario...
-          </div>
-        ) : (
-          <div className="calendar-scroll-wrapper">
-            <div className="calendar-matrix">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '12px' }}>
-                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
-                  <div key={d} style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 800, color: T.onSurfaceVariant, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    {d}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
-              {blanks.map((_, i) => <div key={`blank-${i}`} style={{ minHeight: '120px', borderRadius: '16px', backgroundColor: 'transparent' }} />)}
-              
-              {daysThisMonth.map((day, i) => {
-                const iso = formatISO(day);
-                
-                // LÓGICA MULTI-DÍA: Filtrar citas normales y flexibles que coincidan con este día
-                const dayAppts = appointments.filter(a => {
-                  // Citas confirmadas o completadas en su fecha específica
-                  if (!a.isFlexible && a.date && formatISO(a.date) === iso) return true;
-                  
-                  // Citas flexibles PENDIENTES que tengan este día como opción
-                  if (a.isFlexible && a.status === 'pending') {
-                    return a.flexibleAvailabilities?.some(opt => formatISO(opt.date) === iso);
-                  }
-                  
-                  return false;
-                });
-
-                const dayBlocks = blockedSlots.filter(b => formatISO(b.date) === iso);
-                const isToday = formatISO(new Date()) === iso;
-
-                return (
-                  <div 
-                    key={i} 
-                    className="calendar-day-cell"
-                    onClick={() => setSelectedDayInfo({ date: day, appts: dayAppts, blocks: dayBlocks })}
-                    style={{ 
-                      minHeight: '120px', backgroundColor: T.surfaceContainerLowest, borderRadius: '16px',
-                      padding: '12px', boxSizing: 'border-box', border: isToday ? `2px solid ${T.primary}` : `1px solid ${T.outlineVariant}40`,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)', cursor: 'pointer', display: 'flex', flexDirection: 'column'
-                    }}
-                  >
-                    <div style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: isToday ? 800 : 500, color: isToday ? T.primary : T.onSurface, marginBottom: '8px' }}>
-                      {day.getDate()}
-                    </div>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' }}>
-                      {dayBlocks.map((b, idx) => (
-                        <div key={`blk-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          🚫 {b.isFullDay ? 'DÍA BLOQUEADO' : b.timeSlot}
-                        </div>
-                      ))}
-                      {dayAppts.map((a, idx) => {
-                        const isFlex = a.isFlexible && a.status === 'pending';
-                        return (
-                          <div 
-                            key={`apt-${idx}`} 
-                            style={{ 
-                              fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, 
-                              backgroundColor: a.status==='cancelled' ? T.surfaceVariant : (isFlex ? '#fff9e6' : T.primaryFixed), 
-                              color: a.status==='cancelled'? T.onSurfaceVariant : (isFlex ? '#b08b00' : T.primary), 
-                              padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', 
-                              textDecoration: a.status==='cancelled'?'line-through':'none',
-                              border: isFlex ? '1px dashed #ffdca8' : 'none'
-                            }}
-                          >
-                            {isFlex ? '✨ ' : (a.bulkId ? '🔗 ' : '')}
-                            {isFlex ? 'Flexible' : a.timeSlot} {a.clientName}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-              </div>
+            <div className="admin-calendar-nav" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: T.surfaceContainerLowest, padding: '8px', borderRadius: '9999px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <button onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                ←
+              </button>
+              <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, minWidth: '120px', textAlign: 'center', textTransform: 'capitalize' }}>
+                {currentDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+              </span>
+              <button onClick={handleNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                →
+              </button>
             </div>
           </div>
-        )}
+
+          {/* Matrix */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '100px', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>
+              Cargando calendario...
+            </div>
+          ) : (
+            <div className="calendar-scroll-wrapper">
+              <div className="calendar-matrix">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                  {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
+                    <div key={d} style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 800, color: T.onSurfaceVariant, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
+                  {blanks.map((_, i) => <div key={`blank-${i}`} style={{ minHeight: '120px', borderRadius: '16px', backgroundColor: 'transparent' }} />)}
+
+                  {daysThisMonth.map((day, i) => {
+                    const iso = formatISO(day);
+
+                    // LÓGICA MULTI-DÍA: Filtrar citas normales y flexibles que coincidan con este día
+                    const dayAppts = appointments.filter(a => {
+                      const dayISO = formatISO(day);
+
+                      // Caso 1: Citas estándar con fecha asignada
+                      if (!a.isFlexible && a.date && formatISO(a.date) === dayISO) return true;
+
+                      // Caso 2: Citas flexibles PENDIENTES (buscamos en sus opciones)
+                      if (a.isFlexible && a.status === 'pending') {
+                        return a.flexibleAvailabilities?.some(opt => formatISO(opt.date) === dayISO);
+                      }
+
+                      // Caso 3: Citas flexibles ya CONFIRMADAS (tienen fecha propia)
+                      if (a.isFlexible && (a.status === 'confirmed' || a.status === 'completed') && a.date && formatISO(a.date) === dayISO) return true;
+
+                      return false;
+                    });
+
+                    const dayBlocks = blockedSlots.filter(b => formatISO(b.date) === iso);
+                    const isToday = formatISO(new Date()) === iso;
+
+                    return (
+                      <div
+                        key={i}
+                        className="calendar-day-cell"
+                        onClick={() => setSelectedDayInfo({ date: day, appts: dayAppts, blocks: dayBlocks })}
+                        style={{
+                          minHeight: '120px', backgroundColor: T.surfaceContainerLowest, borderRadius: '16px',
+                          padding: '12px', boxSizing: 'border-box', border: isToday ? `2px solid ${T.primary}` : `1px solid ${T.outlineVariant}40`,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.02)', cursor: 'pointer', display: 'flex', flexDirection: 'column'
+                        }}
+                      >
+                        <div style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: isToday ? 800 : 500, color: isToday ? T.primary : T.onSurface, marginBottom: '8px' }}>
+                          {day.getDate()}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflowY: 'auto' }}>
+                          {dayBlocks.map((b, idx) => (
+                            <div key={`blk-${idx}`} style={{ fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              🚫 {b.isFullDay ? 'DÍA BLOQUEADO' : b.timeSlot}
+                            </div>
+                          ))}
+                          {dayAppts.map((a, idx) => {
+                            const isFlex = a.isFlexible && a.status === 'pending';
+                            return (
+                              <div
+                                key={`apt-${idx}`}
+                                style={{
+                                  fontSize: '10px', fontFamily: T.fontBody, fontWeight: 700,
+                                  backgroundColor: a.status === 'cancelled' ? T.surfaceVariant : (isFlex ? '#fff9e6' : T.primaryFixed),
+                                  color: a.status === 'cancelled' ? T.onSurfaceVariant : (isFlex ? '#b08b00' : T.primary),
+                                  padding: '4px 6px', borderRadius: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                  textDecoration: a.status === 'cancelled' ? 'line-through' : 'none',
+                                  border: isFlex ? '1px dashed #ffdca8' : 'none'
+                                }}
+                              >
+                                {isFlex ? '✨ ' : (a.bulkId ? '🔗 ' : '')}
+                                {(!(a.service as any).allowSimultaneous && !isFlex) ? '' : '⚡ '}
+                                {isFlex ? 'Flexible' : a.timeSlot} {a.clientName}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
 
       {/* DAY MODAL */}
       {selectedDayInfo && (
         <div className="day-modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(28,27,26,0.6)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div className="day-modal-content" style={{ backgroundColor: T.surface, width: '100%', maxWidth: '560px', borderRadius: '24px', padding: '32px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            
+          <div className="day-modal-content" style={{ backgroundColor: T.surface, width: '100%', maxWidth: '560px', maxHeight: '85vh', borderRadius: '24px', padding: '32px', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
                 <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '28px', color: T.primary }}>Agenda del Día</h3>
@@ -464,7 +485,7 @@ export default function AdminCalendarPage() {
             </div>
 
             <div style={{ marginBottom: '24px' }}>
-              <button 
+              <button
                 onClick={() => setShowBlockModal(true)}
                 style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '10px 20px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}
               >
@@ -472,7 +493,7 @@ export default function AdminCalendarPage() {
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px', paddingBottom: '16px' }}>
               {selectedDayInfo.blocks.length === 0 && selectedDayInfo.appts.length === 0 && (
                 <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant }}>No hay movimientos este día.</p>
               )}
@@ -498,12 +519,12 @@ export default function AdminCalendarPage() {
                 const availabilityText = dayOpt ? (dayOpt.isFullDay ? 'Todo el día' : `${dayOpt.startTime || ''} - ${dayOpt.endTime || ''}`) : 'Flexible';
 
                 return (
-                  <div 
-                    key={a._id} 
-                    style={{ 
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                      backgroundColor: isFlex ? '#fffcf0' : T.surfaceContainerLowest, 
-                      padding: '16px', borderRadius: '16px', 
+                  <div
+                    key={a._id}
+                    style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      backgroundColor: isFlex ? '#fffcf0' : T.surfaceContainerLowest,
+                      padding: '16px', borderRadius: '16px',
                       opacity: a.status === 'cancelled' ? 0.6 : 1,
                       border: isFlex ? '1px dashed #ffdca8' : 'none'
                     }}
@@ -521,177 +542,173 @@ export default function AdminCalendarPage() {
                       </div>
                       <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, fontWeight: 600 }}>{a.clientName}</p>
                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>{(a.service as any)?.nombre || 'Servicio'} con {(a.employee as any)?.nombre}</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span 
-                        style={{ 
-                          fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, 
-                          textTransform: 'uppercase', letterSpacing: '0.15em', 
-                          backgroundColor: 
-                            a.status === 'confirmed' ? 'rgba(34, 197, 94, 0.1)' : 
-                            a.status === 'completed' ? 'rgba(107, 114, 128, 0.1)' : 
-                            a.status === 'pending' ? 'rgba(240, 189, 143, 0.3)' : 
-                            'rgba(186, 26, 26, 0.08)',
-                          color: 
-                            a.status === 'confirmed' ? '#22c55e' : 
-                            a.status === 'completed' ? '#6b7280' : 
-                            a.status === 'pending' ? '#623f1b' : 
-                            '#ba1a1a',
-                          padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap'
-                        }}
-                      >
-                          {a.status === 'confirmed' ? 'Confirmada' : 
-                          a.status === 'completed' ? 'Completada' : 
-                          a.status === 'pending' ? 'Pendiente' : 
-                          a.status === 'rejected' ? 'Rechazada' :
-                          'Cancelada'}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800,
+                            textTransform: 'uppercase', letterSpacing: '0.15em',
+                            backgroundColor:
+                              a.status === 'confirmed' ? 'rgba(34, 197, 94, 0.1)' :
+                                a.status === 'completed' ? 'rgba(107, 114, 128, 0.1)' :
+                                  a.status === 'pending' ? 'rgba(240, 189, 143, 0.3)' :
+                                    'rgba(186, 26, 26, 0.08)',
+                            color:
+                              a.status === 'confirmed' ? '#22c55e' :
+                                a.status === 'completed' ? '#6b7280' :
+                                  a.status === 'pending' ? '#623f1b' :
+                                    '#ba1a1a',
+                            padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {a.status === 'confirmed' ? 'Confirmada' :
+                            a.status === 'completed' ? 'Completada' :
+                              a.status === 'pending' ? 'Pendiente' :
+                                a.status === 'rejected' ? 'Rechazada' :
+                                  'Cancelada'}
                         </span>
                         {a.bulkId && (
                           <span style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: T.primaryContainer, color: T.primary, padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>
                             🔗 Sesión Múltiple
                           </span>
                         )}
+                        {(a.service as any).allowSimultaneous && (
+                          <span style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: '#e0f2f1', color: '#00796b', padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap', border: '1px solid #b2dfdb' }}>
+                            ⚡ Simultáneo
+                          </span>
+                        )}
                       </div>
                     </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end', flexShrink: 0 }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      flexWrap: 'wrap', 
-                      gap: '6px', 
-                      justifyContent: 'flex-end',
-                      width: '100%',
-                      maxWidth: '100%',
-                      // Responsive grid for small mobile
-                      ...(window.innerWidth < 480 ? {
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                      } : {})
-                    }}>
-                      {a.status === 'confirmed' && (
-                        <button 
-                          onClick={() => openPriceModal(a)}
-                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
-                        >
-                          ✓ COMPLETAR
-                        </button>
-                      )}
-                      
-                      {isFlex && (
-                        <button 
-                          onClick={() => {
-                            setSelectedDayInfo(null);
-                            setSelectedFlexibleAppt(a);
-                          }}
-                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: T.primary, color: 'white', padding: '10px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
-                        >
-                          ✨ AGENDAR
-                        </button>
-                      )}
 
-                      {a.status === 'pending' && !isFlex && (
-                        <button 
-                          onClick={() => handleStatusChange(a, 'confirmed')}
-                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: '#22c55e', color: 'white', padding: '10px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
-                        >
-                          ✓ CONFIRMAR
-                        </button>
-                      )}
- 
-                      {(a.status === 'pending' || a.status === 'confirmed') && (
-                        <button 
-                          onClick={() => handleCancelar(a)} 
-                          style={{ flexShrink: 1, minWidth: 0, fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, backgroundColor: T.errorContainer, color: T.error, padding: '10px 16px', borderRadius: '9999px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.1em' }}
-                        >
-                          ✕ CANCELAR
-                        </button>
-                      )}
- 
-                      {a.status !== 'cancelled' && a.status !== 'completed' && !isFlex && (
-                        <button 
-                          onClick={() => openReschedule(a)} 
-                          disabled={!isAdmin && hayPendientes && a.status !== 'pending'}
-                          title={!isAdmin && hayPendientes && a.status !== 'pending' ? "Debes gestionar las citas pendientes primero" : ""}
-                          style={{ 
-                            flexShrink: 1, minWidth: 0,
-                            fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, 
-                            backgroundColor: (!isAdmin && hayPendientes && a.status !== 'pending') ? T.outlineVariant : T.secondaryContainer, 
-                            color: (!isAdmin && hayPendientes && a.status !== 'pending') ? '#999' : T.onSecondaryContainer, 
-                            padding: '10px 16px', borderRadius: '9999px', border: 'none', 
-                            cursor: (!isAdmin && hayPendientes && a.status !== 'pending') ? 'not-allowed' : 'pointer',
-                            textTransform: 'uppercase', letterSpacing: '0.1em'
-                          }}
-                        >
-                          🕒 REAGENDAR
-                        </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end', flexShrink: 0 }}>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 w-full">
+                        {a.status === 'confirmed' && (
+                          <button
+                            onClick={() => openPriceModal(a)}
+                            className="text-[13px] font-bold py-2.5 px-3 rounded-xl border-none cursor-pointer uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                            style={{ fontFamily: T.fontBody, backgroundColor: '#22c55e', color: 'white' }}
+                          >
+                            ✓ COMPLETAR
+                          </button>
+                        )}
+
+                        {isFlex && (
+                          <button
+                            onClick={() => {
+                              setSelectedDayInfo(null);
+                              setSelectedFlexibleAppt(a);
+                            }}
+                            className="text-[13px] font-bold py-2.5 px-3 rounded-xl border-none cursor-pointer uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                            style={{ fontFamily: T.fontBody, backgroundColor: T.primary, color: 'white' }}
+                          >
+                            ✨ AGENDAR
+                          </button>
+                        )}
+
+                        {a.status === 'pending' && !isFlex && (
+                          <button
+                            onClick={() => handleStatusChange(a, 'confirmed')}
+                            className="text-[13px] font-bold py-2.5 px-3 rounded-xl border-none cursor-pointer uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                            style={{ fontFamily: T.fontBody, backgroundColor: '#22c55e', color: 'white' }}
+                          >
+                            ✓ CONFIRMAR
+                          </button>
+                        )}
+
+                        {(a.status === 'pending' || a.status === 'confirmed') && (
+                          <button
+                            onClick={() => handleCancelar(a)}
+                            className="text-[13px] font-bold py-2.5 px-3 rounded-xl border-none cursor-pointer uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                            style={{ fontFamily: T.fontBody, backgroundColor: T.errorContainer, color: T.error }}
+                          >
+                            ✕ CANCELAR
+                          </button>
+                        )}
+
+                        {a.status !== 'cancelled' && a.status !== 'completed' && !isFlex && (
+                          <button
+                            onClick={() => openReschedule(a)}
+                            disabled={!isAdmin && hayPendientes && a.status !== 'pending'}
+                            title={!isAdmin && hayPendientes && a.status !== 'pending' ? "Debes gestionar las citas pendientes primero" : ""}
+                            className="text-[13px] font-bold py-2.5 px-3 rounded-xl border-none cursor-pointer uppercase tracking-wider shadow-sm transition-all active:scale-95"
+                            style={{
+                              fontFamily: T.fontBody,
+                              backgroundColor: (!isAdmin && hayPendientes && a.status !== 'pending') ? T.outlineVariant : T.secondaryContainer,
+                              color: (!isAdmin && hayPendientes && a.status !== 'pending') ? '#999' : T.onSecondaryContainer,
+                              opacity: (!isAdmin && hayPendientes && a.status !== 'pending') ? 0.6 : 1
+                            }}
+                          >
+                            🕒 REAGENDAR
+                          </button>
+                        )}
+                      </div>
+
+
+                      {/* WhatsApp notification link inside modal */}
+                      {lastAction && lastAction.id === a._id && (
+                        <div className="animate-fadeIn" style={{ marginTop: '4px' }}>
+                          <button
+                            onClick={() => {
+                              let msg = "";
+                              if (lastAction.type === 'confirmed') {
+                                msg = siteConfig?.mensajeConfirmacion
+                                  ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio', fecha: formatFecha(a.date), hora: a.timeSlot })
+                                  : WA_MESSAGES.confirmacion(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), a.timeSlot);
+                              } else if (lastAction.type === 'cancelled') {
+                                msg = siteConfig?.mensajeCancelacion
+                                  ? buildMessage(siteConfig.mensajeCancelacion, { nombre: a.clientName, fecha: formatFecha(a.date) })
+                                  : WA_MESSAGES.rechazo(a.clientName, formatFecha(a.date));
+                              } else {
+                                msg = siteConfig?.mensajeReagendamiento
+                                  ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio' })
+                                  : WA_MESSAGES.reagendamiento(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), a.timeSlot);
+                              }
+                              setWaModal({ link: waLink(a.clientPhone, msg), mensaje: msg });
+                            }}
+                            style={{
+                              backgroundColor: '#25D366', color: 'white', padding: '6px 12px',
+                              borderRadius: '8px', fontSize: '10px', fontWeight: 800,
+                              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                            }}
+                          >
+                            📲 {lastAction.type === 'confirmed' ? 'Enviar Confirmación' :
+                              lastAction.type === 'cancelled' ? 'Notificar Cancelación' :
+                                'Notificar Reagendamiento'}
+                          </button>
+                        </div>
                       )}
                     </div>
-
-                    {/* WhatsApp notification link inside modal */}
-                    {lastAction && lastAction.id === a._id && (
-                      <div className="animate-fadeIn" style={{ marginTop: '4px' }}>
-                        <button
-                          onClick={() => {
-                            let msg = "";
-                            if (lastAction.type === 'confirmed') {
-                              msg = siteConfig?.mensajeConfirmacion 
-                                ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio', fecha: formatFecha(a.date), hora: a.timeSlot })
-                                : WA_MESSAGES.confirmacion(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), a.timeSlot);
-                            } else if (lastAction.type === 'cancelled') {
-                              msg = siteConfig?.mensajeCancelacion
-                                ? buildMessage(siteConfig.mensajeCancelacion, { nombre: a.clientName, fecha: formatFecha(a.date) })
-                                : WA_MESSAGES.rechazo(a.clientName, formatFecha(a.date));
-                            } else {
-                              msg = siteConfig?.mensajeReagendamiento
-                                ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio' })
-                                : WA_MESSAGES.reagendamiento(a.clientName, (a.service as any)?.nombre || 'Servicio');
-                            }
-                            setWaModal({ link: waLink(a.clientPhone, msg), mensaje: msg });
-                          }}
-                          style={{ 
-                            backgroundColor: '#25D366', color: 'white', padding: '6px 12px', 
-                            borderRadius: '8px', fontSize: '10px', fontWeight: 800, 
-                            border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
-                          }}
-                        >
-                          📲 {lastAction.type === 'confirmed' ? 'Enviar Confirmación' : 
-                               lastAction.type === 'cancelled' ? 'Notificar Cancelación' : 
-                               'Notificar Reagendamiento'}
-                        </button>
-                      </div>
-                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
       {/* CREATE BLOCK MODAL */}
       {showBlockModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ backgroundColor: T.surface, width: '400px', padding: '32px', borderRadius: '24px' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '24px' }}>Nuevo Bloqueo</h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontFamily: T.fontBody, fontSize: '14px' }}>
-                  <input type="checkbox" checked={blockForm.isFullDay} onChange={e => setBlockForm({...blockForm, isFullDay: e.target.checked})} />
+                  <input type="checkbox" checked={blockForm.isFullDay} onChange={e => setBlockForm({ ...blockForm, isFullDay: e.target.checked })} />
                   Bloquear todo el día
                 </label>
               </div>
-              
+
               {!blockForm.isFullDay && (
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 700 }}>Hora a bloquear:</label>
-                  <input type="time" value={blockForm.timeSlot} onChange={e => setBlockForm({...blockForm, timeSlot: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}` }} />
+                  <input type="time" value={blockForm.timeSlot} onChange={e => setBlockForm({ ...blockForm, timeSlot: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}` }} />
                 </div>
               )}
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700 }}>¿A quién aplica?</label>
-                <select value={blockForm.employee} onChange={e => setBlockForm({...blockForm, employee: e.target.value})} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}` }}>
+                <select value={blockForm.employee} onChange={e => setBlockForm({ ...blockForm, employee: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}` }}>
                   <option value="all">Toda la peluquería (Cerrar)</option>
                   {employees.map(e => <option key={e._id} value={e._id}>{e.nombre}</option>)}
                 </select>
@@ -699,7 +716,7 @@ export default function AdminCalendarPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700 }}>Motivo (Visible interno):</label>
-                <input type="text" value={blockForm.reason} onChange={e => setBlockForm({...blockForm, reason: e.target.value})} placeholder="Ej: Festivo, Doctor..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}` }} />
+                <input type="text" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} placeholder="Ej: Festivo, Doctor..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}` }} />
               </div>
             </div>
 
@@ -716,13 +733,13 @@ export default function AdminCalendarPage() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ backgroundColor: T.surface, width: '400px', padding: '32px', borderRadius: '24px' }}>
             <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '24px' }}>Reagendar Cita</h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurface, marginBottom: '6px' }}>Especialista:</label>
                 <select
                   value={reschForm.employeeId}
-                  onChange={e => setReschForm({...reschForm, employeeId: e.target.value, timeSlot: ''})}
+                  onChange={e => setReschForm({ ...reschForm, employeeId: e.target.value, timeSlot: '' })}
                   style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, minHeight: '46px', appearance: 'auto', boxSizing: 'border-box' }}
                 >
                   <option value="">Selecciona especialista...</option>
@@ -734,14 +751,14 @@ export default function AdminCalendarPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurface, marginBottom: '6px' }}>Nueva Fecha:</label>
-                <input type="date" value={reschForm.date} onChange={e => setReschForm({...reschForm, date: e.target.value, timeSlot: ''})} min={formatISO(new Date())} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, boxSizing: 'border-box' }} />
+                <input type="date" value={reschForm.date} onChange={e => setReschForm({ ...reschForm, date: e.target.value, timeSlot: '' })} min={formatISO(new Date())} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, boxSizing: 'border-box' }} />
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurface, marginBottom: '6px' }}>Nueva Hora:</label>
                 <select
                   value={reschForm.timeSlot}
-                  onChange={e => setReschForm({...reschForm, timeSlot: e.target.value})}
+                  onChange={e => setReschForm({ ...reschForm, timeSlot: e.target.value })}
                   style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, minHeight: '46px', appearance: 'auto', boxSizing: 'border-box' }}
                 >
                   <option value="">Selecciona hora...</option>
@@ -752,14 +769,14 @@ export default function AdminCalendarPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurface, marginBottom: '6px' }}>Motivo del reagendamiento (Visible al cliente en WhatsApp):</label>
-                <textarea rows={3} value={reschForm.reason} onChange={e => setReschForm({...reschForm, reason: e.target.value})} placeholder="Ej: Inconvenientes técnicos en local..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, resize: 'none', fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, boxSizing: 'border-box' }} />
+                <textarea rows={3} value={reschForm.reason} onChange={e => setReschForm({ ...reschForm, reason: e.target.value })} placeholder="Ej: Inconvenientes técnicos en local..." style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, resize: 'none', fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, boxSizing: 'border-box' }} />
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '32px' }}>
               <button onClick={() => setShowRescheduleModal(false)} style={{ flex: 1, padding: '12px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none' }}>Cancelar</button>
-              <button 
-                onClick={handleConfirmReschedule} 
+              <button
+                onClick={handleConfirmReschedule}
                 disabled={!reschForm.timeSlot}
                 style={{ flex: 1, padding: '12px', backgroundColor: reschForm.timeSlot ? T.primary : T.outlineVariant, color: 'white', border: 'none', borderRadius: '9999px' }}
               >
@@ -778,8 +795,8 @@ export default function AdminCalendarPage() {
             <p className="text-sm text-gray-500 mb-4">
               {(selectedApptToComplete.service as any)?.nombre || 'Servicio'} · {selectedApptToComplete.clientName}
             </p>
-            <input 
-              type="number" 
+            <input
+              type="number"
               value={finalPriceInput}
               onChange={e => setFinalPriceInput(e.target.value)}
               placeholder="Ej: 85000"
@@ -788,16 +805,16 @@ export default function AdminCalendarPage() {
               onKeyDown={e => e.key === 'Enter' && handleFinalComplete()}
             />
             <div className="flex gap-3">
-              <button 
-                onClick={() => setShowPriceModal(false)} 
+              <button
+                onClick={() => setShowPriceModal(false)}
                 className="flex-1 py-3 rounded-xl border font-bold"
                 style={{ fontFamily: T.fontBody }}
                 disabled={isCompleting}
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleFinalComplete} 
+              <button
+                onClick={handleFinalComplete}
                 className="flex-1 py-3 rounded-xl bg-green-500 text-white font-bold"
                 style={{ fontFamily: T.fontBody }}
                 disabled={isCompleting}
@@ -821,7 +838,7 @@ export default function AdminCalendarPage() {
               "{waModal.mensaje}"
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 onClick={() => setWaModal(null)}
                 style={{ flex: 1, padding: '14px', border: `1px solid ${T.outlineVariant}`, borderRadius: '9999px', background: 'none', fontFamily: T.fontBody, fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
               >
@@ -840,10 +857,10 @@ export default function AdminCalendarPage() {
           </div>
         </div>
       )}
-        
+
       {/* FLEXIBLE CONFIRMATION MODAL */}
       {selectedFlexibleAppt && (
-        <FlexibleConfirmationModal 
+        <FlexibleConfirmationModal
           isOpen={!!selectedFlexibleAppt}
           appointment={{
             id: selectedFlexibleAppt._id,
@@ -853,12 +870,13 @@ export default function AdminCalendarPage() {
             serviceId: typeof selectedFlexibleAppt.service === 'string' ? selectedFlexibleAppt.service : selectedFlexibleAppt.service._id,
             specialistId: typeof selectedFlexibleAppt.employee === 'string' ? selectedFlexibleAppt.employee : selectedFlexibleAppt.employee._id,
             flexibleAvailabilities: selectedFlexibleAppt.flexibleAvailabilities as any
-          }} 
-          onClose={() => setSelectedFlexibleAppt(null)} 
+          }}
+          siteConfig={siteConfig}
+          onClose={() => setSelectedFlexibleAppt(null)}
           onSuccess={() => {
             setSelectedFlexibleAppt(null);
             loadData(false);
-          }} 
+          }}
         />
       )}
     </AdminLayout>

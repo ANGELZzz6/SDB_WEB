@@ -186,13 +186,18 @@ const getAvailability = async (req, res, next) => {
         $lt: new Date(dateOnly(targetDate).getTime() + 24 * 60 * 60 * 1000),
       },
       status: { $in: ['confirmed', 'completed'] },
-    }).populate('service', 'duracion')
+    }).populate('service', 'duracion allowSimultaneous')
 
     // Construir intervalos ocupados: [startMin, endMin + buffer]
+    // Si el servicio permite simultaneidad, solo bloqueamos el inicio (30 min o duración real, lo que sea menor)
     const occupiedIntervals = existingAppointments.map(appt => {
       const apptStart = timeToMinutes(appt.timeSlot)
       const apptDuration = appt.service?.duracion || 60
-      const apptEnd = apptStart + apptDuration + bufferBetweenAppointments
+      const isSimultaneous = appt.service?.allowSimultaneous || false
+      
+      const effectiveDuration = isSimultaneous ? Math.min(30, apptDuration) : apptDuration
+      const apptEnd = apptStart + effectiveDuration + bufferBetweenAppointments
+      
       return { start: apptStart, end: apptEnd }
     })
 
