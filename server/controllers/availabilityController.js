@@ -174,9 +174,18 @@ const getAvailability = async (req, res, next) => {
         $lt: new Date(dateOnly(targetDate).getTime() + 24 * 60 * 60 * 1000),
       },
     })
-    const blockedMinutesSet = new Set(
-      hourBlocks.map(b => timeToMinutes(b.timeSlot))
-    )
+
+    // BUG 4 FIX: Construir intervalos de bloqueo por rango, no solo por slot exacto.
+    // Soporta tanto bloqueos de slot único (timeSlot) como de rango (startTime/endTime).
+    const blockedIntervals = hourBlocks.map(b => {
+      if (b.startTime && b.endTime) {
+        // Bloqueo de rango horario (ej. "19:00" a "22:00")
+        return { start: timeToMinutes(b.startTime), end: timeToMinutes(b.endTime) }
+      }
+      // Bloqueo de slot exacto — tratar como punto de 1 min para compatibilidad
+      const slotMin = timeToMinutes(b.timeSlot || '00:00')
+      return { start: slotMin, end: slotMin + 1 }
+    })
 
     // ── 9. Cargar citas existentes del día (no canceladas) ───────────────────
     const existingAppointments = await Appointment.find({
@@ -209,8 +218,13 @@ const getAvailability = async (req, res, next) => {
     for (let slotStart = startMinutes; slotStart + serviceDuration <= endMinutes; slotStart += stepMinutes) {
       const slotEnd = slotStart + serviceDuration + bufferBetweenAppointments
 
-      // ¿El slot coincide con un bloqueo por hora?
-      if (blockedMinutesSet.has(slotStart)) continue
+      // BUG 4 FIX: ¿El inicio del slot cae dentro de algún intervalo bloqueado?
+      // Cubre tanto bloqueos de slot exacto como de rango horario (ej. 7pm-10pm).
+      const isBlocked = blockedIntervals.some(
+        interval => slotStart >= interval.start && slotStart < interval.end
+      )
+      if (isBlocked) continue
+
 
       // ¿El slot se solapa con alguna cita existente?
       const overlaps = occupiedIntervals.some(

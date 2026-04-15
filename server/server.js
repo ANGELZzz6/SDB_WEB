@@ -22,8 +22,12 @@ const getAllowedOrigins = () => {
     // En producción: solo el dominio de Vercel
     return [process.env.FRONTEND_URL].filter(Boolean)
   }
-  // En desarrollo: localhost:5173
-  return ['http://localhost:5173', process.env.FRONTEND_URL].filter(Boolean)
+  // En desarrollo: localhost + IP LAN desde .env (FRONTEND_URL_LAN)
+  return [
+    'http://localhost:5173',
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL_LAN, // ← IP del móvil en LAN, definida en server/.env
+  ].filter(Boolean)
 }
 
 app.use(cors({

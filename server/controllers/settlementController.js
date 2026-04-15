@@ -42,6 +42,27 @@ exports.create = async (req, res) => {
   try {
     const { specialistId, appointmentIds, totalRevenue, commissionPercentage, totalCommission, notes, dateRange } = req.body;
 
+    if (!specialistId || !Array.isArray(appointmentIds) || appointmentIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Faltan datos requeridos (specialistId, appointmentIds)' });
+    }
+
+    // ─── PATCH 5: Validar ownership y estado antes de liquidar ───────────────
+    // Prevenimos que alguien liquide citas de otro especialista o que no estén completas.
+    const validAppts = await Appointment.find({
+      _id: { $in: appointmentIds },
+      employee: specialistId,   // 🔒 Deben pertenecer al especialista indicado
+      status: 'completed',      // 🔒 Solo citas completadas
+      settled: false            // 🔒 No reliquidar citas ya liquidadas
+    }).select('_id');
+
+    if (validAppts.length !== appointmentIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: `Validación fallida: ${appointmentIds.length - validAppts.length} cita(s) no son válidas para liquidar (no pertenecen al especialista, no están completadas o ya fueron liquidadas).`
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const settlement = new Settlement({
       specialist: specialistId,
       appointments: appointmentIds,

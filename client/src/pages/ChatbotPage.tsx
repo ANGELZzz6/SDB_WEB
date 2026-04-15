@@ -288,6 +288,17 @@ export default function ChatbotPage() {
     setClientName(''); setClientPhone(''); setClientEmail('');
   };
 
+  /**
+   * BUG 1 FIX: Convierte minutos crudos a formato legible.
+   * 45 → "45 min" | 90 → "1h 30m" | 120 → "2h"
+   */
+  const formatDuration = (minutes: number): string => {
+    if (minutes < 60) return `${minutes} min`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m === 0 ? `${h}h` : `${h}h ${m}m`;
+  };
+
   const renderPriceInfo = (pType: string, precio: number, desde?: number, hasta?: number) => {
     const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' });
     if (pType === 'consultar') return 'Consultar precio';
@@ -486,7 +497,7 @@ export default function ChatbotPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 800, color: T.primary }}>{renderPriceInfo(svc.precioTipo || 'fijo', svc.precio, svc.precioDesde, svc.precioHasta)}</span>
                         <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600, color: T.onSurfaceVariant, backgroundColor: T.surfaceContainer, padding: '4px 10px', borderRadius: '8px' }}>
-                          ⏱ {svc.duracion} min
+                          ⏱ {formatDuration(svc.duracion)}
                         </span>
                       </div>
                     </div>
@@ -743,7 +754,7 @@ export default function ChatbotPage() {
               </button>
 
               <p style={{ textAlign: 'center', fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>
-                Tiempo estimado total: {cart.reduce((acc, curr) => acc + curr.duration, 0)} min
+                Tiempo estimado total: {formatDuration(cart.reduce((acc, curr) => acc + curr.duration, 0))}
               </p>
             </div>
           </div>
@@ -874,7 +885,7 @@ export default function ChatbotPage() {
                           <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary }}>
                             {item.isFlexible ? '✨ Solicitud Flexible' : `${formatFancyDate(item.date)} @ ${item.timeSlot}`}
                           </span>
-                          <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{item.duration} min</span>
+                          <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{formatDuration(item.duration)}</span>
                         </div>
                       </div>
                     </div>

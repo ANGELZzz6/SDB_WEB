@@ -76,3 +76,20 @@ El diseño busca una estética premium, minimalista y botánica (colores palo de
 
 > [!TIP]
 > Para depurar el flujo de autenticación, revisa `server/controllers/authController.js` método `me`.
+
+> [!TIP]
+> **Contexto para Agentes IA:** Lee `AI_CONTEXT.md` antes de modificar cualquier archivo. Contiene el glosario de estados, reglas de negocio inviolables y convenciones de código con fecha de auditoría 2026-04-10.
+
+---
+
+## 🔒 6. Hallazgos de Auditoría (2026-04-10) — Pendientes de Parche
+
+| # | Archivo | Descripción | Severidad |
+|---|---|---|---|
+| 1 | `appointmentController.js` `createBulk` | Race condition TOCTOU — `insertMany` sin transacción MongoDB | 🔴 Alta |
+| 2 | `appointmentController.js` `cancel` | Double-cancel risk — usar `findOneAndUpdate` atómico | 🟡 Media |
+| 3 | `appointmentController.js` `reschedule` | Empleada puede reagendar citas ajenas si tiene permiso `citas` | 🟡 Media |
+| 4 | `ProtectedRoute.tsx` | Fallback de error ignora `requiredPermission` → UI permisiva temporalmente | 🟠 Media-Alta |
+| 5 | `settlementController.js` `create` | No valida ownership/estado de citas antes de liquidar | 🟡 Media |
+
+> Ver parches detallados en `AI_CONTEXT.md` o en el reporte de auditoría completo.

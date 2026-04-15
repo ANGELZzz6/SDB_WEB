@@ -83,17 +83,26 @@ const getAll = async (req, res, next) => {
 
     const filter = {}
 
-    // Empleada solo ve sus propias citas - Forzamos ObjectId para evitar desajustes de tipos
+    // BUG 2 FIX: Admin ve TODO sin filtro de empleada forzado.
+    // Empleada solo ve sus propias citas. El filtro por ?employeeId solo aplica para admins.
     if (req.user?.role === 'empleada') {
       if (!req.user.id || !mongoose.Types.ObjectId.isValid(req.user.id)) {
         return res.status(400).json({ success: false, message: 'ID de empleada inválido o no proporcionado' });
       }
-      filter.employee = new mongoose.Types.ObjectId(req.user.id);
-    } else if (employeeId) {
+      // Para empleadas: filtra por su employee O por citas flexibles que le pertenezcan
+      filter.$and = [
+        { $or: [
+          { employee: new mongoose.Types.ObjectId(req.user.id) },
+          { isFlexible: true, employee: new mongoose.Types.ObjectId(req.user.id) }
+        ]}
+      ];
+    } else if (req.user?.role === 'admin' && employeeId) {
+      // Admin puede filtrar opcionalmente por empleada (para el selector del calendario)
       if (mongoose.Types.ObjectId.isValid(employeeId)) {
         filter.employee = new mongoose.Types.ObjectId(employeeId);
       }
     }
+    // Si es admin sin ?employeeId → filter queda vacío → ve TODAS las citas (incluyendo flexibles)
 
     if (status) filter.status = status
 
@@ -174,16 +183,23 @@ const getOne = async (req, res, next) => {
 // ─── POST /api/appointments/bulk ──────────────────────────────────────────────
 // Crea múltiples citas de forma atómica (lógica dry-run) o flexibles
 const createBulk = async (req, res, next) => {
+  // ─── PATCH 1: Transacción atómica para prevenir Race Condition TOCTOU ────────
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { clientName, clientPhone, clientEmail, appointments, isFlexible, flexibleAvailabilities, notes } = req.body
     
     if (!appointments || !Array.isArray(appointments) || appointments.length === 0) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: 'Se requiere una lista de citas' })
     }
     
     // Normalizar teléfono
     const normalizedPhone = normalizePhone(clientPhone || '')
     if (!normalizedPhone) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: 'Teléfono celular requerido' })
     }
 
@@ -192,8 +208,10 @@ const createBulk = async (req, res, next) => {
     const recentApptsCount = await Appointment.countDocuments({
       clientPhone: normalizedPhone,
       createdAt: { $gte: thirtyMinutesAgo }
-    });
+    }).session(session);
     if (recentApptsCount + appointments.length > 5) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(429).json({ 
         success: false, 
         message: 'Límite de citas excedido (máx 4 cada 30 min). No puedes agendar tantas citas a la vez.' 
@@ -203,7 +221,7 @@ const createBulk = async (req, res, next) => {
     // 2. Validación de traslapes intra-petición (Mismo cliente, mismo día, servicios que se cruzan)
     const dailySlots = {}; // { "YYYY-MM-DD": [ {start, end, serviceName} ] }
     
-    // 3. Dry-Run: Validar disponibilidad de cada slot individualmente
+    // 3. Verificación de disponibilidad DENTRO de la transacción (segunda guarda, atómica)
     const preparedData = [];
     const bulkId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
     const settings = await Settings.getSettings();
@@ -217,7 +235,7 @@ const createBulk = async (req, res, next) => {
       if (isFlexible) {
         // Solo necesitamos cargar el servicio para el precio
         const Service = require('../models/Service');
-        svc = await Service.findById(service);
+        svc = await Service.findById(service).session(session);
         if (!svc) throw new Error(`Servicio no encontrado: ${service}`);
 
         preparedData.push({
@@ -225,7 +243,6 @@ const createBulk = async (req, res, next) => {
           employee, service,
           isFlexible: true,
           flexibleAvailabilities: flexibleAvailabilities || [],
-          // Los campos de tiempo quedan vacíos para el flujo flexible
           notes, bulkId,
           status: 'pending',
           priceSnapshot: svc.precio || 0
@@ -233,10 +250,12 @@ const createBulk = async (req, res, next) => {
         continue;
       }
 
-      // Proceso normal (no es flexible)
+      // Proceso normal: verificar disponibilidad DENTRO de la sesión activa
       try {
-        svc = await checkSlotAvailable(employee, service, date, timeSlot);
+        svc = await checkSlotAvailable(employee, service, date, timeSlot, null, session);
       } catch (err) {
+        await session.abortTransaction();
+        session.endSession();
         return res.status(409).json({ 
           success: false, 
           message: `El servicio "${item.serviceName || 'seleccionado'}" ya no está disponible a las ${timeSlot}. Error: ${err.message}` 
@@ -251,6 +270,8 @@ const createBulk = async (req, res, next) => {
       if (!dailySlots[dateKey]) dailySlots[dateKey] = [];
       for (const existing of dailySlots[dateKey]) {
         if (startMin < existing.end && endMin > existing.start) {
+          await session.abortTransaction();
+          session.endSession();
           return res.status(400).json({ 
             success: false, 
             message: `Tus servicios "${existing.serviceName}" y "${svc.nombre}" se cruzan en el horario. Por favor sepáralos.` 
@@ -270,10 +291,14 @@ const createBulk = async (req, res, next) => {
       });
     }
 
-    // 4. Inserción masiva (Si llegamos aquí, el dry-run fue exitoso)
-    const createdAppointments = await Appointment.insertMany(preparedData);
+    // 4. Inserción masiva atómica — DENTRO de la misma sesión/transacción
+    const createdAppointments = await Appointment.insertMany(preparedData, { session });
     
-    // 5. Registro de cliente persistente (usamos la info del primero)
+    // 5. Registro de cliente persistente (fuera de la transacción de citas para no bloquear)
+    await session.commitTransaction();
+    session.endSession();
+
+    // CRM: upsert después de confirmar la transacción principal
     const regexName = new RegExp(`^${clientName.trim()}$`, 'i');
     const existingClient = await Client.findOne({ phone: normalizedPhone, name: { $regex: regexName } });
     if (!existingClient) {
@@ -281,7 +306,7 @@ const createBulk = async (req, res, next) => {
       await Client.create({
         phone: normalizedPhone,
         name: clientName,
-        telefonoDuplicado: !!phoneExists, // Marcar si el teléfono ya lo usa alguien más
+        telefonoDuplicado: !!phoneExists,
         isActive: true
       });
     }
@@ -289,8 +314,12 @@ const createBulk = async (req, res, next) => {
     res.status(201).json({ success: true, count: createdAppointments.length, bulkId, data: createdAppointments });
 
   } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
     if (error.code === 11000) {
-      return res.status(409).json({ success: false, message: 'Uno de los horarios seleccionados fue ocupado por otro cliente. Por favor verifica tu carrito.' });
+      return res.status(409).json({ success: false, message: 'Uno de los horarios seleccionados fue ocupado por otro cliente mientras procesabas tu solicitud. Por favor verifica tu carrito.' });
     }
     next(error);
   }
@@ -567,39 +596,49 @@ const update = async (req, res, next) => {
 // Sin restricción de horas (cancellationHoursLimit = 0)
 const cancel = async (req, res, next) => {
   try {
-    const appt = await Appointment.findById(req.params.id)
-    if (!appt) {
-      return res.status(404).json({ success: false, message: 'Cita no encontrada' })
+    // ─── PATCH 2: Validación de permisos ANTES de la operación atómica ────────
+    // Necesitamos leer la cita primero para validar ownership (público o empleada)
+    const apptForAuth = await Appointment.findById(req.params.id).select('clientPhone employee status');
+    if (!apptForAuth) {
+      return res.status(404).json({ success: false, message: 'Cita no encontrada' });
     }
 
     // BLOCKER 1: Validación para cancelación pública
-    // Si no tiene token (req.user no existe), validamos que el cuerpo traiga el teléfono
     if (!req.user) {
-      const { clientPhone } = req.body
-      if (!clientPhone || normalizePhone(clientPhone) !== appt.clientPhone) {
-        return res.status(403).json({ success: false, message: 'No tienes permiso para cancelar esta cita. El número de teléfono no coincide.' })
+      const { clientPhone } = req.body;
+      if (!clientPhone || normalizePhone(clientPhone) !== apptForAuth.clientPhone) {
+        return res.status(403).json({ success: false, message: 'No tienes permiso para cancelar esta cita. El número de teléfono no coincide.' });
       }
     } else {
-      // Si tiene token, pero es "empleada" solo puede cancelar las suyas
-      if (req.user.role === 'empleada' && appt.employee.toString() !== req.user.id) {
-        return res.status(403).json({ success: false, message: 'Acceso denegado — no eres el especialista asignado' })
+      // Empleada solo puede cancelar las suyas
+      if (req.user.role === 'empleada' && apptForAuth.employee.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, message: 'Acceso denegado — no eres el especialista asignado' });
       }
     }
 
-    if (appt.status === 'cancelled') {
-      return res.status(400).json({ success: false, message: 'La cita ya está cancelada' })
+    // PATCH 2: findOneAndUpdate atómico previene Double-Cancel Race Condition.
+    // El filtro { status: { $nin: ['cancelled', 'completed'] } } actúa como guard:
+    // si dos peticiones llegan simultáneamente, solo una encontrará el doc y lo actualizará.
+    const appt = await Appointment.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        status: { $nin: ['cancelled', 'completed'] }
+      },
+      { $set: { status: 'cancelled' } },
+      { new: true }
+    ).populate('employee', 'nombre').populate('service', 'nombre');
+
+    if (!appt) {
+      // El documento existía pero ya estaba en un estado terminal
+      return res.status(400).json({ 
+        success: false, 
+        message: 'No se puede cancelar esta cita (ya está cancelada o completada)' 
+      });
     }
 
-    if (appt.status === 'completed') {
-      return res.status(400).json({ success: false, message: 'No se puede cancelar una cita completada' })
-    }
-
-    appt.status = 'cancelled'
-    await appt.save()
-
-    res.json({ success: true, message: 'Cita cancelada correctamente', data: appt })
+    res.json({ success: true, message: 'Cita cancelada correctamente', data: appt });
   } catch (error) {
-    next(error)
+    next(error);
   }
 }
 
@@ -762,9 +801,24 @@ const reschedule = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Faltan campos para reagendar (date, timeSlot, employeeId)' });
     }
 
+    // ─── PATCH 3: Validar que employeeId sea un ObjectId válido antes de usarlo ──
+    // Previene CastError de Mongoose y posible fuga de stack trace en la respuesta
+    if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+      return res.status(400).json({ success: false, message: 'El ID de especialista proporcionado no es válido.' });
+    }
+
     const appt = await Appointment.findById(apptId).populate('service');
     if (!appt) {
       return res.status(404).json({ success: false, message: 'Cita no encontrada' });
+    }
+
+    // BUG 3 FIX: Ownership check — admin puede reagendar cualquier cita,
+    // empleada solo puede reagendar sus propias citas.
+    if (req.user?.role !== 'admin') {
+      const employeeOwnerId = appt.employee?._id?.toString() || appt.employee?.toString();
+      if (employeeOwnerId !== req.user?.id) {
+        return res.status(403).json({ success: false, message: 'Acceso denegado: solo puedes reagendar tus propias citas.' });
+      }
     }
 
     if (appt.status === 'cancelled') {

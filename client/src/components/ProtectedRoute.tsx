@@ -73,12 +73,28 @@ export default function ProtectedRoute({ requiredPermission }: ProtectedRoutePro
       } catch (error: any) {
         const errMsg = error.response?.data?.message || error.message;
 
-        // Fallback: Si el servidor falla temporalmente pero tenemos datos locales (ej: admin virtual ya logueado)
-        const cachedUser = localStorage.getItem('adminUser');
-        if (cachedUser) {
-          console.warn('getMe() falló, usando fallback local:', errMsg);
-          setIsAuthenticated(true);
-          setHasPermission(true); 
+        // PATCH 4: Fallback cuando el servidor falla temporalmente.
+        // En lugar de forzar setHasPermission(true), respetamos los permisos
+        // almacenados en el cache local para mantener el RBAC íntegro.
+        const cachedUserStr = localStorage.getItem('adminUser');
+        if (cachedUserStr) {
+          console.warn('getMe() falló, usando fallback local con permisos del cache:', errMsg);
+          try {
+            const cachedUser = JSON.parse(cachedUserStr);
+            const isAdmin = cachedUser.role === 'admin';
+            const userPerms: Record<string, boolean> = cachedUser.permissions || {};
+
+            // Evaluar el permiso requerido usando los datos del cache, no forzar true
+            const fallbackPermission = !requiredPermission || isAdmin || userPerms[requiredPermission] === true;
+
+            setIsAuthenticated(true);
+            setHasPermission(fallbackPermission);
+          } catch {
+            // Si el cache está corrupto, cerramos sesión por seguridad
+            localStorage.removeItem('token');
+            localStorage.removeItem('adminUser');
+            setIsAuthenticated(false);
+          }
         } else {
           console.error('getMe() falló y no hay datos locales:', errMsg);
           localStorage.removeItem('token');

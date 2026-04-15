@@ -639,7 +639,7 @@ export default function AdminSettingsPage() {
                         value={siteConfig.mensajeReagendamiento} 
                         onChange={(v) => handleCmsChange('mensajeReagendamiento', v)} 
                         rows={3}
-                        placeholder={WA_MESSAGES.reagendamiento('{nombre}', '{servicio}')}
+                        placeholder={WA_MESSAGES.reagendamiento('{nombre}', '{servicio}', '{fecha}', '{hora}')}
                       />
                       <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginTop: '8px' }}>Se envía al cambiar fecha, hora o especialista.</p>
                     </div>

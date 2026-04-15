@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { T } from '../lib/adminTokens';
-import { appointmentService } from '../services/api';
+import { appointmentService, siteConfigService } from '../services/api';
 import FlexibleConfirmationModal from './FlexibleConfirmationModal';
 
 interface Props {
@@ -13,6 +13,7 @@ export default function FlexibleRequestsTray({ onMutation }: Props) {
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [siteConfig, setSiteConfig] = useState<any>(null);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -32,6 +33,9 @@ export default function FlexibleRequestsTray({ onMutation }: Props) {
 
   useEffect(() => {
     fetchRequests();
+    siteConfigService.get().then(res => {
+      if (res.success) setSiteConfig(res.data);
+    });
     const interval = setInterval(fetchRequests, 60000); // Polling cada minuto
     return () => clearInterval(interval);
   }, [fetchRequests]);
@@ -148,6 +152,7 @@ export default function FlexibleRequestsTray({ onMutation }: Props) {
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         appointment={selectedRequest}
+        siteConfig={siteConfig}
         onSuccess={handleSuccess}
       />
     </>

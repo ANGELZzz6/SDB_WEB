@@ -63,6 +63,7 @@ export const api = {
 
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
+        cache: 'no-store',
         ...options,
         headers,
       });
@@ -142,12 +143,15 @@ export const serviceService = {
 };
 
 export const appointmentService = {
-  getAll: (params?: { date?: string; employeeId?: string; status?: string; page?: number }) => {
+  getAll: (params?: { date?: string; employeeId?: string; status?: string; page?: number; from?: string; to?: string; limit?: number }) => {
     const searchParams = new URLSearchParams();
     if (params?.date) searchParams.append('date', params.date);
     if (params?.employeeId) searchParams.append('employeeId', params.employeeId);
     if (params?.status) searchParams.append('status', params.status);
     if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.from) searchParams.append('from', params.from);
+    if (params?.to) searchParams.append('to', params.to);
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
 
     const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
     return api.get<ApiResponse<Appointment[]> & { pagination?: any }>(`/appointments${query}`);

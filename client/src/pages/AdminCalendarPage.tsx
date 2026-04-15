@@ -18,7 +18,7 @@ export default function AdminCalendarPage() {
   const [selectedDayInfo, setSelectedDayInfo] = useState<{ date: Date, appts: Appointment[], blocks: BlockedSlot[] } | null>(null);
 
   const [showBlockModal, setShowBlockModal] = useState(false);
-  const [blockForm, setBlockForm] = useState({ employee: 'all', isFullDay: true, timeSlot: '08:00', reason: '' });
+  const [blockForm, setBlockForm] = useState({ employee: 'all', isFullDay: true, startTime: '08:00', endTime: '10:00', reason: '' });
 
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleTarget, setRescheduleTarget] = useState<Appointment | null>(null);
@@ -42,6 +42,11 @@ export default function AdminCalendarPage() {
   const user = rawUser ? JSON.parse(rawUser) : null;
   const isAdmin = user?.role === 'admin';
 
+  // Employee filter: admins default to 'all' (global view), empleadas are locked to their own ID
+  const [selectedEmployee, setSelectedEmployee] = useState<string>(
+    isAdmin ? 'all' : (user?.id || 'all')
+  );
+
   useEffect(() => {
     if (lastAction) {
       const timer = setTimeout(() => setLastAction(null), 30000);
@@ -50,16 +55,19 @@ export default function AdminCalendarPage() {
   }, [lastAction]);
 
   // Fetch data
-  const loadData = async (showLoading = true) => {
+  const loadData = async (showLoading = true, employeeFilter?: string) => {
     try {
       if (showLoading) setLoading(true);
       // No mostrar loading spinner en el polling para no interrumpir
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-      const [_, resApps, resBlocks, resEmps, resConfig] = await Promise.all([
-        appointmentService.getAll(),
-        appointmentService.getAll({ from: startOfMonth.toISOString(), to: endOfMonth.toISOString(), limit: 1000 } as any),
+      // Solo enviar employeeId si se seleccionó una especialista específica
+      const empFilter = employeeFilter ?? selectedEmployee;
+      const empParam = (empFilter && empFilter !== 'all') ? empFilter : undefined;
+
+      const [resApps, resBlocks, resEmps, resConfig] = await Promise.all([
+        appointmentService.getAll({ from: startOfMonth.toISOString(), to: endOfMonth.toISOString(), limit: 1000, ...(empParam ? { employeeId: empParam } : {}) }),
         blockedSlotService.getAll(),
         employeeService.getAll(),
         siteConfigService.get()
@@ -89,7 +97,7 @@ export default function AdminCalendarPage() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [currentDate.getMonth(), currentDate.getFullYear()]);
+  }, [currentDate.getMonth(), currentDate.getFullYear(), selectedEmployee]);
 
   // Calendar logic
   const getDaysInMonth = (year: number, month: number) => {
@@ -122,11 +130,28 @@ export default function AdminCalendarPage() {
   // Modals operations
   const handleCreateBlock = async () => {
     if (!selectedDayInfo) return;
+
+    // Validación previa en el cliente antes de llamar a la API
+    if (!blockForm.isFullDay && blockForm.startTime >= blockForm.endTime) {
+      alert('La hora de inicio debe ser anterior a la hora de fin.');
+      return;
+    }
+
     try {
-      await blockedSlotService.create({
+      const payload: Record<string, any> = {
         date: formatISO(selectedDayInfo.date),
-        ...blockForm
-      });
+        isFullDay: blockForm.isFullDay,
+        employee: blockForm.employee,
+        reason: blockForm.reason,
+      };
+
+      if (!blockForm.isFullDay) {
+        // Siempre enviamos rango (startTime + endTime). El backend lo maneja.
+        payload.startTime = blockForm.startTime;
+        payload.endTime   = blockForm.endTime;
+      }
+
+      await blockedSlotService.create(payload);
       setShowBlockModal(false);
       loadData(false);
       setSelectedDayInfo(null);
@@ -179,9 +204,21 @@ export default function AdminCalendarPage() {
         reason: reschForm.reason
       } as any);
       setShowRescheduleModal(false);
-      setSelectedDayInfo(null);
 
       const updatedAppt = { ...rescheduleTarget, date: reschForm.date, timeSlot: reschForm.timeSlot };
+
+      // Actualización pesimista/optimista instantánea
+      setAppointments(prev => prev.map(a => a._id === updatedAppt._id ? updatedAppt : a));
+
+      // Actualizar vista del modal actual (si no cambió de día se actualiza, si cambió se quita)
+      if (selectedDayInfo) {
+        setSelectedDayInfo({
+          ...selectedDayInfo,
+          appts: selectedDayInfo.appts
+            .map(a => a._id === updatedAppt._id ? updatedAppt : a)
+            .filter(a => formatISO(a.date) === formatISO(selectedDayInfo.date))
+        });
+      }
 
       sendApptNotification('reschedule', updatedAppt, siteConfig);
 
@@ -224,14 +261,31 @@ export default function AdminCalendarPage() {
   };
 
   const handleCancelar = async (appt: Appointment) => {
-    const ok = window.confirm(`¿Estás seguro de que deseas cancelar la cita de ${appt.clientName}? Esta acción no se puede deshacer.`);
-    if (!ok) return;
+    // PASO 1: Confirmación de que realmente se quiere cancelar
+    const okCancelar = window.confirm(
+      `¿Confirmas que deseas cancelar la cita de ${appt.clientName}?\n\nEsta acción no se puede deshacer.`
+    );
+    if (!okCancelar) return;
+
+    // PASO 2: ¿Quién inició la cancelación?
+    // SÍ → fue el cliente (no notificar, ya lo sabe)
+    // NO → fue el salón (notificar al cliente por WhatsApp)
+    const fueElCliente = window.confirm(
+      `¿La cancelación fue solicitada por el cliente?\n\n` +
+      `✅ Aceptar  → El cliente lo solicitó (NO se enviará notificación WhatsApp)\n` +
+      `❌ Cancelar → Fue el salón (SÍ se abrirá WhatsApp para notificar al cliente)`
+    );
 
     try {
       const res = await appointmentService.updateStatus(appt._id, 'cancelled');
       if (res.success) {
         const fullAppt = res.data || appt;
-        sendApptNotification('cancel', fullAppt, siteConfig);
+
+        if (!fueElCliente) {
+          // El salón canceló → el cliente no lo sabe → abrir WhatsApp
+          sendApptNotification('cancel', fullAppt, siteConfig);
+        }
+
         setLastAction({ id: appt._id, type: 'cancelled', appt: fullAppt });
         loadData(false);
 
@@ -353,7 +407,7 @@ export default function AdminCalendarPage() {
             </div>
           )}
 
-          <div className="admin-calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <div className="admin-calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '36px', color: T.primary }}>
                 Calendario General
@@ -363,16 +417,44 @@ export default function AdminCalendarPage() {
               </p>
             </div>
 
-            <div className="admin-calendar-nav" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: T.surfaceContainerLowest, padding: '8px', borderRadius: '9999px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <button onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                ←
-              </button>
-              <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, minWidth: '120px', textAlign: 'center', textTransform: 'capitalize' }}>
-                {currentDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
-              </span>
-              <button onClick={handleNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                →
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {/* Filtro de especialista — solo visible para admins */}
+              {isAdmin && employees.length > 0 && (
+                <select
+                  id="admin-calendar-employee-filter"
+                  value={selectedEmployee}
+                  onChange={e => {
+                    setSelectedEmployee(e.target.value);
+                    // loadData se ejecuta automáticamente por el useEffect que depende de selectedEmployee
+                  }}
+                  style={{
+                    fontFamily: T.fontBody, fontSize: '14px', fontWeight: 600,
+                    padding: '10px 16px', borderRadius: '9999px',
+                    border: `1.5px solid ${T.outlineVariant}`,
+                    backgroundColor: T.surfaceContainerLowest,
+                    color: T.onSurface, cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="all">👩‍💼 Todas las especialistas</option>
+                  {employees.map(emp => (
+                    <option key={emp._id} value={emp._id}>{emp.nombre}</option>
+                  ))}
+                </select>
+              )}
+
+              <div className="admin-calendar-nav" style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: T.surfaceContainerLowest, padding: '8px', borderRadius: '9999px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                <button onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  ←
+                </button>
+                <span style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, minWidth: '120px', textAlign: 'center', textTransform: 'capitalize' }}>
+                  {currentDate.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+                </span>
+                <button onClick={handleNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', fontSize: '16px', borderRadius: '9999px', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = T.surfaceContainerLow} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  →
+                </button>
+              </div>
             </div>
           </div>
 
@@ -700,9 +782,36 @@ export default function AdminCalendarPage() {
               </div>
 
               {!blockForm.isFullDay && (
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700 }}>Hora a bloquear:</label>
-                  <input type="time" value={blockForm.timeSlot} onChange={e => setBlockForm({ ...blockForm, timeSlot: e.target.value })} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}` }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurface }}>
+                    Rango horario a bloquear:
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '11px', color: T.onSurfaceVariant, marginBottom: '4px', fontFamily: T.fontBody }}>Hora inicio</label>
+                      <input
+                        type="time"
+                        value={blockForm.startTime}
+                        onChange={e => setBlockForm({ ...blockForm, startTime: e.target.value })}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <span style={{ fontSize: '18px', color: T.onSurfaceVariant, paddingTop: '16px' }}>→</span>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '11px', color: T.onSurfaceVariant, marginBottom: '4px', fontFamily: T.fontBody }}>Hora fin</label>
+                      <input
+                        type="time"
+                        value={blockForm.endTime}
+                        onChange={e => setBlockForm({ ...blockForm, endTime: e.target.value })}
+                        style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  {blockForm.startTime >= blockForm.endTime && (
+                    <p style={{ margin: 0, fontSize: '12px', color: T.error, fontFamily: T.fontBody }}>
+                      ⚠️ La hora de inicio debe ser anterior a la hora de fin
+                    </p>
+                  )}
                 </div>
               )}
 

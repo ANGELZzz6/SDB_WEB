@@ -82,44 +82,77 @@ const getAll = async (req, res, next) => {
 }
 
 // ─── POST /api/blocked-slots ─────────────────────────────────────────────────
-// Body: { employee: ObjectId|'all', isGlobal, date, isFullDay, timeSlot?, reason? }
+// Body: { employee, isGlobal, date, isFullDay, timeSlot?, startTime?, endTime?, reason? }
+// Para bloqueos parciales: enviar SOLO timeSlot (slot exacto) O SOLO startTime+endTime (rango).
 const create = async (req, res, next) => {
   try {
-    let { employee, isGlobal, date, isFullDay, timeSlot, reason } = req.body
+    let { employee, isGlobal, date, isFullDay, timeSlot, startTime, endTime, reason } = req.body
 
     if (!date) {
       return res.status(400).json({ success: false, message: 'La fecha es requerida' })
     }
 
+    // ── Validar combinación de campos de tiempo ───────────────────────────────
+    const isRange = !!(startTime || endTime)
+
+    if (!isFullDay) {
+      if (isRange) {
+        // Modo rango: ambos campos obligatorios
+        if (!startTime || !endTime) {
+          return res.status(400).json({
+            success: false,
+            message: 'Para bloqueos de rango se requieren startTime Y endTime juntos (ej. "19:00" y "22:00")',
+          })
+        }
+        // Validación de orden: startTime debe ser anterior a endTime
+        if (startTime >= endTime) {
+          return res.status(400).json({
+            success: false,
+            message: 'startTime debe ser anterior a endTime',
+          })
+        }
+      } else {
+        // Modo slot exacto: timeSlot obligatorio
+        if (!timeSlot) {
+          return res.status(400).json({
+            success: false,
+            message: 'Para bloqueos parciales se requiere timeSlot (slot exacto) O el par startTime+endTime (rango)',
+          })
+        }
+      }
+    }
+
+    // ── Construir el documento ────────────────────────────────────────────────
     const slotData = {
       date: dateOnly(new Date(date)),
       isFullDay: isFullDay ?? false,
-      timeSlot: isFullDay ? undefined : timeSlot,
-      reason: reason || ''
+      reason: reason || '',
     }
 
+    // Campos de tiempo: mutuamente excluyentes por diseño
+    if (!isFullDay) {
+      if (isRange) {
+        slotData.startTime = startTime
+        slotData.endTime   = endTime
+        // timeSlot queda undefined — el motor de disponibilidad ya soporta ambos modos
+      } else {
+        slotData.timeSlot = timeSlot
+      }
+    }
+
+    // ── Scope: global o por empleada ──────────────────────────────────────────
     if (isGlobal || employee === 'all') {
-      slotData.isGlobal = true;
-      // remove employee property explicitly for globals
-      slotData.employee = undefined;
+      slotData.isGlobal  = true
+      slotData.employee  = undefined
     } else {
       if (!employee) {
         return res.status(400).json({ success: false, message: 'employee es requerido para bloqueos privados' })
       }
-      slotData.isGlobal = false;
-      // Ensure ObjectId casting
-      slotData.employee = new mongoose.Types.ObjectId(employee);
-    }
-
-    if (!slotData.isFullDay && !slotData.timeSlot) {
-      return res.status(400).json({
-        success: false,
-        message: 'timeSlot es requerido cuando isFullDay es false',
-      })
+      slotData.isGlobal  = false
+      slotData.employee  = new mongoose.Types.ObjectId(employee)
     }
 
     const slot = await BlockedSlot.create(slotData)
-
     res.status(201).json({ success: true, data: slot })
   } catch (error) {
     next(error)

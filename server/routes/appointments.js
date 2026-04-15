@@ -41,8 +41,9 @@ router.put('/:id', authMiddleware, apptCtrl.update)
 // PATCH /api/appointments/:id/complete — admin o empleada dueña 
 router.patch('/:id/complete', authMiddleware, apptCtrl.complete)
 
-// PATCH /api/appointments/:id/reschedule — admin solamente (para este flujo)
-router.patch('/:id/reschedule', authMiddleware, checkPermission('citas'), apptCtrl.reschedule)
+// PATCH /api/appointments/:id/reschedule — admin O la empleada dueña de la cita
+// BUG 3 FIX: Se reemplaza requireRole('admin') por ownership check en el controlador
+router.patch('/:id/reschedule', authMiddleware, apptCtrl.reschedule)
 
 // DELETE /api/appointments/:id — cancelar (admin, empleada dueña, o cliente con validación)
 router.delete('/:id', optionalAuth, apptCtrl.cancel)
