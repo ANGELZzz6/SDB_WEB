@@ -1,517 +1,767 @@
 # 🚀 PRODUCTION_READY.md — L'Élixir Salon
-> **Generado:** 2026-04-11 | **Scope:** Full-Stack Pre-Production Audit
-> **Complementa:** `AI_CONTEXT.md` (arquitectura) y `AUDIT_REPORT.md` (seguridad)
+> **Última Actualización:** 2026-04-15 | **Versión del Sistema:** 2.1.0 — Post Bug-Fix Release
+> **Roles de referencia:** DevOps Engineer · SRE · Tech Lead
 >
-> Este documento es la guía de DevOps/QA para preparar el sistema para producción real.
-> Un desarrollador que lo lea debe poder desplegar y operar el sistema sin asistencia adicional.
+> Este documento es la guía de operaciones definitiva para desplegar y mantener el sistema en producción.
+> Un desarrollador que lo lea debe ser capaz de: desplegar el sistema, responder a incidentes y aplicar parches sin asistencia adicional.
+>
+> **Complementa:** `AI_CONTEXT.md` (arquitectura y código) · `AUDIT_REPORT.md` (seguridad) · `MASTER_SYS_CONTEXT.md` (negocio)
 
 ---
 
-## FASE 1 — Auditoría de "Cosas que Faltan"
+## Mapa de Documentación del Sistema
 
-### 🔴 CRÍTICO — Error Boundaries en React (Frontend)
-
-**Estado:** ❌ NO IMPLEMENTADO
-
-**Análisis:** `client/src/main.tsx` monta el árbol completo de React sin ningún `ErrorBoundary`. Si cualquier componente lanza un error de JavaScript no capturado (ej: un `undefined.map()` al recibir datos inesperados de la API), **toda la pestaña del navegador queda en blanco** — incluyendo el panel de administración.
-
-```tsx
-// main.tsx ACTUAL (vulnerable):
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />         // ← Sin ErrorBoundary. Un crash aquí = pantalla en blanco total
-  </StrictMode>
-)
 ```
-
-**Impacto en producción:** Una especialista no podrá ver sus citas del día si la API devuelve un campo inesperado. Ningún mensaje de error, solo pantalla blanca.
-
-**Parche requerido — crear `client/src/components/ErrorBoundary.tsx`:**
-```tsx
-import { Component, type ReactNode } from 'react';
-
-interface Props { children: ReactNode; fallback?: ReactNode; }
-interface State { hasError: boolean; error?: Error; }
-
-export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
-
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, info: { componentStack: string }) {
-    // En producción: enviar a servicio de monitoreo (Sentry, etc.)
-    console.error('[ErrorBoundary]', error, info.componentStack);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback ?? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', minHeight: '100vh', gap: '16px', fontFamily: 'sans-serif' }}>
-          <h2 style={{ color: '#ba1a1a' }}>Ocurrió un error inesperado</h2>
-          <p style={{ color: '#666' }}>Por favor recarga la página o contacta al administrador.</p>
-          <button onClick={() => window.location.reload()}
-            style={{ padding: '12px 24px', backgroundColor: '#7c4e70', color: 'white',
-              border: 'none', borderRadius: '9999px', cursor: 'pointer', fontWeight: 700 }}>
-            Recargar
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-```
-
-**Luego en `main.tsx`:**
-```tsx
-import { ErrorBoundary } from './components/ErrorBoundary';
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>
-)
+1. MASTER_SYS_CONTEXT.md  → ¿QUÉ es el sistema? (negocio, reglas, glosario)
+           ↓
+2. AI_CONTEXT.md           → ¿CÓMO funciona? (arquitectura, código, convenciones)
+           ↓
+3. PRODUCTION_READY.md    → ¿CÓMO se despliega y mantiene? (DevOps, Ops, QA)
+           ↓
+4. AUDIT_REPORT.md         → ¿QUÉ riesgos tiene? (seguridad, diagramas)
 ```
 
 ---
 
-### 🟠 ALTO — Logging de Producción (Backend)
+## PARTE I — Estado Actual del Sistema
 
-**Estado:** ⚠️ PARCIALMENTE INSTALADO, NO ACTIVADO
+### ✅ Checklist de Bugs Críticos — COMPLETADOS
 
-**Análisis profundo:**
-- `morgan` **está instalado** (`package.json` línea 30) pero está **comentado** en `server.js` (líneas 109-113) "por petición del usuario para limpiar terminal".
-- No hay Winston ni ningún logger estructurado. El error handler global usa `console.error` que en producción **se pierde en los logs del proceso** sin estructura de búsqueda.
-- En producción (Railway/Render/VPS), los `console.log` del arranque son los únicos registros del sistema.
+Los siguientes hallazgos del `AUDIT_REPORT.md` han sido resueltos en la sesión de desarrollo del **2026-04-15**.
 
-**Riesgo real:** Si el servidor lanza 200 errores 500 en 1 hora, no hay forma de saberlo ni de buscarlos. Un ataque fallido o un bug crítico pasará totalmente desapercibido hasta que el cliente se queje.
+| # | Descripción del Fix | Archivos afectados | Estado |
+|---|---|---|---|
+| ✅ **FIX-1** | **Cache de `fetch` desactivada** — Se eliminó el comportamiento de cache del navegador en las llamadas a la API de disponibilidad. El front ahora fuerza `cache: 'no-store'` para garantizar datos frescos en cada consulta. | `client/src/services/api.ts` | ✅ **HECHO** |
+| ✅ **FIX-2** | **Transacciones Atómicas / Anti-TOCTOU** — El endpoint `createBulk` y el flujo de `update` (confirmación) ahora envuelven las operaciones de verify + write en una sesión de MongoDB (`startTransaction` / `commitTransaction`). La base de datos es el árbitro final. | `server/controllers/appointmentController.js` | ✅ **HECHO** |
+| ✅ **FIX-3** | **Double-Cancel eliminado** — La función `cancel` pasó de un patrón `read → check → save` a un `findOneAndUpdate` atómico con filtro `status: { $nin: ['cancelled', 'completed'] }`. La operación es atómica por diseño de MongoDB. | `server/controllers/appointmentController.js` | ✅ **HECHO** |
+| ✅ **FIX-4** | **Seguridad RBAC en `ProtectedRoute`** — El bloque de fallback local (`getMe()` falla + datos en cache) ahora respeta el `requiredPermission` de la ruta, evaluando los permisos del usuario cacheado en lugar de hacer `setHasPermission(true)` ciegamente. | `client/src/components/ProtectedRoute.tsx` | ✅ **HECHO** |
+| ✅ **FIX-5** | **Visibilidad Total para el Admin en el Calendario** — El estado `selectedEmployee` en el admin del calendario se inicializa en `"all"` por defecto. El request a la API omite el parámetro `employeeId` cuando el admin está en modo "todos", y el controlador `getAll` acepta la ausencia del filtro sin lanzar error. | `client/src/pages/AdminCalendarPage.tsx` + `server/controllers/appointmentController.js` | ✅ **HECHO** |
+| ✅ **FIX-6** | **UI Optimista/Pesimista** — Las acciones de confirmar y cancelar citas actualizan el estado local del componente de forma inmediata (optimistic update) y revierten al estado original si el servidor devuelve un error. Experiencia sin lag para el admin. | `client/src/pages/AdminCalendarPage.tsx` + `AdminPage.tsx` | ✅ **HECHO** |
+| ✅ **FIX-7** | **Bloqueos por rangos de horas reales en BD** — La disponibilidad ahora se calcula usando los rangos de horario almacenados en el documento `Employee` (campo `horarioPersonalizado`), no con valores hardcodeados. El endpoint de disponibilidad refleja cambios de horario en tiempo real. | `server/controllers/availabilityController.js` | ✅ **HECHO** |
 
-**Parche mínimo viable — reactivar Morgan en producción (`server.js`):**
-```javascript
-// Reemplazar el bloque comentado (líneas 108-113) con:
-const morgan = require('morgan');
-
-// En desarrollo: colorido y detallado
-if (process.env.NODE_ENV !== 'production') {
-  app.use(morgan('dev'));
-} else {
-  // En producción: formato JSON para parsing por Railway/Render/Logtail
-  app.use(morgan('combined'));
-}
-```
-
-**Parche completo recomendado — implementar Winston:**
-```bash
-npm install winston winston-daily-rotate-file
-```
-```javascript
-// server/utils/logger.js
-const { createLogger, format, transports } = require('winston');
-
-const logger = createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: format.combine(
-    format.timestamp(),
-    format.errors({ stack: true }),
-    format.json()
-  ),
-  transports: [
-    new transports.Console({
-      format: process.env.NODE_ENV !== 'production'
-        ? format.combine(format.colorize(), format.simple())
-        : format.json()
-    }),
-    // En producción, rotar archivos de log diariamente
-    ...(process.env.NODE_ENV === 'production' ? [
-      new transports.DailyRotateFile({
-        filename: 'logs/error-%DATE%.log',
-        level: 'error',
-        maxFiles: '14d'
-      })
-    ] : [])
-  ]
-});
-
-module.exports = logger;
-```
+> [!NOTE]
+> Los Hallazgos #3 (fuga de info en `reschedule`) y #5 (`settlementController` sin validación de ownership) del AUDIT_REPORT original están documentados en el backlog técnico post-lanzamiento (ver Parte II §2.4). Son de severidad media-baja y no son bloqueantes para el Go/No-Go de producción, dado que el backend siempre actúa como última línea de defensa.
 
 ---
 
-### 🟡 MEDIO — Optimización del Bundle de Vite
+## PARTE II — Checklist de Despliegue (Pendiente)
 
-**Estado:** ⚠️ Sin configuración de build optimizado
+### ☐ 2.1 Infraestructura
 
-**Análisis:** `vite.config.ts` solo tiene configuración de dev server. No hay:
-- `build.rollupOptions` para code splitting
-- Compresión manual (depende de la plataforma de hosting)
-- Separación de chunks de vendors (React, React Router, etc.)
+#### Paso 1 — MongoDB Atlas (Base de Datos de Producción)
 
-**Estimación del bundle:** Con ~10 páginas de admin (AdminCalendarPage ~50KB, ChatbotPage ~55KB, AdminPage ~47KB), el bundle sin split puede superar **1.5MB** sin comprimir — lento en redes móviles colombianas.
+- [ ] Crear organización y proyecto en [cloud.mongodb.com](https://cloud.mongodb.com)
+- [ ] Crear cluster **M0 (gratuito)** o **M10 (para backups automáticos)**
+- [ ] Crear usuario de BD: solo `readWrite` en la base `salon-produccion`
+- [ ] En **Network Access**: agregar la IP del servidor backend (NO `0.0.0.0/0`)
+- [ ] Copiar la **Connection String** (`mongodb+srv://...`)
+- [ ] Habilitar **Atlas Backup** (requiere M10+) o configurar `mongodump` manual semanal
+- [ ] Verificar que el índice único parcial exista:
+  ```javascript
+  // Desde Atlas → Collections → Appointments → Indexes
+  // Debe existir: { employee: 1, date: 1, timeSlot: 1 }
+  // con partialFilterExpression: { status: { $nin: ["cancelled","rejected"] }, isFlexible: { $ne: true } }
+  ```
+- [ ] Configurar alerta de conexiones: Atlas → Alerts → "Connections current > 80% of max"
 
-**Parche recomendado — `vite.config.ts`:**
-```typescript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+#### Paso 2 — Backend en Railway (o Render)
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
-    },
-  },
-  build: {
-    target: 'es2020',
-    rollupOptions: {
-      output: {
-        // Separar vendors del código de la app para mejor caché del navegador
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-        }
-      }
-    },
-    // Alertar si algún chunk supera 500KB
-    chunkSizeWarningLimit: 500,
-  }
-})
-```
+- [ ] Conectar repositorio GitHub a Railway: [railway.app](https://railway.app) → New Project → Deploy from GitHub
+- [ ] Configurar variables de entorno en Railway:
 
-**Configurar compresión Gzip en la plataforma de hosting:**
-- **Vercel:** Automático (sin configuración adicional)
-- **Nginx:** `gzip on; gzip_types text/javascript application/javascript application/json;`
-- **Railway/Render:** Automático en el CDN
+  ```env
+  NODE_ENV=production
+  PORT=5000
+  MONGO_URI=mongodb+srv://usuario:password@cluster.mongodb.net/salon-produccion?retryWrites=true&w=majority
+  JWT_SECRET=<mínimo 64 caracteres — generar: openssl rand -hex 64>
+  JWT_EXPIRES_IN=7d
+  ADMIN_USERNAME=admin
+  ADMIN_PASSWORD=<hash BCrypt de 12 rondas — ver instrucción abajo>
+  ADMIN_NOMBRE=Administradora
+  ADMIN_EMAIL=admin@lelixirsalon.com
+  FRONTEND_URL=https://lelixirsalon.vercel.app
+  TZ=America/Bogota
+  LOG_LEVEL=info
+  ```
 
----
+  **Generar `ADMIN_PASSWORD` como hash BCrypt:**
+  ```bash
+  # En tu terminal local con Node.js instalado:
+  node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('TuPasswordSeguro123!', 12).then(h => console.log(h))"
+  # Copiar el output ($2b$12$...) como valor de ADMIN_PASSWORD
+  ```
 
-### ✅ BIEN — Variables de Entorno
+- [ ] Configurar **Start Command**: `node server/server.js`
+- [ ] Configurar **Health Check**: apuntar a `GET /api/health`
+- [ ] Obtener la URL pública de Railway (ej. `https://salon-backend-production.up.railway.app`)
 
-**Estado:** ✅ CORRECTO (con 1 observación menor)
+#### Paso 3 — Frontend en Vercel
 
-**Hallazgos:**
-- `api.ts` línea 13: `|| 'http://localhost:5001/api'` — el fallback usa **puerto 5001** pero el servidor corre en el **5000**. Mínimo riesgo (solo afecta si `VITE_API_URL` no está definida en dev), pero puede confundir.
-- No hay credenciales hardcodeadas en el código fuente.
-- Cloudinary: Referencias solo en headers CSP de Helmet — no hay API keys expuestas. ✅
-- MongoDB: Solo via `process.env.MONGO_URI`. ✅
-- JWT: Solo via `process.env.JWT_SECRET`. ✅
-- Admin password: Validación BCrypt en arranque. ✅
+- [ ] Conectar repositorio GitHub a Vercel: [vercel.com](https://vercel.com) → New Project
+- [ ] Configurar **Root Directory**: `client`
+- [ ] Configurar **Build Command**: `npm run build`
+- [ ] Configurar **Output Directory**: `dist`
+- [ ] Agregar variable de entorno en Vercel:
 
-**Corrección menor sugerida en `api.ts`:**
-```typescript
-// Cambiar puerto del fallback para consistencia:
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-//                                                               ^^^^^ de 5001 a 5000
-```
+  ```env
+  VITE_API_URL=https://salon-backend-production.up.railway.app/api
+  ```
 
----
+- [ ] Hacer el primer deploy y verificar que la URL de Vercel carga el frontend
 
-### 🟡 MEDIO — UX Mobile / Touch Targets
+#### Paso 4 — Dominio Personalizado (Opcional)
 
-**Estado:** ⚠️ MIXTO — algunos botones por debajo del mínimo WCAG (44px)
+- [ ] En Vercel → Settings → Domains: agregar `lelixirsalon.com`
+- [ ] En el proveedor de DNS (GoDaddy/Namecheap/etc.): crear registro CNAME apuntando a Vercel
+- [ ] SSL automático de Vercel (Let's Encrypt) — esperar propagación DNS (~24h)
+- [ ] Actualizar `FRONTEND_URL` en Railway con el dominio final
+- [ ] Actualizar la whitelist CORS en `server.js` con el dominio final
 
-**Análisis:** Las especificaciones WCAG 2.1 y las guías de Apple/Google requieren **mínimo 44×44px** de área táctil para botones en móvil.
+#### Paso 5 — Verificaciones Post-Despliegue
 
-**Botones con riesgo detectado:**
-- Botones de acción dentro del modal de calendario (`AdminCalendarPage.tsx`) usan clases `py-2.5 px-3` que generan ~40px de altura con texto pequeño — borderline.
-- Botón de cerrar modal ("✕") en línea 484: `fontSize: '24px'` sin padding explícito — área táctil real ~24px.
-- Los botones de WhatsApp inline del calendario (`fontSize: '10px'`, `py-2.5`) probablemente están bajo los 44px en móvil.
-
-**Patrón de fix:**
-```tsx
-// Para cualquier botón de acción en móvil, agregar minHeight:
-style={{ minHeight: '44px', minWidth: '44px', ... }}
-
-// O con clases de Tailwind:
-className="min-h-[44px] ..."
-```
+- [ ] `GET https://tu-backend.railway.app/api/health` responde `200 OK` con `status: "ok"`
+- [ ] `NODE_ENV` es `"production"` en la respuesta del health check
+- [ ] El frontend en Vercel carga sin errores de consola
+- [ ] Probar el flujo completo: chatbot → agendar cita → ver en admin calendar
+- [ ] El header `X-Frame-Options: DENY` está presente (Helmet activo)
+- [ ] El redirect HTTP → HTTPS funciona en el backend
 
 ---
 
-## FASE 2 — PRODUCTION_READY Checklist
+### ☐ 2.2 Seguridad Pre-Lanzamiento
+
+- [ ] **Verificar `.gitignore`** — confirmar que estos archivos NUNCA llegaron a Git:
+  ```gitignore
+  .env
+  .env.production
+  .env.local
+  server/.env
+  client/.env.local
+  client/.env.production
+  ```
+  Ejecutar: `git log --all --full-history -- "**/.env"` — si devuelve commits, los archivos estuvieron expuestos. Rotar todas las credenciales.
+
+- [ ] **Escanear el historial de Git** buscando credenciales accidentales:
+  ```bash
+  git log -p | grep -E "(password|secret|mongo|jwt)" --ignore-case
+  ```
+
+- [ ] **Probar Rate Limiting**: enviar 11 intentos de login incorrectos → recibir 429 en el intento 11
+
+- [ ] **Probar NoSQL Injection**: enviar `{"clientPhone": {"$gt": ""}}` → recibir 400 (sanitización activa)
 
 ---
 
-### ☐ 2.1 Checklist de Infraestructura
+### ☐ 2.3 Checklist Go/No-Go
 
-#### SSL / HTTPS
-- [ ] Dominio apuntando al servidor con DNS configurado (CNAME/A Record)
-- [ ] Certificado SSL activo (Let's Encrypt via Certbot, o automático en Vercel/Railway)
-- [ ] `HTTPS redirect` activo en `server.js` ✅ (ya implementado línea 49-53)
-- [ ] `x-forwarded-proto` verificado detrás de reverso proxy ✅
+> [!IMPORTANT]
+> **Todos los ítems deben ser ✅ antes de comunicar el sistema al público.**
 
-#### Variables de Entorno — Lista Completa
-
-**Backend (`server/.env`):**
-```env
-NODE_ENV=production
-PORT=5000
-MONGO_URI=mongodb+srv://usuario:password@cluster.mongodb.net/salon?retryWrites=true&w=majority
-JWT_SECRET=<mínimo 64 caracteres aleatorios — generar con: openssl rand -hex 64>
-JWT_EXPIRES_IN=7d
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=$2b$12$<hash bcrypt generado>
-ADMIN_NOMBRE=Administradora
-ADMIN_EMAIL=admin@lelixirsalon.com
-FRONTEND_URL=https://lelixirsalon.vercel.app
-LOG_LEVEL=info
-```
-
-**Frontend (`client/.env.production`):**
-```env
-VITE_API_URL=https://tu-backend.railway.app/api
-```
-
-**⚠️ NUNCA commitear `.env` a Git.** Verificar que `.gitignore` tenga:
-```gitignore
-.env
-.env.production
-.env.local
-server/.env
-client/.env.local
-```
-
-#### MongoDB Atlas — Configuración de Producción
-- [ ] IP Whitelist configurada (solo IP del servidor backend, no `0.0.0.0/0`)
-- [ ] Usuario de BD con permisos mínimos (`readWrite` en la base del salón únicamente)
-- [ ] Backups automáticos habilitados (M10+ o Atlas Backup)
-- [ ] Alertas de conexiones y latencia configuradas en Atlas
-- [ ] `retryWrites=true` en la URI de conexión ✅ (ya en convención)
-- [ ] Índices críticos verificados: `{ employee, date, timeSlot }` con `partialFilterExpression` ✅
-
-#### Configuración del Servidor (Railway / Render / VPS)
-- [ ] `NODE_ENV=production` configurado en la plataforma
-- [ ] `npm run start` como comando de inicio (no `nodemon`)
-- [ ] Health check configurado apuntando a `GET /api/health`
-- [ ] Reinicio automático en crash (PM2 o la plataforma lo gestiona)
-- [ ] Zona horaria del servidor: `TZ=America/Bogota` en variables de entorno
+- [ ] Suite A de QA completa (agendamiento público) — ver §2.4 abajo
+- [ ] Suite B de QA completa (panel admin y calendario)
+- [ ] Suite D de QA completa (seguridad)
+- [ ] SSL activo: `https://` en la URL del frontend y del backend
+- [ ] Variables de entorno de producción verificadas (especialmente `ADMIN_PASSWORD` como hash BCrypt)
+- [ ] `NODE_ENV=production` confirmado via `GET /api/health`
+- [ ] MongoDB Atlas: backups habilitados o estrategia documentada de backup manual
+- [ ] ErrorBoundary implementado en React (BL-01 del backlog)
+- [ ] Morgan activado para logging básico (BL-02 del backlog)
+- [ ] UptimeRobot configurado: monitoreo cada 5 minutos + alerta por email/WhatsApp
+- [ ] Al menos 1 cita de prueba end-to-end completada en producción (chatbot → admin → confirmación → completada)
 
 ---
 
-### ☐ 2.2 Checklist de Rendimiento
+### ☐ 2.4 Suites de QA Manual
 
-#### Frontend (Vite Build)
-- [ ] Ejecutar `npm run build` y verificar que no haya chunks > 500KB
-- [ ] Verificar que `index.html` resultante tenga `<link rel="preconnect">` para Google Fonts
-- [ ] Code splitting configurado (`manualChunks` en vite.config.ts — ver Fase 1)
-- [ ] Assets estáticos con nombres hasheados (Vite lo hace automáticamente) ✅
-- [ ] Verificar que imágenes de Cloudinary usen transformaciones `f_auto,q_auto` en la URL
-
-**Verificar el bundle generado:**
-```bash
-npm run build
-# Revisar output en dist/assets/ — ningún .js debería superar 500KB sin comprimir
-```
-
-#### Backend (Node.js)
-- [ ] Morgan activado para requests logging ✅ (pendiente descommentar)
-- [ ] Mongoose connection pool: por defecto `maxPoolSize=5`, suficiente para este volumen
-- [ ] Caché de `SiteConfig` activa (5 min) ✅
-- [ ] `express.json({ limit: '10mb' })` — reducir a `'1mb'` si no hay uploads grandes vía API
-- [ ] Sin `console.log` innecesarios en controladores ✅ (confirmado en auditoría)
-
-#### Base de Datos
-- [ ] Índices existentes son suficientes para el volumen esperado. Verificar con:
-```javascript
-// En MongoDB Atlas → Performance Advisor
-// O desde mongosh:
-db.appointments.getIndexes()
-// Índices críticos a tener:
-// { employee: 1, date: 1, timeSlot: 1 } — partialFilter ✅
-// { clientPhone: 1 } — para búsquedas CRM
-// { status: 1, date: 1 } — para getAll filtrado
-// { bulkId: 1 } — para agrupar sesiones
-```
-
----
-
-### ☐ 2.3 Plan de Pruebas Manuales (QA)
-
-#### 🧪 Suite A — Flujo de Agendamiento (ChatbotPage)
+#### 🧪 Suite A — Agendamiento Público (ChatbotPage)
 
 | # | Acción | Resultado Esperado |
 |---|---|---|
-| A1 | Ir a `/` → hacer clic en "Agenda tu cita" | Navega a `/chatbot` sin errores de consola |
-| A2 | Seleccionar una especialista y un servicio | Los horarios del día se cargan dentro de 3 segundos |
-| A3 | Seleccionar una fecha **pasada** (ayer) | El sistema debe rechazarla o no mostrar slots disponibles |
-| A4 | Completar el flujo y agendar con teléfono válido | Mensaje de confirmación "Cita recibida" visible |
+| A1 | Ir a `/` → clic en "Agenda tu cita" | Navega a `/chatbot` sin errores de consola |
+| A2 | Seleccionar una especialista y un servicio | Horarios del día se cargan en < 3 segundos |
+| A3 | Seleccionar una fecha pasada (ayer) | Sin slots disponibles |
+| A4 | Completar el flujo — agendar con teléfono válido | "Cita recibida, pendiente de confirmación" |
 | A5 | Repetir A4 con el **mismo horario** desde otra pestaña simultáneamente | Solo una cita es creada; la segunda recibe error 409 |
-| A6 | Intentar agendar **6+ citas** del mismo teléfono en 30 minutos | Recibir error 429 "Límite excedido" |
-| A7 | Dejar el campo teléfono vacío y enviar | Mensaje de error "Teléfono celular requerido" visible |
-| A8 | Seleccionar **"Disponibilidad flexible"** | El chatbot cambia al flujo flexible y solicita rangos de fecha |
+| A6 | Intentar agendar **5+ citas** del mismo teléfono en 30 minutos | Error 429 "Límite excedido" |
+| A7 | Dejar el campo teléfono vacío y enviar | Error "Teléfono celular requerido" |
+| A8 | Seleccionar **"Disponibilidad flexible"** | Chatbot cambia al flujo flexible y solicita rangos de fecha |
 | A9 | Completar una cita flexible | La cita aparece en el calendario del admin con ícono ✨ |
 
 #### 🧪 Suite B — Panel de Admin (AdminCalendarPage)
 
 | # | Acción | Resultado Esperado |
 |---|---|---|
-| B1 | Login con credenciales de admin | Redirige a `/admin` con nombre correcto en header |
-| B2 | Login con contraseña incorrecta **10 veces** | Al intento 11: respuesta 429 "Demasiados intentos" |
-| B3 | Ir a `/admin/calendario` → clic en un día con citas | Modal del día se abre con las citas listadas |
-| B4 | Hacer clic en "✕ CANCELAR" en una cita | Aparecen los 2 diálogos de confirmación en secuencia |
-| B5 | En B4, responder "Sí" en el segundo diálogo (fue el cliente) | La cita queda cancelada; WhatsApp **NO** se abre automáticamente |
-| B6 | En B4, responder "No" en el segundo diálogo (fue el salón) | La cita queda cancelada; WhatsApp **SÍ** se abre automáticamente |
-| B7 | Confirmar una cita pendiente | Status cambia a "Confirmada"; banner verde de WhatsApp aparece |
-| B8 | Intentar confirmar en un slot ya ocupado | Se muestra error 409 "Horario no disponible" |
-| B9 | Reagendar una cita como **empleada** (no admin) | La solicitud debe ser bloqueada (403) |
+| B1 | Login con credenciales de admin | Redirige a `/admin` con nombre correcto en el header |
+| B2 | Login con contraseña incorrecta **10 veces** | Respuesta 429 "Demasiados intentos" al intento 11 |
+| B3 | Ir a `/admin/calendario` — selector de empleada en "Todas" | El calendario muestra citas de **todas** las especialistas |
+| B4 | Hacer clic en un día con citas | Modal del día se abre con todas las citas listadas |
+| B5 | Clic en "✕ CANCELAR" en una cita | Aparecen los 2 diálogos de confirmación en secuencia |
+| B6 | En B5, responder "Sí" (el cliente canceló) | Cita cancelada; WhatsApp **NO** se abre automáticamente |
+| B7 | En B5, responder "No" (el salón canceló) | Cita cancelada; WhatsApp **SÍ** se abre automáticamente para disculparse |
+| B8 | Confirmar una cita pendiente | Status cambia inmediatamente (UI optimista); banner verde de WhatsApp aparece |
+| B9 | Confirmar en un slot ya ocupado | Error 409 "Horario no disponible"; la cita vuelve a estado anterior (UI reversa) |
 | B10 | Bloquear un día completo | El día aparece con "🚫 DÍA BLOQUEADO" en el calendario |
-| B11 | Intentar agendar en el día bloqueado desde chatbot | No aparecen horarios disponibles |
-
-#### 🧪 Suite C — Flujo de Empleadas
-
-| # | Acción | Resultado Esperado |
-|---|---|---|
-| C1 | Login como empleada | Solo ve menú con sus permisos asignados |
-| C2 | Intentar acceder a `/admin/configuracion` sin permiso | Redirige al dashboard; no expone la página |
-| C3 | Acceder sin conexión al servidor (servidor apagado) | El fallback usa permisos del cache; no muestra páginas no autorizadas |
-| C4 | El admin hace logout forzado (resetea `tokenVersion`) | La empleada logueada recibe 401 en próxima acción |
-| C5 | Ver itinerario del día | Citas en orden cronológico con gaps entre servicios |
+| B11 | Intentar agendar en el día bloqueado desde el chatbot | No aparecen horarios disponibles |
 
 #### 🧪 Suite D — Seguridad
 
 | # | Acción | Resultado Esperado |
 |---|---|---|
-| D1 | Enviar `{ "clientPhone": { "$gt": "" } }` en body de agendamiento | Error 400; no expone datos (sanitización activa) |
-| D2 | Intentar acceder a `/api/employees` sin token | Respuesta 401 |
+| D1 | Enviar `{ "clientPhone": { "$gt": "" } }` en body | Error 400; no expone datos de BD |
+| D2 | Acceder a `/api/employees` sin token | Respuesta 401 |
 | D3 | Acceder a `/api/settlements` con token de empleada sin permiso | Respuesta 403 |
-| D4 | Enviar `employeeId: "no-es-un-objectid"` a `/api/appointments/:id/reschedule` | Respuesta 400 "ID de especialista inválido" (parche 3 activo) |
-| D5 | Liquidar citas de otra especialista enviando sus IDs | Respuesta 400 "Citas no válidas para liquidar" (parche 5 activo) |
-| D6 | Verificar header de respuesta | Debe incluir `X-Content-Type-Options`, `X-Frame-Options` (helmet activo) |
-| D7 | Comprobar que `/api/health` responde en < 500ms | Indicador de conectividad saludable |
-
-#### 🧪 Suite E — UX Mobile
-
-| # | Acción | Resultado Esperado |
-|---|---|---|
-| E1 | Abrir ChatbotPage en iPhone 12 (375px) | Sin scroll horizontal; texto legible |
-| E2 | Tap en botón "Agendar" en mobile | Responde al primer tap (no requiere doble tap) |
-| E3 | Abrir modal del calendario en móvil | Bottom sheet visible; botones tap-friendly (≥44px) |
-| E4 | Usar el campo de fecha en Android | Selector de fecha nativo del sistema operativo |
+| D4 | Enviar `employeeId: "no-es-un-objectid"` a `reschedule` | Respuesta 400 "ID inválido" |
+| D5 | Liquidar citas de otra especialista enviando sus IDs | Respuesta 400 "Citas no válidas para liquidar" |
+| D6 | Verificar headers de respuesta | `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy` presentes |
 
 ---
 
-### ☐ 2.4 Backlog Técnico — Priorizado Post-Lanzamiento
+## PARTE III — Guía de Mantenimiento en Producción
 
-#### 🔴 P1 — Urgente (primeras 2 semanas post-launch)
+> **Esta es la respuesta a la pregunta:**
+> *"Si mañana surge un error crítico o se requiere hacer una modificación en la web mientras ya está publicada, ¿cómo lo solucionamos sin romper la experiencia de los clientes actuales?"*
 
-| ID | Tarea | Esfuerzo | Impacto |
-|---|---|---|---|
-| BL-01 | **Implementar ErrorBoundary en React** | 30 min | Evita pantallas en blanco para todos los usuarios |
-| BL-02 | **Reactivar Morgan + agregar error logging persistente** | 1h | Sin esto, los bugs de producción son invisibles |
-| BL-03 | **Configurar `vite.config.ts` con code splitting** | 30 min | Mejora TTI (Time to Interactive) en móvil ~40% |
-| BL-04 | **Corregir puerto fallback** `localhost:5001` → `5000` en `api.ts` | 5 min | Evita confusión en dev sin `.env` |
+---
 
-#### 🟠 P2 — Importante (primer mes)
+### 3.1 El Flujo de Trabajo Seguro: Ambientes Separados
 
-| ID | Tarea | Esfuerzo | Impacto |
-|---|---|---|---|
-| BL-05 | **Configurar Sentry.io** (o similar) para error tracking automático | 2h | Alertas en tiempo real de errores en producción |
-| BL-06 | **Minify touch targets ≥ 44px** en modales del calendario | 1h | Usabilidad móvil admin |
-| BL-07 | **Agregar índices de MongoDB** para `clientPhone` y `bulkId` | 30 min | Consultas CRM más rápidas bajo carga |
-| BL-08 | **Implementar `compression` middleware** para Gzip en Express | 15 min | Reduce tamaño de respuestas JSON ~70% |
+La regla más importante en producción es **nunca desarrollar directamente contra la base de datos de producción**. El diagrama es el siguiente:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Tu Máquina Local (Desarrollo)                              │
+│                                                             │
+│  ┌──────────────┐     ┌──────────────┐                     │
+│  │  client/     │────▶│  server/     │                     │
+│  │  localhost:  │     │  localhost:  │                     │
+│  │  5173        │     │  5000        │                     │
+│  └──────────────┘     └──────┬───────┘                     │
+│                              │                             │
+│                              ▼                             │
+│                    ┌─────────────────┐                     │
+│                    │  MongoDB Atlas  │                     │
+│                    │  BASE DE DATOS  │                     │
+│                    │  DE DESARROLLO  │  ← salon-dev        │
+│                    └─────────────────┘                     │
+└─────────────────────────────────────────────────────────────┘
+
+                              ≠ (NUNCA EL MISMO)
+
+┌─────────────────────────────────────────────────────────────┐
+│  PRODUCCIÓN (La Nube)                                       │
+│                                                             │
+│  ┌──────────────┐     ┌──────────────┐                     │
+│  │  Vercel      │────▶│  Railway     │                     │
+│  │  (Frontend)  │     │  (Backend)   │                     │
+│  └──────────────┘     └──────┬───────┘                     │
+│                              │                             │
+│                              ▼                             │
+│                    ┌─────────────────┐                     │
+│                    │  MongoDB Atlas  │                     │
+│                    │  BASE DE DATOS  │                     │
+│                    │  DE PRODUCCIÓN  │  ← salon-produccion │
+│                    └─────────────────┘                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Cómo configurar el ambiente de desarrollo conectado al clúster DEV:
+
+1. **Crear una base de datos separada en Atlas** — en el mismo clúster, crear una BD llamada `salon-dev` (gratis, mismo clúster M0).
+
+2. **`server/.env` para desarrollo** — este archivo NUNCA se sube a Git:
+   ```env
+   NODE_ENV=development
+   PORT=5000
+   MONGO_URI=mongodb+srv://usuario:password@cluster.mongodb.net/salon-dev?retryWrites=true&w=majority
+   JWT_SECRET=cualquier-string-para-dev-no-importa-la-seguridad
+   JWT_EXPIRES_IN=7d
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=admin123   # En dev puede ser texto plano (el server lo detecta y lo hashea)
+   ADMIN_NOMBRE=Admin Local
+   ADMIN_EMAIL=admin@dev.com
+   FRONTEND_URL=http://localhost:5173
+   ```
+
+3. **`client/.env`** — para el cliente en desarrollo:
+   ```env
+   VITE_API_URL=http://localhost:5000/api
+   ```
+
+4. **Iniciar el entorno local:**
+   ```bash
+   # Terminal 1 — Backend
+   cd server && npm run dev
+
+   # Terminal 2 — Frontend
+   cd client && npm run dev
+   ```
+
+5. **Sembrar datos de prueba** (opcional):
+   ```bash
+   node server/seed.js   # Si existe, o crear citas/empleadas manualmente via admin
+   ```
+
+---
+
+### 3.2 Flujo de Trabajo Git — Ramas y Despliegue Seguro
+
+El sistema de ramas asegura que **`main` siempre sea lo que está en producción**.
+
+```
+main (producción en Vercel/Railway)
+  │
+  └──▶ fix/nombre-del-bug   (rama de trabajo)
+  └──▶ feature/nueva-funcion (rama de trabajo)
+```
+
+#### Flujo completo para cualquier cambio:
 
 ```bash
-# BL-08:
+# 1. Asegurarse de estar actualizado con producción
+git checkout main
+git pull origin main
+
+# 2. Crear una rama de trabajo descriptiva
+git checkout -b fix/cancelacion-doble-cita
+# o para features:
+git checkout -b feature/notificaciones-email
+
+# 3. Hacer los cambios en el editor/IDE
+# ... editar archivos ...
+
+# 4. Probar LOCALMENTE contra la BD de desarrollo
+#    (servidor corriendo en localhost)
+
+# 5. Committear con mensaje descriptivo
+git add .
+git commit -m "fix: cancelacion atomica usando findOneAndUpdate para prevenir doble-cancel"
+
+# 6. Subir la rama al repositorio
+git push origin fix/cancelacion-doble-cita
+
+# 7. En GitHub: crear un Pull Request de fix/* → main
+#    Revisar el diff una última vez antes de mergear
+
+# 8. Mergear el PR a main
+#    → Railway detecta el push a main y re-despliega el backend automáticamente
+#    → Vercel detecta el push a main y re-despliega el frontend automáticamente
+```
+
+> [!IMPORTANT]
+> **Vercel y Railway** detectan automáticamente los pushes a `main` y hacen el despliegue sin intervención manual. El tiempo de despliegue es ~2-3 minutos. Durante ese tiempo, la versión anterior sigue sirviendo requests (zero-downtime deployment).
+
+---
+
+### 3.3 Despliegue de un Hotfix (Parche de Emergencia)
+
+Un **hotfix** es un fix crítico que no puede esperar el ciclo normal de desarrollo. Se aplica directamente sobre `main`.
+
+#### Protocolo de Hotfix (Paso a Paso):
+
+```
+ALERTA DE BUG CRÍTICO EN PRODUCCIÓN
+           │
+           ▼
+    ┌─────────────────────────┐
+    │ 1. Evaluar la severidad │
+    │    ¿Están los clientes  │
+    │    sin poder agendar?   │
+    └────────────┬────────────┘
+                 │
+        Sí → HOTFIX INMEDIATO
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │ 2. Reproducir en LOCAL  │
+    │    conectado a BD dev   │
+    └────────────┬────────────┘
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │ 3. Aplicar el fix       │
+    │    Asegurarse de que    │
+    │    funciona en local    │
+    └────────────┬────────────┘
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │ 4. git commit + push    │
+    │    → main directamente  │
+    │    (justificado por     │
+    │     la emergencia)      │
+    └────────────┬────────────┘
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │ 5. Monitorear los logs  │
+    │    en Railway durante   │
+    │    los primeros 10 min  │
+    └────────────┬────────────┘
+                 │
+                 ▼
+    ┌─────────────────────────┐
+    │ 6. Documentar el incid. │
+    │    ¿Qué pasó? ¿Por qué? │
+    │    ¿Cómo evitarlo?      │
+    └─────────────────────────┘
+```
+
+#### Comandos para un Hotfix de Backend (Node.js/Express):
+
+```bash
+# 1. Reproducir el bug localmente
+cd server && npm run dev
+# Probar el endpoint fallido contra la BD de dev
+
+# 2. Aplicar el fix
+# (editar el archivo correspondiente)
+
+# 3. Committear directamente a main
+git add server/controllers/appointmentController.js
+git commit -m "hotfix: corregir error 500 en createBulk cuando service no existe [CRÍTICO]"
+git push origin main
+# → Railway despliega automáticamente en ~2 minutos
+
+# 4. Verificar el despliegue
+curl https://salon-backend.railway.app/api/health
+# Esperar respuesta 200 con la versión actualizada
+
+# 5. Probar el endpoint arreglado en producción
+curl -X POST https://salon-backend.railway.app/api/appointments/bulk \
+  -H "Content-Type: application/json" \
+  -d '{ "...datos de prueba..." }'
+```
+
+#### Comandos para un Hotfix de Frontend (React):
+
+```bash
+# 1. Reproducir el bug localmente
+cd client && npm run dev
+
+# 2. Aplicar el fix en el componente o página correspondiente
+
+# 3. Verificar que el build compile sin errores
+npm run build
+# Si hay errores TypeScript, corregirlos antes de pushear
+
+# 4. Committear y pushear
+git add client/src/pages/AdminCalendarPage.tsx
+git commit -m "hotfix: corregir crash en calendario cuando cita no tiene serviceId"
+git push origin main
+# → Vercel despliega automáticamente en ~2 minutos
+
+# 5. Verificar en la URL de Vercel que el fix está activo
+```
+
+> [!TIP]
+> **¿Cómo saber si el despliegue ya terminó sin entrar al dashboard?**
+> Railway expone el número de versión en el health endpoint. Puedes agregar `buildTimestamp` o `version` a `/api/health` y comparar antes/después del push.
+
+---
+
+### 3.4 Migraciones de Base de Datos — Cambios de Esquema en Producción
+
+> **Escenario:** Necesitas agregar un nuevo campo al schema de `Appointment` (o cualquier otro modelo). ¿Cómo lo haces sin corromper las citas viejas?
+
+#### Principio Fundamental: La Migración Cero
+
+MongoDB y Mongoose son **schema-less por naturaleza**. Esto significa que agregar un campo nuevo al schema de Mongoose **NO afecta los documentos existentes** en la base de datos. Los documentos viejos simplemente no tendrán ese campo — Mongoose devuelve `undefined` para los campos que no existen en el documento.
+
+**La estrategia correcta es usar `default` values.**
+
+#### Caso 1 — Agregar un Campo Opcional con Default
+
+```javascript
+// ANTES — en models/Appointment.js
+const appointmentSchema = new Schema({
+  status: { type: String, default: 'pending' },
+  clientPhone: { type: String, required: true },
+  // ...
+})
+```
+
+```javascript
+// DESPUÉS — agregar campo `source` para saber de dónde vino la cita
+const appointmentSchema = new Schema({
+  status: { type: String, default: 'pending' },
+  clientPhone: { type: String, required: true },
+  // NUEVO CAMPO — con default garantiza compatibilidad con documentos viejos
+  source: { type: String, enum: ['chatbot', 'phone', 'walk-in'], default: 'chatbot' },
+  // ...
+})
+```
+
+**Resultado:**
+- Las citas NEW tendrán `source: 'chatbot'` (o lo que el código especifique).
+- Las citas VIEJAS devolverán `source: 'chatbot'` también, porque el `default` se aplica al leer si el campo no existe.
+- **CERO riesgo de corrupción.**
+
+#### Caso 2 — Agregar un Campo Requerido (Required)
+
+> [!WARNING]
+> **Nunca agregues `required: true` a un campo nuevo en producción sin un migration script.** Los documentos existentes no tienen ese campo → Mongoose fallará al intentar `.save()` sobre ellos.
+
+**Procedimiento seguro:**
+
+```bash
+# PASO 1 — Hacer backup de la BD de producción
+# En Atlas: Database → ... → Download → Export Collection
+
+# PASO 2 — Agregar el campo como OPCIONAL primero (sin required)
+# models/Appointment.js:
+nuevosCampo: { type: String }   # Sin required, sin default todavía
+
+# PASO 3 — Hacer deploy de este cambio a producción
+git commit -m "feat: agregar campo nuevosCampo al schema (opcional, pendiente migración)"
+git push origin main
+
+# PASO 4 — Ejecutar el migration script en producción
+# (conectado a la BD de producción via Mongo Shell o script Node.js)
+```
+
+```javascript
+// server/scripts/migrate-add-source-field.js
+// Ejecutar UNA SOLA VEZ: node server/scripts/migrate-add-source-field.js
+
+const mongoose = require('mongoose');
+require('dotenv').config({ path: './server/.env' });
+
+// ⚠️ IMPORTANTE: Apuntar a la BD de PRODUCCIÓN para la migración
+const MONGO_URI = process.env.MONGO_URI; // Debe ser la URI de producción
+
+async function migrate() {
+  await mongoose.connect(MONGO_URI);
+  console.log('Conectado a MongoDB. Iniciando migración...');
+
+  const result = await mongoose.connection.db
+    .collection('appointments')
+    .updateMany(
+      { source: { $exists: false } },   // Solo los documentos SIN el campo
+      { $set: { source: 'chatbot' } }   // Asignar el valor por defecto histórico
+    );
+
+  console.log(`✅ Migración completada. Documentos actualizados: ${result.modifiedCount}`);
+  await mongoose.disconnect();
+}
+
+migrate().catch(err => {
+  console.error('❌ Error en la migración:', err);
+  process.exit(1);
+});
+```
+
+```bash
+# PASO 5 — Ejecutar la migración (una sola vez)
+node server/scripts/migrate-add-source-field.js
+
+# PASO 6 — Verificar que todos los documentos tienen el campo
+# En Atlas → Collections → Appointments → Filter: { source: { $exists: false } }
+# El resultado debe ser 0 documentos
+
+# PASO 7 — AHORA SÍ agregar `required: true` si lo necesitas
+# models/Appointment.js:
+# nuevosCampo: { type: String, required: true }
+git commit -m "feat: marcar nuevosCampo como required (post-migración exitosa)"
+git push origin main
+```
+
+#### Caso 3 — Modificar un Índice Existente
+
+```bash
+# Escenario: Agregar un índice para optimizar una consulta lenta
+
+# PASO 1 — Agregar el índice en el schema de Mongoose
+# models/Appointment.js — al final del schema:
+appointmentSchema.index({ clientPhone: 1 }, { background: true }) # background: true para no bloquear la BD
+
+# PASO 2 — Deploy a producción
+git push origin main
+# Mongoose/MongoDB crea el índice en background — NO bloquea las operaciones existentes
+# En Atlas → Collections → Appointments → Indexes → Estado: "building" → "ready"
+```
+
+> [!CAUTION]
+> **Nunca elimines un índice** que esté siendo usado por queries en producción sin verificar primero con el Performance Advisor de Atlas qué queries lo usan.
+
+---
+
+### 3.5 Respuesta a Incidentes — Runbooks
+
+#### 🔴 INCIDENTE: El backend no responde (HTTP 502/503)
+
+```bash
+# 1. Verificar el health endpoint
+curl https://salon-backend.railway.app/api/health
+# → Si timeout: el proceso Node.js se cayó
+
+# 2. Ir a Railway Dashboard → Deployments
+# → Ver los logs del último deploy
+# → Buscar "Error" o "Cannot find module" o "MongoServerError"
+
+# 3. Si fue un deploy reciente el causante: hacer Rollback
+# Railway → Deployments → seleccionar el deploy anterior → Redeploy
+
+# 4. Si el proceso crashea en loop: revisar las variables de entorno
+# Railway → Variables → verificar MONGO_URI y JWT_SECRET
+```
+
+#### 🟠 INCIDENTE: Las citas no aparecen en el calendario del admin
+
+```bash
+# Síntoma: Admin ve el calendario vacío o con citas de solo una especialista
+
+# Posibles causas:
+# 1. El parámetro employeeId se está enviando cuando no debería (filtro activo)
+# 2. Error en el query $or del getAll controller para fechas
+
+# Diagnóstico — desde las DevTools del navegador:
+# Network → XHR → buscar el request GET /api/appointments
+# Verificar la URL: debe ser /api/appointments?date=2026-04-15 SIN employeeId cuando admin ve "Todas"
+
+# Fix temporal si hay un bug:
+# Ir al Calendario Admin → refrescar la página con F5
+# Si persiste, revisar el log de Railway → Controller → getAll
+```
+
+#### 🟡 INCIDENTE: Un cliente reporta que no puede agendar
+
+```bash
+# 1. Preguntar al cliente: ¿Qué mensaje de error ve?
+# 2. Reproducir en local:
+#    cd client && npm run dev
+#    Intentar el mismo agendamiento en localhost
+# 3. Revisar los logs de Railway → filtrar por la IP del cliente o por "ERROR"
+# 4. Causas comunes:
+#    - Rate limit: el cliente envió demasiadas requests (ver error 429 en logs)
+#    - Horario bloqueado: un BlockedSlot cubre el período que el cliente quiere
+#    - El empleado tiene disponibleHoy=false en BD
+# 5. Solución rápida: Atlas → Collections → Employees → buscar el empleado y verificar disponibleHoy
+```
+
+---
+
+### 3.6 Monitoreo Continuo y Protocolo Mensual
+
+#### Herramientas de Monitoreo Recomendadas (Gratuitas)
+
+| Herramienta | Qué monitorea | Configuración |
+|---|---|---|
+| **UptimeRobot** | Disponibilidad del backend (ping cada 5 min) | uptimerobot.com → New Monitor → HTTP(s) → URL del health endpoint → Mail alert |
+| **MongoDB Atlas Alerts** | Conexiones, latencia, disco | Atlas → Alerts → Add Alert → "Connections % > 80" |
+| **Railway Logs** | Errores del proceso Node.js | Railway → Deployments → View Logs → buscar "Error" o "500" |
+| **Vercel Analytics** | Tráfico y Core Web Vitals del frontend | Vercel → Analytics → Enable (plan gratuito) |
+
+#### Protocolo de Mantenimiento — Primer Lunes de Cada Mes
+
+```bash
+# ═══════════════════════════════════════════
+# CHECKLIST MENSUAL — L'ÉLIXIR SALON
+# Ejecutar el primer lunes de cada mes
+# ═══════════════════════════════════════════
+
+# 1. VERIFICAR SLOW QUERIES EN MONGODB
+#    Atlas → Performance Advisor → Operations sin índice
+#    Si hay queries con ratio de IXSCAN bajo: agregar índice
+
+# 2. VERIFICAR LOGS DE ERRORES DEL MES
+#    Railway → Logs → filtrar "Error 500" o "MongoServerError"
+#    Documentar los errores encontrados
+
+# 3. REVISAR RATE LIMITS
+#    ¿Hay muchos 429 en los logs? → Puede ser scraping o abuso
+#    Ajustar limits en server.js si es necesario
+
+# 4. BACKUP MANUAL DE LA BD (si no hay Atlas Backup M10)
+#    Opción A: Atlas → ... → Export Collection → Appointments (como JSON)
+#    Opción B: desde terminal con mongodump:
+mongodump --uri="mongodb+srv://usuario:password@cluster.mongodb.net/salon-produccion" --out=./backups/$(date +%Y-%m-%d)
+
+# 5. VERIFICAR EXPIRACIÓN DEL JWT
+#    Si JWT_EXPIRES_IN=7d, todos los admin deben re-loguear cada semana
+#    Evaluar aumentar a 30d para mayor comodidad operativa
+
+# 6. REVISAR DEPENDENCIAS CON VULNERABILIDADES
+cd server && npm audit
+cd client && npm audit
+#    Si hay vulnerabilidades HIGH: actualizar el paquete afectado
+
+# 7. VERIFICAR ÍNDICES DE MONGODB
+#    Desde mongosh o Atlas → Collections → Appointments → Explain Plan:
+db.appointments.explain("executionStats").find({ status: "confirmed", date: { $gte: new Date() } })
+#    Buscar "IXSCAN" en el plan (bueno). Si aparece "COLLSCAN" → falta un índice.
+
+# 8. ROTAR JWT_SECRET SI HAY SOSPECHAS DE COMPROMISO
+#    → Actualizar la variable en Railway
+#    → TODOS los usuarios serán deslogueados automáticamente al siguiente request
+#    → Comunicar a las especialistas que deben volver a iniciar sesión
+```
+
+---
+
+## PARTE IV — Backlog Técnico Post-Lanzamiento
+
+### 🔴 P1 — Urgente (primeras 2 semanas post-launch)
+
+| ID | Tarea | Esfuerzo | Impacto |
+|---|---|---|---|
+| BL-01 | **Implementar ErrorBoundary en React** | 30 min | Evita pantalla en blanco total si un componente crashea |
+| BL-02 | **Reactivar Morgan + logging persistente** | 1h | Sin esto, los bugs de producción son invisibles |
+| BL-03 | **Code splitting en `vite.config.ts`** | 30 min | Mejora TTI en móvil ~40% |
+| BL-04 | **Corregir puerto fallback** `5001` → `5000` en `api.ts` | 5 min | Consistencia en dev sin `.env` |
+| BL-05 | **Configurar UptimeRobot** | 15 min | Alerta inmediata si el backend cae |
+
+### 🟠 P2 — Importante (primer mes)
+
+| ID | Tarea | Esfuerzo | Impacto |
+|---|---|---|---|
+| BL-06 | **Configurar Sentry.io** para error tracking | 2h | Alertas automáticas de errores en producción |
+| BL-07 | **Fix Hallazgo #3** — validar `ObjectId` en `reschedule` + `requireRole('admin')` | 30 min | Cierra la brecha donde una empleada puede reagendar citas ajenas |
+| BL-08 | **Fix Hallazgo #5** — validar ownership en `settlementController` | 1h | Previene liquidaciones cruzadas accidentales |
+| BL-09 | **Minify touch targets ≥ 44px** en modales del calendario | 1h | Usabilidad móvil para el admin |
+| BL-10 | **Agregar índices** para `clientPhone` y `bulkId` | 30 min | Consultas CRM más rápidas bajo carga |
+| BL-11 | **Middleware `compression`** para Gzip en Express | 15 min | Reduce tamaño de respuestas JSON ~70% |
+
+```bash
+# BL-11 — Implementación:
 npm install compression
 # En server.js, antes de las rutas:
 const compression = require('compression');
 app.use(compression());
 ```
 
-#### 🟡 P3 — Mejoras (segundo mes)
+### 🟡 P3 — Mejoras (segundo mes)
 
 | ID | Tarea | Esfuerzo | Impacto |
 |---|---|---|---|
-| BL-09 | **Tests automatizados E2E** con Playwright para flujos críticos de agendamiento | 2d | Cobertura de regresiones |
-| BL-10 | **Paginación en `getAll` appointments** para el calendario — ya hay base pero sin UI | 4h | Necesario cuando las citas superen 500 documentos |
-| BL-11 | **Redis para rate limiting distribuido** (si se escala a múltiples instancias) | 1d | Actualmente el rate limit es por proceso, no compartido |
-| BL-12 | **Notificaciones WhatsApp vía API oficial** (Twilio/360dialog) reemplazando el link manual | 3d | Automatización real; elimina intervención del admin |
-| BL-13 | **Internacionalización de fechas** — actualmente hardcodeado en `es-CO` | 4h | Preparación para expansión |
+| BL-12 | **Tests E2E con Playwright** para flujos críticos de agendamiento | 2d | Cobertura de regresiones automática |
+| BL-13 | **Paginación en `getAll` appointments** para el calendario | 4h | Necesario cuando las citas superen 500 documentos |
+| BL-14 | **Redis para rate limiting distribuido** | 1d | Si se escala a múltiples instancias (actualmente por proceso) |
+| BL-15 | **WhatsApp API oficial** (Twilio/360dialog) | 3d | Automatización real; elimina intervención manual del admin |
 
 ---
 
-## FASE 3 — Integración con AI_CONTEXT.md
+## PARTE V — Referencia Rápida para Desarrolladores
 
-### Mapa de Documentación del Sistema
-
-Los tres archivos de documentación técnica forman un sistema complementario. Cualquier desarrollador futuro — humano o agente IA — debe leerlos en este orden:
-
-```
-1. MASTER_SYS_CONTEXT.md   → ¿QUÉ es el sistema? (negocio, reglas, glosario)
-           ↓
-2. AI_CONTEXT.md            → ¿CÓMO funciona? (arquitectura, código, convenciones)
-           ↓
-3. PRODUCTION_READY.md     → ¿CÓMO se mantiene vivo? (ops, QA, backlog)
-           ↓
-4. AUDIT_REPORT.md          → ¿QUÉ riesgos tiene? (seguridad, diagramas)
-```
-
-### Guía de Referencia Rápida para Desarrolladores Futuros
-
-| Situación | Documento a consultar | Sección |
+| Situación | Documento | Sección |
 |---|---|---|
 | "¿Qué significa estado `pending`?" | `AI_CONTEXT.md` | §3 Glosario de Estados |
 | "¿Cómo agrego un nuevo módulo de permisos?" | `AI_CONTEXT.md` | §8 Flujos Críticos |
-| "La app está en blanco en producción" | `PRODUCTION_READY.md` | Fase 1 → ErrorBoundary |
-| "¿Qué variables de entorno necesito?" | `PRODUCTION_READY.md` | §2.1 Infraestructura |
-| "Hay un bug de doble cancelación" | `AUDIT_REPORT.md` → `AI_CONTEXT.md` | Hallazgo 2 → §5 Convenciones |
-| "¿Cómo testeo el flujo de agendamiento?" | `PRODUCTION_READY.md` | §2.3 Suite A |
-| "Quiero escalar a múltiples instancias" | `PRODUCTION_READY.md` | BL-11 (Redis) |
+| "La app está en blanco en producción" | `PRODUCTION_READY.md` | BL-01 ErrorBoundary |
+| "¿Qué variables de entorno necesito?" | `PRODUCTION_READY.md` | Parte II §2.1 |
+| "Hay un error crítico en producción" | `PRODUCTION_READY.md` | Parte III §3.3 Hotfix |
+| "Necesito agregar un campo a la BD" | `PRODUCTION_READY.md` | Parte III §3.4 Migraciones |
+| "¿Cómo testeo el flujo de agendamiento?" | `PRODUCTION_READY.md` | Parte II §2.4 Suite A |
+| "Quiero escalar a múltiples instancias" | `PRODUCTION_READY.md` | BL-14 Redis |
 | "Hay una race condition en bulk" | `AUDIT_REPORT.md` | Hallazgo 1 |
-
-### Protocolo de Mantenimiento Mensual
-
-Ejecutar estas verificaciones el primer lunes de cada mes:
-
-```bash
-# 1. Verificar que MongoDB Atlas no tenga slow queries
-#    → Atlas UI → Performance Advisor → Operations sin índice
-
-# 2. Rotar JWT_SECRET si ha habido sospechas de compromiso
-#    → Actualizar env var en la plataforma
-#    → Todos los usuarios serán deslogueados automáticamente
-
-# 3. Revisar logs de errores del mes anterior
-#    → Railway/Render → Logs → filtrar por "Error" o status 500
-
-# 4. Verificar que los índices de MongoDB siguen siendo óptimos
-db.appointments.explain("executionStats").find({ status: "confirmed", date: { $gte: new Date() } })
-
-# 5. Revisar rate limit — si hay muchos 429, el salón puede estar siendo víctima de scraping
-#    → Ajustar limits en server.js según el análisis
-
-# 6. Ejecutar test-backend.js contra producción (con credenciales de test)
-node server/test-backend.js
-```
-
-### Criterios de "Go/No-Go" para el Lanzamiento
-
-Todos los ítems de esta lista deben ser ✅ antes de anunciar el sistema al público:
-
-**Go/No-Go Checklist:**
-- [ ] Suite A de QA completa sin fallos (agendamiento público)
-- [ ] Suite B de QA completa sin fallos (panel admin)
-- [ ] Suite D de QA completa sin fallos (seguridad)
-- [ ] SSL activo y verificado (`https://` en la URL del frontend)
-- [ ] Variables de entorno en producción verificadas (especialmente `ADMIN_PASSWORD` como hash BCrypt)
-- [ ] `NODE_ENV=production` confirmado (verificar via `GET /api/health`)
-- [ ] MongoDB Atlas: backups automáticos habilitados
-- [ ] ErrorBoundary implementado (BL-01) — **no lanzar sin esto**
-- [ ] Morgan reactivado para logging básico (BL-02) — **no lanzar sin esto**
-- [ ] Revisión de al menos 1 cita de prueba end-to-end (chatbot → admin → confirmación)
+| "El admin no ve todas las citas en el calendar" | `PRODUCTION_READY.md` | FIX-5 (Visibilidad Admin) |
 
 ---
 
 > [!CAUTION]
-> **Si el servidor está bajo carga alta (>50 usuarios simultáneos):** El rate limit de 100 req/15min por IP puede afectar a usuarios legítimos que comparten IP (ej. todo un edificio de oficinas detrás de un NAT). Considerar implementar el rate limit basado en `userId` para usuarios autenticados y reservar el limit por IP solo para rutas públicas.
+> **Punto de falla único actual:** El sistema no tiene failover. Si el servidor Node.js en Railway cae, toda la operación del salón se detiene. Configurar alertas de UptimeRobot es **obligatorio antes del lanzamiento** (ver BL-05). Para mayor resiliencia, explorar redundancia en Render como servicio de backup (P3).
 
 > [!WARNING]
-> **Punto de falla único actual:** El sistema no tiene ninguna instancia de failover. Si el servidor Node.js cae, toda la operación del salón se detiene — incluyendo la visualización del calendario por las especialistas. Para un salón activo, configurar alertas de uptime (UptimeRobot, Better Uptime) es **obligatorio antes del lanzamiento**.
+> **Sobre el Admin Password en Producción:** El sistema valida en el arranque que `ADMIN_PASSWORD` sea un hash BCrypt (inicia con `$2b$`). Si arranca con texto plano en producción, el proceso falla intencionalmente. Nunca usar contraseñas simples en producción.
 
 > [!NOTE]
-> **Sobre WhatsApp:** El sistema actual abre links `wa.me` que requieren que el admin haga clic manualmente. Esto significa que si el admin no está activo, los clientes no reciben notificaciones. El BL-12 (API oficial de WhatsApp) es la evolución natural para automatizar esto completamente.
+> **Sobre WhatsApp:** El sistema actual abre links `wa.me` que requieren que el admin haga clic manualmente. Si el admin no está activo, los clientes no reciben notificaciones. El BL-15 (API oficial de WhatsApp) es la evolución natural para automatizar esto completamente en el futuro.
