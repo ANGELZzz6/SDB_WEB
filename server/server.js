@@ -88,8 +88,8 @@ const isProd = process.env.NODE_ENV === 'production'
 // General API limit (Carga de datos, navegación por el dashboard, peticiones GET en general)
 app.use('/api/', rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: isProd ? 200 : 10000, // Elevado a 200 para que el Admin no sea bloqueado al recargar o navegar
-  skip: () => !isProd,
+  max: isProd ? 500 : 10000, // Elevado a 500 para soportar alta actividad administrativa
+  skip: (req) => !isProd || req.method === 'OPTIONS', // Evitar bloquear peticiones preflight u OPTIONS
   message: { success: false, message: 'Demasiadas peticiones desde esta red, por favor intenta después de unos minutos.' }
 }))
 
