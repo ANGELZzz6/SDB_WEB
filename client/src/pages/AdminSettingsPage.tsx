@@ -300,23 +300,15 @@ export default function AdminSettingsPage() {
 
           {/* Business Info */}
           <SectionCard>
-            <SectionTitle icon="🏪" title="Información del Negocio" />
-            <div className="settings-two-col">
-              <div>
-                <FieldLabel>Nombre del Salón</FieldLabel>
-                <UnderlineInput value={settings.businessName} onChange={(v) => handleChange('businessName', v)} />
-              </div>
-              <div>
-                <FieldLabel>Dirección</FieldLabel>
-                <UnderlineInput value={settings.address} onChange={(v) => handleChange('address', v)} />
-              </div>
+            <SectionTitle icon="🏪" title="Operación del Negocio" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
               <div>
                 <FieldLabel>Días Máximos de Reserva Adelantada</FieldLabel>
                 <UnderlineInput value={settings.maxDaysInAdvance} onChange={(v) => handleChange('maxDaysInAdvance', Number(v))} type="number" />
               </div>
 
-              <div style={{ gridColumn: '1/-1' }}>
+              <div>
                 <FieldLabel>Horarios Generales de Atención</FieldLabel>
                 <div className="settings-inner-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '8px' }}>
                    <div>
@@ -326,24 +318,6 @@ export default function AdminSettingsPage() {
                    <div>
                       <FieldLabel>Hora Cierre</FieldLabel>
                       <UnderlineInput type="time" value={settings.businessHours.fin} onChange={(v) => handleNestedChange('businessHours', 'fin', v)} />
-                   </div>
-                </div>
-              </div>
-
-              <div style={{ gridColumn: '1/-1' }}>
-                <FieldLabel>Redes Sociales</FieldLabel>
-                <div className="settings-social-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '8px' }}>
-                   <div>
-                      <FieldLabel>Instagram</FieldLabel>
-                      <UnderlineInput value={settings.socialMedia.instagram || ''} onChange={(v) => handleNestedChange('socialMedia', 'instagram', v)} />
-                   </div>
-                   <div>
-                      <FieldLabel>Facebook</FieldLabel>
-                      <UnderlineInput value={settings.socialMedia.facebook || ''} onChange={(v) => handleNestedChange('socialMedia', 'facebook', v)} />
-                   </div>
-                   <div>
-                      <FieldLabel>TikTok</FieldLabel>
-                      <UnderlineInput value={settings.socialMedia.tiktok || ''} onChange={(v) => handleNestedChange('socialMedia', 'tiktok', v)} />
                    </div>
                 </div>
               </div>
