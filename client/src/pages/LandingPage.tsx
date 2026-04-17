@@ -350,10 +350,10 @@ export default function LandingPage() {
           </div>
 
           {/* Hamburger button (Mobile) */}
-          <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'rotate(45deg) translate(5px, 6px)' : 'none', transition: '0.3s' }}></div>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, opacity: isMenuOpen ? 0 : 1, transition: '0.3s', margin: '5px 0' }}></div>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'rotate(-45deg) translate(5px, -6px)' : 'none', transition: '0.3s' }}></div>
+          <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'flex', flexDirection: 'column', gap: '5px', cursor: 'pointer', zIndex: 100, padding: '8px' }}>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(7px) rotate(45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, opacity: isMenuOpen ? 0 : 1, transition: 'all 0.3s ease' }}></div>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
           </div>
         </div>
 
