@@ -25,6 +25,7 @@ export default function AdminSpecialistsPage() {
     comisionPorcentaje: 0
   });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [especialidadesInput, setEspecialidadesInput] = useState('');
 
   const fetchSpecialists = async () => {
     try {
@@ -52,6 +53,7 @@ export default function AdminSpecialistsPage() {
   const openModal = (emp?: Employee) => {
     if (emp) {
       setEditingId(emp._id);
+      setEspecialidadesInput(emp.especialidades?.join(', ') || '');
       setFormData({
         nombre: emp.nombre,
         descripcion: emp.descripcion,
@@ -61,6 +63,7 @@ export default function AdminSpecialistsPage() {
       });
     } else {
       setEditingId(null);
+      setEspecialidadesInput('');
       setFormData({ nombre: '', descripcion: '', foto: '', especialidades: [], comisionPorcentaje: 0 });
     }
     setIsModalOpen(true);
@@ -357,7 +360,10 @@ export default function AdminSpecialistsPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.onSurfaceVariant, marginBottom: '6px' }}>Especialidades (separadas por coma)</label>
-                <input required type="text" value={formData.especialidades?.join(', ')} onChange={e => setFormData({ ...formData, especialidades: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px' }} />
+                <input required type="text" value={especialidadesInput} onChange={e => {
+                  setEspecialidadesInput(e.target.value);
+                  setFormData({ ...formData, especialidades: e.target.value.split(',').map(s => s.trim()).filter(Boolean) });
+                }} style={{ width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: T.onSurfaceVariant, marginBottom: '6px' }}>% Comisión Global</label>

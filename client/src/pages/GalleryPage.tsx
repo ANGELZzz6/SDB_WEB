@@ -40,6 +40,7 @@ const wrap: React.CSSProperties = {
    Shared Navbar
 ───────────────────────────────────────────────── */
 function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigate>; location: ReturnType<typeof useLocation> }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const links = [
     { label: 'Servicios', path: '/servicios' },
     { label: 'Especialistas', path: '/especialistas' },
@@ -75,18 +76,41 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
             );
           })}
         </div>
-        <button onClick={() => navigate('/chatbot')} style={{
-          fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.12em',
-          backgroundColor: T.primary, color: '#FFFFFF',
-          padding: '12px 24px', borderRadius: '9999px', border: 'none',
-          cursor: 'pointer', transition: 'transform 0.2s',
-        }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-        >
-          Agendar Cita
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button onClick={() => navigate('/chatbot')} style={{
+            fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.12em',
+            backgroundColor: T.primary, color: '#FFFFFF',
+            padding: '12px 24px', borderRadius: '9999px', border: 'none',
+            cursor: 'pointer', transition: 'transform 0.2s',
+          }}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            Agendar Cita
+          </button>
+          
+          <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'flex', flexDirection: 'column', gap: '4px', cursor: 'pointer', zIndex: 100, padding: '8px' }}>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'rotate(45deg) translate(5px, 6px)' : 'none', transition: '0.3s' }}></div>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, opacity: isMenuOpen ? 0 : 1, transition: '0.3s', margin: '1px 0' }}></div>
+            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'rotate(-45deg) translate(5px, -6px)' : 'none', transition: '0.3s' }}></div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh',
+        background: T.surface, zIndex: 90,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '32px', transition: 'transform 0.4s ease-in-out',
+        transform: isMenuOpen ? 'translateY(0)' : 'translateY(-100%)',
+      }}>
+        {[...links, { label: 'Agendar Cita', path: '/chatbot' }].map(({ label, path }) => (
+          <button key={label} onClick={() => { navigate(path); setIsMenuOpen(false); }} style={{ fontSize: '28px', fontFamily: T.fontHeadline, fontStyle: 'italic', color: T.primary, background: 'none', border: 'none', cursor: 'pointer' }}>
+            {label}
+          </button>
+        ))}
+        <button onClick={() => setIsMenuOpen(false)} style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', marginTop: '60px', opacity: 0.5, color: T.onSurfaceVariant, background: 'none', border: 'none', cursor: 'pointer' }}>CERRAR</button>
       </div>
     </nav>
   );
@@ -164,7 +188,11 @@ export default function GalleryPage() {
         * { box-sizing: border-box; }
         ::selection { background: #ffd9de; color: #944555; }
         .nav-links { display: none; }
-        @media (min-width: 768px) { .nav-links { display: flex; } }
+        .hamburger { display: flex; }
+        @media (min-width: 768px) { 
+          .nav-links { display: flex; } 
+          .hamburger { display: none !important; }
+        }
 
         /* Masonry */
         .masonry-grid {
