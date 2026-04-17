@@ -234,15 +234,16 @@ export default function AdminLayout({
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {topBarRight}
           
-          <button onClick={handleLogout} className="logout-btn desktop-only" style={{ display: 'flex' }}>
-             <span>🚪</span>
-             Cerrar Sesión
+          <button onClick={handleLogout} className="logout-btn" style={{ display: 'flex', justifyContent: 'center' }}>
+             <span style={{ fontSize: '16px', lineHeight: 1 }}>🚪</span>
+             <span className="desktop-only">Cerrar Sesión</span>
           </button>
 
           <style>{`
             @media (max-width: 768px) {
               .desktop-only { display: none !important; }
               .user-name-label { display: none; }
+              .logout-btn { padding: 8px !important; border-radius: 12px !important; }
             }
           `}</style>
 

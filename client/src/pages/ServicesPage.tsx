@@ -448,7 +448,7 @@ export default function ServicesPage() {
                   transition: 'gap 0.3s',
                   paddingTop: '8px',
                 }}
-                onClick={() => navigate('/#especialistas')}
+                onClick={() => navigate('/especialistas')}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.gap = '14px')}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.gap = '8px')}
               >
