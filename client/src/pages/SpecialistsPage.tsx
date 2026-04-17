@@ -181,8 +181,10 @@ export default function SpecialistsPage() {
           background: ${T.surfaceContainerLowest};
           border-radius: 2rem;
           padding: 40px 48px;
-          border-bottom: 2px solid ${T.primaryFixed};
-          transition: box-shadow 0.5s;
+          border: 1px solid rgba(217, 193, 195, 0.3);
+          border-bottom: 3px solid ${T.primaryFixed};
+          box-shadow: 0 8px 32px rgba(148, 69, 85, 0.04);
+          transition: all 0.5s;
         }
         .specialist-card::before {
           content: '';
@@ -196,7 +198,11 @@ export default function SpecialistsPage() {
           transition: opacity 0.6s;
         }
         .specialist-card:hover::before { opacity: 1; }
-        .specialist-card:hover { box-shadow: 0 24px 64px rgba(148,69,85,0.10); }
+        .specialist-card:hover { 
+          transform: translateY(-4px);
+          box-shadow: 0 24px 64px rgba(148,69,85,0.12);
+          border-color: rgba(255, 217, 222, 0.8);
+        }
 
         .service-row {
           display: flex;
