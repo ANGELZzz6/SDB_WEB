@@ -85,12 +85,12 @@ app.use(express.urlencoded({ extended: true }))
 // ==============================
 const isProd = process.env.NODE_ENV === 'production'
 
-// General API limit
+// General API limit (Carga de datos, navegación por el dashboard, peticiones GET en general)
 app.use('/api/', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isProd ? 100 : 10000,
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: isProd ? 200 : 10000, // Elevado a 200 para que el Admin no sea bloqueado al recargar o navegar
   skip: () => !isProd,
-  message: { success: false, message: 'Demasiadas peticiones desde esta IP, por favor intenta después de 15 minutos' }
+  message: { success: false, message: 'Demasiadas peticiones desde esta red, por favor intenta después de unos minutos.' }
 }))
 
 // Login — más estricto (10 intentos / 15 min)
@@ -98,15 +98,16 @@ app.use('/api/auth/login', rateLimit({
   windowMs: 15 * 60 * 1000,
   max: isProd ? 10 : 1000,
   skip: () => !isProd,
-  message: { success: false, message: 'Demasiados intentos de login. Por favor intenta de nuevo en 15 minutos' }
+  message: { success: false, message: 'Demasiados intentos de inicio de sesión fallidos. Por seguridad, intenta de nuevo en 15 minutos.' }
 }))
 
-// Agendamiento — protección contra spam (20 citas / 10 min por IP)
+// Agendamiento — protección contra spam y abusos (30 creaciones/ediciones / 15 min por IP)
 app.use('/api/appointments', rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: isProd ? 20 : 1000,
-  skip: () => !isProd,
-  message: { success: false, message: 'Límite de agendamientos excedido. Intenta más tarde.' }
+  windowMs: 15 * 60 * 1000,
+  max: isProd ? 30 : 1000,
+  // 🔥 CLAVE: Excluir las peticiones GET (para que al cargar el calendario no sume al límite estricto)
+  skip: (req) => !isProd || req.method === 'GET' || req.method === 'OPTIONS',
+  message: { success: false, message: 'Límite de creación o modificación de citas excedido temporalmente. Intenta en unos minutos.' }
 }))
 
 // Logs desactivados por petición del usuario para limpiar terminal
