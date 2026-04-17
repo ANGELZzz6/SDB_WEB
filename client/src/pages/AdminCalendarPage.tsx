@@ -124,6 +124,11 @@ export default function AdminCalendarPage() {
     return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
   };
 
+  const isMultiSession = (bulkId?: string) => {
+    if (!bulkId) return false;
+    return appointments.filter(a => a.bulkId === bulkId).length > 1 || citasPendientes.filter(a => a.bulkId === bulkId).length > 1;
+  };
+
   const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
@@ -536,7 +541,7 @@ export default function AdminCalendarPage() {
                                   border: isFlex ? '1px dashed #ffdca8' : 'none'
                                 }}
                               >
-                                {isFlex ? '✨ ' : (a.bulkId ? '🔗 ' : '')}
+                                {isFlex ? '✨ ' : (isMultiSession(a.bulkId) ? '🔗 ' : '')}
                                 {(!(a.service as any).allowSimultaneous && !isFlex) ? '' : '⚡ '}
                                 {isFlex ? 'Flexible' : a.timeSlot} {a.clientName}
                               </div>
@@ -648,7 +653,7 @@ export default function AdminCalendarPage() {
                                 a.status === 'rejected' ? 'Rechazada' :
                                   'Cancelada'}
                         </span>
-                        {a.bulkId && (
+                        {isMultiSession(a.bulkId) && (
                           <span style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: T.primaryContainer, color: T.primary, padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>
                             🔗 Sesión Múltiple
                           </span>

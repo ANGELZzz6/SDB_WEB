@@ -332,6 +332,11 @@ export default function AdminPage() {
     setShowFlexModal(true);
   };
 
+  const isMultiSession = (bulkId?: string) => {
+    if (!bulkId) return false;
+    return appointments.filter(a => a.bulkId === bulkId).length > 1 || pendingAppointments.filter(a => a.bulkId === bulkId).length > 1;
+  };
+
   const confirmedCount = appointments.filter((a) => a.status === 'Confirmada').length;
 
   const filtered = appointments.filter((a) =>
@@ -442,7 +447,7 @@ export default function AdminPage() {
                     <h4 className="truncate" style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, margin: 0 }}>{appt.client}</h4>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>📞 {appt.clientPhone}</p>
-                      {appt.bulkId && (
+                      {isMultiSession(appt.bulkId) && (
                         <span style={{ fontSize: '10px', backgroundColor: T.primaryContainer, color: T.primary, padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>🔗 Sesión Múltiple</span>
                       )}
                     </div>
@@ -590,7 +595,7 @@ export default function AdminPage() {
                             <div className="flex items-center justify-between w-full mb-1">
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <h4 className="truncate" style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, marginBottom: 0 }}>{appt.client}</h4>
-                                {appt.bulkId && (
+                                {isMultiSession(appt.bulkId) && (
                                   <span title="Parte de una sesión múltiple" style={{ fontSize: '12px', cursor: 'help' }}>🔗</span>
                                 )}
                               </div>
