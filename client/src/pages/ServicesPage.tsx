@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { serviceService, siteConfigService } from '../services/api';
+import { serviceService, siteConfigService, employeeService, settingsService } from '../services/api';
 import type { Service, SiteConfig } from '../types';
 
 /* ─────────────────────────────────────────────────
@@ -44,6 +44,9 @@ export default function ServicesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [services, setServices] = useState<Service[]>([]);
+  const [totalServicesCount, setTotalServicesCount] = useState<number | null>(null);
+  const [totalEmployeesCount, setTotalEmployeesCount] = useState<number | null>(null);
+  const [businessHours, setBusinessHours] = useState<{ inicio: string; fin: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<SiteConfig | null>(null);
 
@@ -59,9 +62,23 @@ export default function ServicesPage() {
       }
     });
 
+    settingsService.get().then(res => {
+      if (res.success && res.data?.businessHours) {
+        setBusinessHours(res.data.businessHours);
+      }
+    });
+
+    employeeService.getAll().then(res => {
+      if (res.success && res.data) {
+        setTotalEmployeesCount(res.data.filter((e:any) => e.isActive).length);
+      }
+    });
+
     serviceService.getAll().then(res => {
       if (res.success && res.data) {
-        setServices(res.data.filter((s:any) => s.isActive));
+        const active = res.data.filter((s:any) => s.isActive);
+        setServices(active);
+        setTotalServicesCount(active.length);
       }
       setLoading(false);
     });
@@ -77,6 +94,14 @@ export default function ServicesPage() {
       return `${pDesde} - ${pHasta}`;
     }
     return formatter.format(svc.precio || 0).replace(',00', '');
+  };
+
+  const calculateHours = () => {
+    if (!businessHours) return '12h';
+    const [startH] = businessHours.inicio.split(':').map(Number);
+    const [endH] = businessHours.fin.split(':').map(Number);
+    const diff = endH - startH;
+    return diff > 0 ? `${diff}h` : '12h';
   };
 
   const navLinks = [
@@ -404,9 +429,9 @@ export default function ServicesPage() {
               {/* Stats mini */}
               <div style={{ display: 'flex', gap: '40px', paddingTop: '8px' }}>
                 {[
-                  { val: '8', lbl: 'Servicios' },
-                  { val: '2', lbl: 'Especialistas' },
-                  { val: '15h', lbl: 'De atención' },
+                  { val: totalServicesCount ? `${totalServicesCount}+` : '8+', lbl: 'Servicios' },
+                  { val: totalEmployeesCount ? `${totalEmployeesCount}` : '2', lbl: 'Especialistas' },
+                  { val: calculateHours(), lbl: 'De atención' },
                 ].map(({ val, lbl }) => (
                   <div key={lbl}>
                     <div style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '28px', color: T.primary }}>{val}</div>

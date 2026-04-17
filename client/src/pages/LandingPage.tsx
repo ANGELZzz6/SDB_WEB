@@ -64,6 +64,8 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [totalServicesCount, setTotalServicesCount] = useState<number | null>(null);
+  const [totalEmployeesCount, setTotalEmployeesCount] = useState<number | null>(null);
   const [gallery, setGallery] = useState<string[]>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [config, setConfig] = useState<SiteConfig | null>(null);
@@ -90,12 +92,16 @@ export default function LandingPage() {
 
     serviceService.getAll().then(res => {
       if (res.success && res.data) {
-        setServices(res.data.filter((s:any) => s.isActive).slice(0, 6));
+        const active = res.data.filter((s:any) => s.isActive);
+        setTotalServicesCount(active.length);
+        setServices(active.slice(0, 6));
       }
     });
     employeeService.getAll().then(res => {
       if (res.success && res.data) {
-        setEmployees(res.data.filter((e:any) => e.isActive).slice(0, 2));
+        const active = res.data.filter((e:any) => e.isActive);
+        setTotalEmployeesCount(active.length);
+        setEmployees(active.slice(0, 2));
       }
     });
     galleryService.getItems().then(res => {
@@ -115,6 +121,14 @@ export default function LandingPage() {
       return `${pDesde} - ${pHasta}`;
     }
     return formatter.format(svc.precio || 0).replace(',00', '');
+  };
+
+  const calculateHours = () => {
+    if (!businessHours) return '12h';
+    const [startH] = businessHours.inicio.split(':').map(Number);
+    const [endH] = businessHours.fin.split(':').map(Number);
+    const diff = endH - startH;
+    return diff > 0 ? `${diff}h` : '12h';
   };
 
   return (
@@ -462,9 +476,9 @@ export default function LandingPage() {
               {/* Stats */}
               <div className="hero-stats" style={{ display: 'flex', alignItems: 'center', gap: '0', paddingTop: '24px', flexWrap: 'wrap' }}>
                 {[
-                  { value: '6+', label: 'Servicios' },
-                  { value: '7/7', label: 'Días' },
-                  { value: '15h', label: 'De atención' },
+                  { value: totalServicesCount ? `${totalServicesCount}+` : '6+', label: 'Servicios' },
+                  { value: totalEmployeesCount ? `${totalEmployeesCount}` : '2', label: 'Especialistas' },
+                  { value: calculateHours(), label: 'De atención' },
                 ].map(({ value, label }, i) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ paddingRight: i < 2 ? '32px' : 0 }}>
