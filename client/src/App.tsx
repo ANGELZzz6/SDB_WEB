@@ -19,11 +19,13 @@ import ChatbotPage from './pages/ChatbotPage';
 import AdminItineraryPage from './pages/AdminItineraryPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import ProtectedRoute from './components/ProtectedRoute';
+import GlobalWakeUp from './components/GlobalWakeUp';
 import './index.css';
 
 function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <GlobalWakeUp />
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />

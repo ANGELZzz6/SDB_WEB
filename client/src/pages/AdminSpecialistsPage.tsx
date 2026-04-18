@@ -139,7 +139,7 @@ export default function AdminSpecialistsPage() {
     inactive: specialists.filter(s => !s.isActive).length
   };
 
-  const filteredSpecialists = specialists.filter(s => 
+  const filteredSpecialists = specialists.filter(s =>
     s.nombre.toLowerCase().includes(search.toLowerCase()) ||
     s.descripcion?.toLowerCase().includes(search.toLowerCase()) ||
     s.especialidades?.some(e => e.toLowerCase().includes(search.toLowerCase()))
@@ -223,7 +223,7 @@ export default function AdminSpecialistsPage() {
               return (
                 <div key={emp._id} className="spec-card" style={{ opacity: isActive ? 1 : 0.65 }}>
                   {/* Delete button (trash) */}
-                  <button 
+                  <button
                     onClick={() => handleDelete(emp._id)}
                     style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', opacity: 0.6, transition: 'opacity 0.2s' }}
                     onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
