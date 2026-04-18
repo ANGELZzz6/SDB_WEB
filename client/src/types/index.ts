@@ -118,6 +118,7 @@ export interface SiteConfig {
   colorSecundario: string
   colorAcento: string
   heroImagenUrl: string
+  heroVideoUrl: string
   fondoImagenUrl: string
   mensajeConfirmacion: string
   mensajeCancelacion: string

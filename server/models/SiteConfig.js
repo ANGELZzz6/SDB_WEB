@@ -28,6 +28,7 @@ const SiteConfigSchema = new mongoose.Schema({
 
   // Imágenes (URLs de Cloudinary)
   heroImagenUrl: { type: String, default: "" },
+  heroVideoUrl: { type: String, default: "" },
   fondoImagenUrl: { type: String, default: "" },
 
   // Mensajes WhatsApp (Plantillas editables)

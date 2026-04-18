@@ -70,12 +70,16 @@ export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [businessHours, setBusinessHours] = useState<{ inicio: string; fin: string } | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   useEffect(() => {
     // Cargar configuración CMS
     siteConfigService.get().then(res => {
       if (res.success && res.data) {
         setConfig(res.data);
+        if (res.data.heroVideoUrl) {
+          setIsVideoPlaying(true);
+        }
         // Inyectar colores dinámicos
         document.documentElement.style.setProperty('--color-primary', res.data.colorPrimario);
         document.documentElement.style.setProperty('--color-secondary', res.data.colorSecundario);
@@ -493,13 +497,24 @@ export default function LandingPage() {
 
             {/* Right: Image */}
             <div style={{ flex: 1, position: 'relative', width: '100%', maxWidth: '520px' }}>
-              {/* Main image */}
+              {/* Main image / video */}
               <div style={{ width: '100%', aspectRatio: '4/5', borderRadius: '28px', overflow: 'hidden', boxShadow: `0 40px 80px rgba(148,69,85,0.12)` }}>
-                <img
-                  src={config?.heroImagenUrl || "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=700&h=875&fit=crop"}
-                  alt={config?.nombreSalon || "Salón de belleza de lujo"}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
+                {isVideoPlaying && config?.heroVideoUrl ? (
+                  <video
+                    src={config.heroVideoUrl}
+                    autoPlay
+                    muted
+                    playsInline
+                    onEnded={() => setIsVideoPlaying(false)}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                ) : (
+                  <img
+                    src={config?.heroImagenUrl || "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=700&h=875&fit=crop"}
+                    alt={config?.nombreSalon || "Salón de belleza de lujo"}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                )}
                 {/* Glassmorphism badge on image */}
                 <div style={{
                   position: 'absolute', bottom: '32px', left: '32px',

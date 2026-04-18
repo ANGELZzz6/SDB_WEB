@@ -118,6 +118,7 @@ export default function AdminSettingsPage() {
     colorSecundario: '#3e0215',
     colorAcento: '#fdf8f9',
     heroImagenUrl: '',
+    heroVideoUrl: '',
     fondoImagenUrl: '',
     mensajeConfirmacion: '',
     mensajeCancelacion: '',
@@ -235,7 +236,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const openCloudinary = (field: 'heroImagenUrl' | 'fondoImagenUrl') => {
+  const openCloudinary = (field: 'heroImagenUrl' | 'fondoImagenUrl' | 'heroVideoUrl') => {
     if (!(window as any).cloudinary) {
       alert('Cloudinary widget is not loaded yet. Please wait.');
       return;
@@ -522,9 +523,9 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
 
-              {/* TAB 4: IMÁGENES */}
+              {/* TAB 4: IMÁGENES & MEDIOS */}
               <div style={{ display: cmsTab === 'imagenes' ? 'block' : 'none', width: '100%' }}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
                   <div>
                     <FieldLabel>Imagen Hero (Principal)</FieldLabel>
                     <div style={{ position: 'relative', height: '180px', borderRadius: '12px', overflow: 'hidden', backgroundColor: T.surfaceContainerHighest, marginBottom: '12px' }}>
@@ -535,7 +536,20 @@ export default function AdminSettingsPage() {
                       )}
                     </div>
                     <button type="button" onClick={() => openCloudinary('heroImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
-                      {siteConfig.heroImagenUrl ? 'Reemplazar Hero' : 'Subir Hero'}
+                      {siteConfig.heroImagenUrl ? 'Reemplazar Imagen' : 'Subir Imagen'}
+                    </button>
+                  </div>
+                  <div>
+                    <FieldLabel>Video Hero (Secuencial)</FieldLabel>
+                    <div style={{ position: 'relative', height: '180px', borderRadius: '12px', overflow: 'hidden', backgroundColor: T.surfaceContainerHighest, marginBottom: '12px' }}>
+                      {siteConfig.heroVideoUrl ? (
+                        <video src={siteConfig.heroVideoUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} controls />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin video</div>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => openCloudinary('heroVideoUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                      {siteConfig.heroVideoUrl ? 'Reemplazar Video' : 'Subir Video'}
                     </button>
                   </div>
                   <div>
