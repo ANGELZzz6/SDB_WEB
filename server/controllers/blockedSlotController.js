@@ -133,7 +133,7 @@ const create = async (req, res, next) => {
     if (!isFullDay) {
       if (isRange) {
         slotData.startTime = startTime
-        slotData.endTime   = endTime
+        slotData.endTime = endTime
         // timeSlot queda undefined — el motor de disponibilidad ya soporta ambos modos
       } else {
         slotData.timeSlot = timeSlot
@@ -142,14 +142,14 @@ const create = async (req, res, next) => {
 
     // ── Scope: global o por empleada ──────────────────────────────────────────
     if (isGlobal || employee === 'all') {
-      slotData.isGlobal  = true
-      slotData.employee  = undefined
+      slotData.isGlobal = true
+      slotData.employee = undefined
     } else {
       if (!employee) {
         return res.status(400).json({ success: false, message: 'employee es requerido para bloqueos privados' })
       }
-      slotData.isGlobal  = false
-      slotData.employee  = new mongoose.Types.ObjectId(employee)
+      slotData.isGlobal = false
+      slotData.employee = new mongoose.Types.ObjectId(employee)
     }
 
     const slot = await BlockedSlot.create(slotData)

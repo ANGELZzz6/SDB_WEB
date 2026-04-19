@@ -105,7 +105,7 @@ export default function LandingPage() {
       if (res.success && res.data) {
         const active = res.data.filter((e:any) => e.isActive);
         setTotalEmployeesCount(active.length);
-        setEmployees(active.slice(0, 2));
+        setEmployees(active);
       }
     });
     galleryService.getItems().then(res => {

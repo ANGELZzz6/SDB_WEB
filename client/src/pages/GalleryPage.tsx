@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { galleryService } from '../services/api';
-import type { GalleryCategory, GalleryItem } from '../types';
+import { galleryService, siteConfigService } from '../services/api';
+import type { GalleryCategory, GalleryItem, SiteConfig } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -39,7 +39,7 @@ const wrap: React.CSSProperties = {
 /* ─────────────────────────────────────────────────
    Shared Navbar
 ───────────────────────────────────────────────── */
-function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigate>; location: ReturnType<typeof useLocation> }) {
+function Navbar({ navigate, location, salonName }: { navigate: ReturnType<typeof useNavigate>; location: ReturnType<typeof useLocation>; salonName: string }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const links = [
     { label: 'Servicios', path: '/servicios' },
@@ -55,7 +55,7 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
     }}>
       <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}>
         <span onClick={() => navigate('/')} style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none' }}>
-          Beauty Salon
+          {salonName}
         </span>
         <div className="nav-links" style={{ alignItems: 'center', gap: '40px' }}>
           {links.map(({ label, path }) => {
@@ -119,11 +119,11 @@ function Navbar({ navigate, location }: { navigate: ReturnType<typeof useNavigat
 /* ─────────────────────────────────────────────────
    Shared Footer
 ───────────────────────────────────────────────── */
-function Footer() {
+function Footer({ salonName }: { salonName: string }) {
   return (
     <footer style={{ backgroundColor: T.surfaceContainer, paddingTop: '64px', paddingBottom: '32px' }}>
       <div style={{ ...wrap, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center' }}>
-        <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primary }}>Beauty Salon de Belleza</span>
+        <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primary }}>{salonName}</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px' }}>
           {['Instagram', 'WhatsApp', 'Contacto', 'Privacidad'].map((l) => (
             <a key={l} href="#" style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, textDecoration: 'none', opacity: 0.8, transition: 'opacity 0.3s' }}
@@ -134,7 +134,7 @@ function Footer() {
         </div>
         <div style={{ width: '100%', height: '1px', backgroundColor: `${T.outlineVariant}30`, margin: '8px 0' }} />
         <p style={{ fontFamily: T.fontBody, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}80` }}>
-          © {new Date().getFullYear()} Beauty Salon. El Arte de Cuidarte.
+          © {new Date().getFullYear()} {salonName}. El Arte de Cuidarte.
         </p>
       </div>
     </footer>
@@ -152,18 +152,21 @@ export default function GalleryPage() {
   const [categories, setCategories] = useState<GalleryCategory[]>([]);
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+  const salonName = siteConfig?.nombreSalon || "L'Élixir Salon";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // By default API items fetch only actives. Same with categories.
-        const [catRes, itemRes] = await Promise.all([
+        const [catRes, itemRes, configRes] = await Promise.all([
           galleryService.getCategories(),
-          galleryService.getItems()
+          galleryService.getItems(),
+          siteConfigService.get()
         ]);
         if (catRes.success) setCategories(catRes.data || []);
         if (itemRes.success) setItems(itemRes.data || []);
+        if (configRes.success && configRes.data) setSiteConfig(configRes.data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -284,7 +287,7 @@ export default function GalleryPage() {
         }
       `}</style>
 
-      <Navbar navigate={navigate} location={location} />
+      <Navbar navigate={navigate} location={location} salonName={salonName} />
 
       <main style={{ paddingTop: '128px', paddingBottom: '80px' }}>
         <div style={wrap}>
@@ -372,7 +375,7 @@ export default function GalleryPage() {
         </div>
       </main>
 
-      <Footer />
+      <Footer salonName={salonName} />
 
       {/* Floating Booking Bar */}
       <div className="floating-bar">
