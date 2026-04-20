@@ -4,7 +4,7 @@ import { T } from '../lib/adminTokens';
 import { appointmentService, employeeService, availabilityService, siteConfigService } from '../services/api';
 import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Employee, SiteConfig } from '../types';
-import { waLink, WA_MESSAGES, formatFecha, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
+import { waLink, WA_MESSAGES, formatFecha, formatHora12, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
 
 /* ─────────────────────────────────────────────────
    Data
@@ -456,7 +456,10 @@ export default function AdminPage() {
                       {appt.isFlexible && <span style={{ fontSize: '10px', backgroundColor: T.primaryFixed, color: T.primary, padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>✨ Flexible</span>}
                     </div>
                     <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>
-                      👩‍🎨 {appt.specialist} · {appt.isFlexible ? 'Horario a convenir' : appt.time}
+                      👩‍🎨 {appt.specialist} · {appt.isFlexible ? 'Horario a convenir' : formatHora12(appt.time)}
+                    </p>
+                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary, margin: 0, fontWeight: 600 }}>
+                      📅 {formatFecha(appt.date)}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 w-full">
@@ -490,8 +493,8 @@ export default function AdminPage() {
                         <button
                           onClick={() => {
                             const msg = siteConfig?.mensajeConfirmacion
-                              ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: appt.client, servicio: appt.service, fecha: formatFecha(appt.date), hora: appt.time })
-                              : WA_MESSAGES.confirmacion(appt.client, appt.service, formatFecha(appt.date), appt.time);
+                              ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: appt.client, servicio: appt.service, fecha: formatFecha(appt.date), hora: formatHora12(appt.time) })
+                              : WA_MESSAGES.confirmacion(appt.client, appt.service, formatFecha(appt.date), formatHora12(appt.time));
                             setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
                           }}
                           style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
@@ -503,11 +506,11 @@ export default function AdminPage() {
                         <button
                           onClick={() => {
                             const msg = lastAction.type === 'rejected' && siteConfig?.mensajeRechazoConflicto
-                              ? buildMessage(siteConfig.mensajeRechazoConflicto, { nombre: appt.client, fecha: formatFecha(appt.date), hora: appt.time })
+                              ? buildMessage(siteConfig.mensajeRechazoConflicto, { nombre: appt.client, fecha: formatFecha(appt.date), hora: formatHora12(appt.time) })
                               : siteConfig?.mensajeCancelacion
                                 ? buildMessage(siteConfig.mensajeCancelacion, { nombre: appt.client, fecha: formatFecha(appt.date) })
                                 : lastAction.type === 'rejected'
-                                  ? WA_MESSAGES.rechazoConflicto(appt.client, formatFecha(appt.date), appt.time)
+                                  ? WA_MESSAGES.rechazoConflicto(appt.client, formatFecha(appt.date), formatHora12(appt.time))
                                   : WA_MESSAGES.rechazo(appt.client, formatFecha(appt.date));
                             setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
                           }}
@@ -521,7 +524,7 @@ export default function AdminPage() {
                           onClick={() => {
                             const msg = siteConfig?.mensajeReagendamiento
                               ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: appt.client, servicio: appt.service })
-                              : WA_MESSAGES.reagendamiento(appt.client, appt.service, formatFecha(appt.date), appt.time);
+                              : WA_MESSAGES.reagendamiento(appt.client, appt.service, formatFecha(appt.date), formatHora12(appt.time));
                             setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
                           }}
                           style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
@@ -580,7 +583,7 @@ export default function AdminPage() {
                   <div key={appt.id} className="appt-card flex gap-0 sm:gap-6 items-stretch w-full min-w-0">
                     {/* Time marker hidden on mobile, visible on sm+ */}
                     <div className="hidden sm:block w-14 pt-5 text-right shrink-0">
-                      <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: `${T.onSurfaceVariant}55`, letterSpacing: '0.05em' }}>{appt.time}</span>
+                      <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: `${T.onSurfaceVariant}55`, letterSpacing: '0.05em' }}>{formatHora12(appt.time)}</span>
                     </div>
 
                     <div className="appt-card-content w-full min-w-0 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{ flex: 1, backgroundColor: appt.status === 'Completada' ? T.surfaceContainerLow : T.surfaceContainerLowest, borderLeft: `4px solid ${appt.status === 'Completada' ? T.surfaceContainerHighest : T.primary}`, boxShadow: `0 16px 40px rgba(62,2,21,${appt.status === 'Completada' ? '0.02' : '0.04'})`, opacity: appt.status === 'Completada' ? 0.85 : 1 }}>
@@ -602,7 +605,7 @@ export default function AdminPage() {
                               <span className="shrink-0 sm:hidden" style={{ fontFamily: T.fontBody, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', backgroundColor: statusStyle.bg, color: statusStyle.color, padding: '4px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>{appt.status}</span>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="sm:hidden font-bold" style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary }}>{appt.time}</span>
+                              <span className="sm:hidden font-bold" style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary }}>{formatHora12(appt.time)}</span>
                               <span className="hidden sm:inline" style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.outlineVariant }} />
                               <span style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>{appt.serviceIcon} {appt.service}</span>
                               <span className="hidden sm:inline" style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.outlineVariant }} />
@@ -621,7 +624,7 @@ export default function AdminPage() {
                           {(appt.status === 'Confirmada' || appt.status === 'Pendiente') && (
                             <button
                               onClick={() => {
-                                const msg = `Hola ${appt.client} 👋, te escribimos desde L'Élixir Salon. ¡Tenemos un espacio disponible ahora mismo! ¿Puedes pasar antes de tu cita de las ${appt.time}? Te esperamos 💅`;
+                                const msg = `Hola ${appt.client} 👋, te escribimos desde L'Élixir Salon. ¡Tenemos un espacio disponible ahora mismo! ¿Puedes pasar antes de tu cita de las ${formatHora12(appt.time)}? Te esperamos 💅`;
                                 setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
                               }}
                               style={{
@@ -713,7 +716,7 @@ export default function AdminPage() {
                   style={{ width: '100%', padding: '14px', borderRadius: '14px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, cursor: 'pointer' }}
                 >
                   <option value="">Selecciona hora...</option>
-                  {availableSlots.map(t => <option key={t} value={t}>{t}</option>)}
+                  {availableSlots.map(t => <option key={t} value={t}>{formatHora12(t)}</option>)}
                 </select>
                 {availableSlots.length === 0 && reschForm.date && <p style={{ fontSize: '11px', color: T.error, marginTop: '6px', fontWeight: 600 }}>No hay disponibilidad en esta fecha</p>}
               </div>

@@ -3,6 +3,22 @@ export const waLink = (phone: string, message: string) => {
   return `https://wa.me/57${clean}?text=${encodeURIComponent(message)}`;
 };
 
+/**
+ * Converts a 24h time string "HH:MM" to 12h format "h:MM AM/PM".
+ * Safe: handles empty strings, midnight (00:xx), noon (12:xx).
+ * Examples: "14:30" → "2:30 PM" | "09:00" → "9:00 AM" | "00:00" → "12:00 AM"
+ */
+export const formatHora12 = (hora24: string): string => {
+  if (!hora24 || !hora24.includes(':')) return hora24 || '';
+  const [hhStr, mmStr] = hora24.split(':');
+  const hh = parseInt(hhStr, 10);
+  const mm = mmStr?.padStart(2, '0') || '00';
+  if (isNaN(hh)) return hora24;
+  const period = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 || 12;
+  return `${h12}:${mm} ${period}`;
+};
+
 export const WA_MESSAGES = {
   confirmacion: (nombre: string, servicio: string, fecha: string, hora: string) =>
     `Hola ${nombre} ✅, tu cita de *${servicio}* está confirmada para el *${fecha}* a las *${hora}*. ¡Te esperamos! 💅 — L'Élixir Salon`,
@@ -21,8 +37,10 @@ export const WA_MESSAGES = {
 };
 
 export const formatFecha = (fecha: string) => {
-  // Ensure the date is interpreted as local noon to avoid time zone shifts
-  return new Date(fecha + 'T12:00:00').toLocaleDateString('es-CO', {
+  // Extract only YYYY-MM-DD to safely handle both plain dates and full ISO timestamps
+  // (e.g. "2026-04-25T00:00:00.000Z" from the server after a fetchData refresh)
+  const dateOnly = (fecha || '').split('T')[0];
+  return new Date(dateOnly + 'T12:00:00').toLocaleDateString('es-CO', {
     weekday: 'long', day: 'numeric', month: 'long'
   }); // "domingo, 5 de abril"
 };
@@ -93,7 +111,7 @@ export const sendApptNotification = (
     nombre: client,
     servicio: service,
     fecha: formatFecha(date),
-    hora: time,
+    hora: formatHora12(time),
     especialista: specialist
   });
 

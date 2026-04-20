@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
 import { appointmentService, employeeService } from '../services/api';
+import { sendApptNotification, formatHora12 } from '../utils/whatsappMessages';
 import type { Employee } from '../types';
+import type { SiteConfig } from '../types';
 
 export default function AdminItineraryPage() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -11,6 +13,19 @@ export default function AdminItineraryPage() {
   const [itinerary, setItinerary] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Complete appointment modal state
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [selectedApptToComplete, setSelectedApptToComplete] = useState<any>(null);
+  const [finalPriceInput, setFinalPriceInput] = useState<string>('');
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
+  const [notification, setNotification] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+
+  const showNotif = (msg: string, type: 'ok' | 'err' = 'ok') => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 3500);
+  };
 
   // User auth info
   const rawUser = localStorage.getItem('adminUser');
@@ -38,14 +53,44 @@ export default function AdminItineraryPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await appointmentService.getItinerary(selectedEmployeeId, selectedDate);
-      if (res.success) {
-        setItinerary(res.data);
-      }
+      const [itinRes, configRes] = await Promise.all([
+        appointmentService.getItinerary(selectedEmployeeId, selectedDate),
+        import('../services/api').then(m => m.siteConfigService.get())
+      ]);
+      if (itinRes.success) setItinerary(itinRes.data);
+      if (configRes?.success && configRes?.data) setSiteConfig(configRes.data);
     } catch (err: any) {
       setError(err.message || 'Error al cargar el itinerario');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleComplete = (item: any) => {
+    setSelectedApptToComplete(item);
+    setFinalPriceInput('');
+    setShowPriceModal(true);
+  };
+
+  const handleFinalComplete = async () => {
+    if (!selectedApptToComplete) return;
+    if (!finalPriceInput || Number(finalPriceInput) <= 0) {
+      showNotif('Por favor ingresa el valor cobrado', 'err');
+      return;
+    }
+    try {
+      setIsCompleting(true);
+      const res = await appointmentService.complete(selectedApptToComplete.id, { finalPrice: Number(finalPriceInput) });
+      if (res.success) {
+        showNotif('✅ Cita marcada como completada', 'ok');
+        setShowPriceModal(false);
+        sendApptNotification('complete', selectedApptToComplete, siteConfig);
+        fetchItinerary();
+      }
+    } catch (error: any) {
+      showNotif(error.message || 'Error al completar la cita', 'err');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -196,8 +241,8 @@ export default function AdminItineraryPage() {
                       <div style={{ position: 'relative', marginBottom: '24px' }}>
                         {/* Time label on the left */}
                         <div className="itinerary-time-column" style={{ position: 'absolute', left: '-100px', top: '12px', textAlign: 'right', width: '70px' }}>
-                          <p style={{ fontSize: '13px', fontWeight: 800, color: T.primary }}>{item.startTime}</p>
-                          <p style={{ fontSize: '11px', color: T.onSurfaceVariant }}>{item.endTime}</p>
+                          <p style={{ fontSize: '13px', fontWeight: 800, color: T.primary }}>{formatHora12(item.startTime)}</p>
+                          <p style={{ fontSize: '11px', color: T.onSurfaceVariant }}>{formatHora12(item.endTime)}</p>
                         </div>
 
                         {/* Dot on the line */}
@@ -235,7 +280,7 @@ export default function AdminItineraryPage() {
                             {item.type === 'appointment' && (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                 <p style={{ fontSize: '14px', color: T.onSurface }}><strong>Cliente:</strong> {item.client}</p>
-                                <p style={{ fontSize: '13px', color: `${T.onSurfaceVariant}80` }}>🕒 {item.startTime} - {item.endTime} · {item.price ? `$${item.price.toLocaleString()}` : ''}</p>
+                                <p style={{ fontSize: '13px', color: `${T.onSurfaceVariant}80` }}>🕒 {formatHora12(item.startTime)} - {formatHora12(item.endTime)} · {item.price ? `$${item.price.toLocaleString()}` : ''}</p>
                               </div>
                             )}
                             {item.type === 'block' && (
@@ -243,14 +288,22 @@ export default function AdminItineraryPage() {
                             )}
                           </div>
 
-                          <div className="itinerary-card-right" style={{ textAlign: 'right' }}>
+                          <div className="itinerary-card-right" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                              <p style={{ fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant }}>{item.duration} min</p>
                              {item.type === 'appointment' && (
                                <button 
                                  onClick={() => window.open(`https://wa.me/${item.clientPhone?.replace(/\D/g,'')}`, '_blank')}
-                                 style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', backgroundColor: '#25D366', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer', marginTop: '8px' }}
+                                 style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', backgroundColor: '#25D366', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                                >
                                  WhatsApp
+                               </button>
+                             )}
+                             {item.type === 'appointment' && item.status === 'confirmed' && (
+                               <button
+                                 onClick={() => handleComplete(item)}
+                                 style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', backgroundColor: '#22c55e', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                               >
+                                 ✓ Completar
                                </button>
                              )}
                           </div>
@@ -285,6 +338,56 @@ export default function AdminItineraryPage() {
           </div>
         )}
       </div>
+
+      {/* NOTIFICATION TOAST */}
+      {notification && (
+        <div style={{
+          position: 'fixed', top: '20px', right: '24px', zIndex: 999,
+          backgroundColor: notification.type === 'ok' ? '#22c55e' : '#ba1a1a',
+          color: '#fff', padding: '14px 24px', borderRadius: '12px',
+          fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
+        }}>
+          {notification.msg}
+        </div>
+      )}
+
+      {/* FINAL PRICE MODAL */}
+      {showPriceModal && selectedApptToComplete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '24px', color: T.primary, marginBottom: '8px' }}>¿Cuánto se cobró?</h3>
+            <p className="text-sm text-gray-500 mb-4">{selectedApptToComplete.title} · {selectedApptToComplete.client}</p>
+            <input
+              type="number"
+              value={finalPriceInput}
+              onChange={e => setFinalPriceInput(e.target.value)}
+              placeholder="Ej: 85000"
+              className="w-full border rounded-xl p-3 text-lg mb-4"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleFinalComplete()}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPriceModal(false)}
+                className="flex-1 py-3 rounded-xl border font-bold"
+                style={{ fontFamily: T.fontBody }}
+                disabled={isCompleting}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleFinalComplete}
+                className="flex-1 py-3 rounded-xl bg-green-500 text-white font-bold"
+                style={{ fontFamily: T.fontBody }}
+                disabled={isCompleting}
+              >
+                {isCompleting ? 'Procesando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

@@ -4,7 +4,7 @@ import { T } from '../lib/adminTokens';
 import { appointmentService, blockedSlotService, employeeService, availabilityService, siteConfigService } from '../services/api';
 import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Appointment, BlockedSlot, Employee, SiteConfig } from '../types';
-import { waLink, WA_MESSAGES, formatFecha, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
+import { waLink, WA_MESSAGES, formatFecha, formatHora12, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
 
 export default function AdminCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -393,10 +393,10 @@ export default function AdminCalendarPage() {
               </div>
               <a
                 href={
-                  lastAction.type === 'confirmed' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.confirmacion(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
-                    lastAction.type === 'rejected' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazoConflicto(lastAction.appt.clientName, formatFecha(lastAction.appt.date), lastAction.appt.timeSlot)) :
+                  lastAction.type === 'confirmed' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.confirmacion(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), formatHora12(lastAction.appt.timeSlot))) :
+                    lastAction.type === 'rejected' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazoConflicto(lastAction.appt.clientName, formatFecha(lastAction.appt.date), formatHora12(lastAction.appt.timeSlot))) :
                       lastAction.type === 'cancelled' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazo(lastAction.appt.clientName, formatFecha(lastAction.appt.date))) :
-                        waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.reagendamiento(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), lastAction.appt.timeSlot))
+                        waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.reagendamiento(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), formatHora12(lastAction.appt.timeSlot)))
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -543,7 +543,7 @@ export default function AdminCalendarPage() {
                               >
                                 {isFlex ? '✨ ' : (isMultiSession(a.bulkId) ? '🔗 ' : '')}
                                 {(!(a.service as any).allowSimultaneous && !isFlex) ? '' : '⚡ '}
-                                {isFlex ? 'Flexible' : a.timeSlot} {a.clientName}
+                                {isFlex ? 'Flexible' : formatHora12(a.timeSlot)} {a.clientName}
                               </div>
                             );
                           })}
@@ -619,7 +619,7 @@ export default function AdminCalendarPage() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                         <span style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 800, color: isFlex ? '#b08b00' : T.primary }}>
-                          {isFlex ? `✨ ${availabilityText}` : a.timeSlot}
+                          {isFlex ? `✨ ${availabilityText}` : formatHora12(a.timeSlot)}
                         </span>
                         {isFlex && (
                           <span style={{ fontSize: '10px', backgroundColor: '#ffdca8', color: '#623f1b', padding: '2px 8px', borderRadius: '9999px', fontWeight: 700, textTransform: 'uppercase' }}>
@@ -738,8 +738,8 @@ export default function AdminCalendarPage() {
                               let msg = "";
                               if (lastAction.type === 'confirmed') {
                                 msg = siteConfig?.mensajeConfirmacion
-                                  ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio', fecha: formatFecha(a.date), hora: a.timeSlot })
-                                  : WA_MESSAGES.confirmacion(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), a.timeSlot);
+                                  ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio', fecha: formatFecha(a.date), hora: formatHora12(a.timeSlot) })
+                                  : WA_MESSAGES.confirmacion(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), formatHora12(a.timeSlot));
                               } else if (lastAction.type === 'cancelled') {
                                 msg = siteConfig?.mensajeCancelacion
                                   ? buildMessage(siteConfig.mensajeCancelacion, { nombre: a.clientName, fecha: formatFecha(a.date) })
@@ -747,7 +747,7 @@ export default function AdminCalendarPage() {
                               } else {
                                 msg = siteConfig?.mensajeReagendamiento
                                   ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio' })
-                                  : WA_MESSAGES.reagendamiento(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), a.timeSlot);
+                                  : WA_MESSAGES.reagendamiento(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), formatHora12(a.timeSlot));
                               }
                               setWaModal({ link: waLink(a.clientPhone, msg), mensaje: msg });
                             }}
@@ -876,7 +876,7 @@ export default function AdminCalendarPage() {
                   style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}`, fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, backgroundColor: T.surfaceContainerLowest, minHeight: '46px', appearance: 'auto', boxSizing: 'border-box' }}
                 >
                   <option value="">Selecciona hora...</option>
-                  {availableSlots.map(t => <option key={t} value={t} style={{ fontFamily: T.fontBody }}>{t}</option>)}
+                  {availableSlots.map(t => <option key={t} value={t} style={{ fontFamily: T.fontBody }}>{formatHora12(t)}</option>)}
                 </select>
                 {availableSlots.length === 0 && reschForm.date && <span style={{ fontSize: '11px', color: T.error, fontFamily: T.fontBody }}>No hay disponibilidad en esta fecha</span>}
               </div>

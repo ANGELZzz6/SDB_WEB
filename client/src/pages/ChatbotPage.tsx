@@ -1,12 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { T } from '../lib/adminTokens';
-import {
-  employeeService,
-  serviceService,
-  availabilityService,
-  settingsService,
-  appointmentService
-} from '../services/api';
+import { employeeService, serviceService, availabilityService, settingsService, appointmentService } from '../services/api';
+import { formatHora12 } from '../utils/whatsappMessages';
 import type { Employee, Service, Settings } from '../types';
 
 function formatGoogleCalendarDate(dateStr: string, timeStr: string, durationMin: number) {
@@ -596,7 +591,7 @@ export default function ChatbotPage() {
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = T.primaryContainer; e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.color = T.primary; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = T.surfaceContainerLowest; e.currentTarget.style.borderColor = T.outlineVariant; e.currentTarget.style.color = T.onSurface; }}
                   >
-                    {time}
+                    {formatHora12(time)}
                   </button>
                 ))}
               </div>
@@ -713,7 +708,7 @@ export default function ChatbotPage() {
                       {item.isFlexible ? (
                         <span>✨ Horario Flexible ({flexibleAvailabilities.length} días)</span>
                       ) : (
-                        <span>{formatFancyDate(item.date)} @ {item.timeSlot}</span>
+                        <span>{formatFancyDate(item.date)} @ {formatHora12(item.timeSlot)}</span>
                       )}
                     </p>
                   </div>
@@ -822,7 +817,7 @@ export default function ChatbotPage() {
                     <div>
                       <p style={{ margin: 0, fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '14px', color: T.onSurface }}>{item.serviceName}</p>
                       <p style={{ margin: 0, fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>
-                        {item.employeeName} - {item.isFlexible ? 'Horario Flexible' : item.timeSlot}
+                        {item.employeeName} - {item.isFlexible ? 'Horario Flexible' : formatHora12(item.timeSlot)}
                       </p>
                     </div>
                     <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>
@@ -883,7 +878,7 @@ export default function ChatbotPage() {
                         <span style={{ display: 'block', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>con {item.employeeName}</span>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                           <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary }}>
-                            {item.isFlexible ? '✨ Solicitud Flexible' : `${formatFancyDate(item.date)} @ ${item.timeSlot}`}
+                            {item.isFlexible ? '✨ Solicitud Flexible' : `${formatFancyDate(item.date)} @ ${formatHora12(item.timeSlot)}`}
                           </span>
                           <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>{formatDuration(item.duration)}</span>
                         </div>

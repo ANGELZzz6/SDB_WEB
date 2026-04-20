@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { T } from '../lib/adminTokens';
 import { availabilityService, api } from '../services/api';
-import { sendApptNotification } from '../utils/whatsappMessages';
+import { sendApptNotification, formatHora12 } from '../utils/whatsappMessages';
 
 interface FlexibleAvailability {
   date: string;
@@ -138,7 +138,7 @@ export default function FlexibleConfirmationModal({ isOpen, onClose, appointment
                     {formatFlexibleDate(opt.date)}
                   </div>
                   <div style={{ fontSize: '12px', color: T.onSurfaceVariant }}>
-                    {opt.isFullDay ? '✅ Todo el día' : `🕒 ${opt.startTime} - ${opt.endTime}`}
+                    {opt.isFullDay ? '✅ Todo el día' : `🕒 ${formatHora12(opt.startTime)} - ${formatHora12(opt.endTime)}`}
                   </div>
                   <button 
                     onClick={() => setFlexForm({ ...flexForm, date: opt.date.split('T')[0] })}
@@ -192,7 +192,7 @@ export default function FlexibleConfirmationModal({ isOpen, onClose, appointment
                           transition: 'all 0.2s'
                         }}
                       >
-                        {s}
+                        {formatHora12(s)}
                       </button>
                     ))}
                   </div>
