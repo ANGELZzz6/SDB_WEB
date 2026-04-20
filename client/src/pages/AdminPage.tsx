@@ -4,7 +4,7 @@ import { T } from '../lib/adminTokens';
 import { appointmentService, employeeService, availabilityService, siteConfigService } from '../services/api';
 import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Employee, SiteConfig } from '../types';
-import { waLink, WA_MESSAGES, formatFecha, formatHora12, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
+import { waLink, WA_MESSAGES, formatFecha, formatHora12, buildMessage } from '../utils/whatsappMessages';
 
 /* ─────────────────────────────────────────────────
    Data
@@ -78,23 +78,12 @@ export default function AdminPage() {
   const [selectedApptToComplete, setSelectedApptToComplete] = useState<UIAppointment | null>(null);
   const [finalPriceInput, setFinalPriceInput] = useState<string>('');
   const [isCompleting, setIsCompleting] = useState(false);
-  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled' | 'rejected', appt: any } | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
-
-
 
   // Flexible Modal state (Refactored to shared component)
   const [showFlexModal, setShowFlexModal] = useState(false);
   const [flexTarget, setFlexTarget] = useState<UIAppointment | null>(null);
-
-  // Botón de WA desaparece después de 30 segundos
-  useEffect(() => {
-    if (lastAction) {
-      const timer = setTimeout(() => setLastAction(null), 30000);
-      return () => clearTimeout(timer);
-    }
-  }, [lastAction]);
 
   const formatISO = (d: Date | string) => {
     if (typeof d === 'string') return d.split('T')[0];
@@ -205,6 +194,8 @@ export default function AdminPage() {
     try {
       const res = await appointmentService.updateStatus(id, newStatus);
       if (res.success) {
+        const affectedAppt = pendingAppointments.find(a => a.id === id);
+
         setPendingAppointments(prev => prev.filter(a => a.id !== id));
         setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: mapStatus(newStatus) } : a));
 
@@ -217,17 +208,22 @@ export default function AdminPage() {
 
         showNotif(newStatus === 'confirmed' ? '✅ Cita confirmada' : '❌ Solicitud rechazada', newStatus === 'confirmed' ? 'ok' : 'err');
 
-        // WhatsApp notification trigger
-        const affectedAppt = pendingAppointments.find(a => a.id === id);
+        // Abrir modal WA directamente (flujo unificado, sin confirm() nativo)
         if (affectedAppt) {
-          sendApptNotification(
-            newStatus === 'confirmed' ? 'confirm' : 'reject',
-            affectedAppt,
-            siteConfig
-          );
+          let msg = '';
+          if (newStatus === 'confirmed') {
+            msg = siteConfig?.mensajeConfirmacion
+              ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: affectedAppt.client, servicio: affectedAppt.service, fecha: formatFecha(affectedAppt.date), hora: formatHora12(affectedAppt.time) })
+              : WA_MESSAGES.confirmacion(affectedAppt.client, affectedAppt.service, formatFecha(affectedAppt.date), formatHora12(affectedAppt.time));
+          } else {
+            msg = siteConfig?.mensajeRechazoConflicto
+              ? buildMessage(siteConfig.mensajeRechazoConflicto, { nombre: affectedAppt.client, fecha: formatFecha(affectedAppt.date), hora: formatHora12(affectedAppt.time) })
+              : WA_MESSAGES.rechazoConflicto(affectedAppt.client, formatFecha(affectedAppt.date), formatHora12(affectedAppt.time));
+          }
+          setWaModal({ link: waLink(affectedAppt.clientPhone, msg), mensaje: msg });
         }
 
-        fetchData(false); // Refrescar para asegurar sincronía
+        fetchData(false);
       }
     } catch (error: any) {
       if (error.response?.status === 409) {
@@ -282,8 +278,12 @@ export default function AdminPage() {
         ));
         showNotif('✅ Cita reagendada exitosamente (sigue pendiente)');
 
+        // Abrir modal WA directamente con el mensaje de reagendamiento
         const updatedAppt = { ...rescheduleTarget, date: reschForm.date, time: reschForm.timeSlot };
-        sendApptNotification('reschedule', updatedAppt, siteConfig);
+        const msg = siteConfig?.mensajeReagendamiento
+          ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: updatedAppt.client, servicio: updatedAppt.service, fecha: formatFecha(updatedAppt.date), hora: formatHora12(updatedAppt.time) })
+          : WA_MESSAGES.reagendamiento(updatedAppt.client, updatedAppt.service, formatFecha(updatedAppt.date), formatHora12(updatedAppt.time));
+        setWaModal({ link: waLink(updatedAppt.clientPhone, msg), mensaje: msg });
 
         fetchData(false);
       }
@@ -315,7 +315,11 @@ export default function AdminPage() {
         showNotif('✅ Cita marcada como completada', 'ok');
         setShowPriceModal(false);
 
-        sendApptNotification('complete', selectedApptToComplete, siteConfig);
+        // Abrir modal WA directamente con el mensaje de completado
+        const msg = siteConfig?.mensajeCompletada
+          ? buildMessage(siteConfig.mensajeCompletada, { nombre: selectedApptToComplete.client, servicio: selectedApptToComplete.service })
+          : `¡Hola ${selectedApptToComplete.client}! Gracias por visitarnos hoy para tu servicio de ${selectedApptToComplete.service}. ¡Esperamos verte pronto! 💅 — L'Élixir Salon`;
+        setWaModal({ link: waLink(selectedApptToComplete.clientPhone, msg), mensaje: msg });
 
         fetchData(false);
       }
@@ -485,55 +489,6 @@ export default function AdminPage() {
                       Rechazar
                     </button>
                   </div>
-
-                  {/* WhatsApp Success Button */}
-                  {lastAction && lastAction.id === appt.id && (
-                    <div className="mt-4 animate-fadeIn">
-                      {lastAction.type === 'confirmed' && (
-                        <button
-                          onClick={() => {
-                            const msg = siteConfig?.mensajeConfirmacion
-                              ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: appt.client, servicio: appt.service, fecha: formatFecha(appt.date), hora: formatHora12(appt.time) })
-                              : WA_MESSAGES.confirmacion(appt.client, appt.service, formatFecha(appt.date), formatHora12(appt.time));
-                            setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
-                          }}
-                          style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
-                        >
-                          📲 Enviar confirmación por WhatsApp
-                        </button>
-                      )}
-                      {(lastAction.type === 'cancelled' || lastAction.type === 'rejected') && (
-                        <button
-                          onClick={() => {
-                            const msg = lastAction.type === 'rejected' && siteConfig?.mensajeRechazoConflicto
-                              ? buildMessage(siteConfig.mensajeRechazoConflicto, { nombre: appt.client, fecha: formatFecha(appt.date), hora: formatHora12(appt.time) })
-                              : siteConfig?.mensajeCancelacion
-                                ? buildMessage(siteConfig.mensajeCancelacion, { nombre: appt.client, fecha: formatFecha(appt.date) })
-                                : lastAction.type === 'rejected'
-                                  ? WA_MESSAGES.rechazoConflicto(appt.client, formatFecha(appt.date), formatHora12(appt.time))
-                                  : WA_MESSAGES.rechazo(appt.client, formatFecha(appt.date));
-                            setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
-                          }}
-                          style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
-                        >
-                          📲 Enviar {lastAction.type === 'rejected' ? 'rechazo por conflicto' : 'cancelación'} por WhatsApp
-                        </button>
-                      )}
-                      {lastAction.type === 'rescheduled' && (
-                        <button
-                          onClick={() => {
-                            const msg = siteConfig?.mensajeReagendamiento
-                              ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: appt.client, servicio: appt.service })
-                              : WA_MESSAGES.reagendamiento(appt.client, appt.service, formatFecha(appt.date), formatHora12(appt.time));
-                            setWaModal({ link: waLink(appt.clientPhone, msg), mensaje: msg });
-                          }}
-                          style={{ backgroundColor: '#25D366', color: 'white', padding: '10px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.2)' }}
-                        >
-                          📲 Coordinar reagendamiento por WhatsApp
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
