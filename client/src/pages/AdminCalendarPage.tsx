@@ -4,7 +4,7 @@ import { T } from '../lib/adminTokens';
 import { appointmentService, blockedSlotService, employeeService, availabilityService, siteConfigService } from '../services/api';
 import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Appointment, BlockedSlot, Employee, SiteConfig } from '../types';
-import { waLink, WA_MESSAGES, formatFecha, formatHora12, buildMessage, sendApptNotification } from '../utils/whatsappMessages';
+import { waLink, WA_MESSAGES, formatFecha, formatHora12, buildMessage } from '../utils/whatsappMessages';
 
 export default function AdminCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -30,7 +30,6 @@ export default function AdminCalendarPage() {
   const [finalPriceInput, setFinalPriceInput] = useState<string>('');
   const [isCompleting, setIsCompleting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [lastAction, setLastAction] = useState<{ id: string, type: 'confirmed' | 'cancelled' | 'rescheduled' | 'rejected', appt: any } | null>(null);
   const [siteConfig, setSiteConfig] = useState<SiteConfig | null>(null);
   const [waModal, setWaModal] = useState<{ link: string, mensaje: string } | null>(null);
 
@@ -47,12 +46,6 @@ export default function AdminCalendarPage() {
     isAdmin ? 'all' : (user?.id || 'all')
   );
 
-  useEffect(() => {
-    if (lastAction) {
-      const timer = setTimeout(() => setLastAction(null), 30000);
-      return () => clearTimeout(timer);
-    }
-  }, [lastAction]);
 
   // Fetch data
   const loadData = async (showLoading = true, employeeFilter?: string) => {
@@ -211,11 +204,10 @@ export default function AdminCalendarPage() {
       setShowRescheduleModal(false);
 
       const updatedAppt = { ...rescheduleTarget, date: reschForm.date, timeSlot: reschForm.timeSlot };
+      const serviceName = typeof updatedAppt.service === 'string' ? updatedAppt.service : (updatedAppt.service as any)?.nombre || 'Servicio';
 
-      // Actualización pesimista/optimista instantánea
+      // Actualización optimista
       setAppointments(prev => prev.map(a => a._id === updatedAppt._id ? updatedAppt : a));
-
-      // Actualizar vista del modal actual (si no cambió de día se actualiza, si cambió se quita)
       if (selectedDayInfo) {
         setSelectedDayInfo({
           ...selectedDayInfo,
@@ -225,9 +217,12 @@ export default function AdminCalendarPage() {
         });
       }
 
-      sendApptNotification('reschedule', updatedAppt, siteConfig);
+      // Abrir modal WA directamente
+      const msg = siteConfig?.mensajeReagendamiento
+        ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: updatedAppt.clientName, servicio: serviceName, fecha: formatFecha(updatedAppt.date), hora: formatHora12(updatedAppt.timeSlot) })
+        : WA_MESSAGES.reagendamiento(updatedAppt.clientName, serviceName, formatFecha(updatedAppt.date), formatHora12(updatedAppt.timeSlot));
+      setWaModal({ link: waLink(updatedAppt.clientPhone, msg), mensaje: msg });
 
-      setLastAction({ id: rescheduleTarget._id, type: 'rescheduled', appt: updatedAppt });
       loadData(false);
     } catch (e: any) {
       alert(e.message || 'Error reagendando');
@@ -239,12 +234,21 @@ export default function AdminCalendarPage() {
       const res = await appointmentService.updateStatus(appt._id, newStatus);
       if (res.success) {
         const fullAppt = res.data || appt;
-        sendApptNotification(
-          newStatus === 'confirmed' ? 'confirm' : 'reject',
-          fullAppt,
-          siteConfig
-        );
-        setLastAction({ id: appt._id, type: newStatus, appt: fullAppt });
+        const serviceName = typeof fullAppt.service === 'string' ? fullAppt.service : (fullAppt.service as any)?.nombre || 'Servicio';
+
+        // Abrir modal WA directamente con el mensaje correcto
+        let msg = '';
+        if (newStatus === 'confirmed') {
+          msg = siteConfig?.mensajeConfirmacion
+            ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: fullAppt.clientName, servicio: serviceName, fecha: formatFecha(fullAppt.date), hora: formatHora12(fullAppt.timeSlot) })
+            : WA_MESSAGES.confirmacion(fullAppt.clientName, serviceName, formatFecha(fullAppt.date), formatHora12(fullAppt.timeSlot));
+        } else {
+          msg = siteConfig?.mensajeRechazoConflicto
+            ? buildMessage(siteConfig.mensajeRechazoConflicto, { nombre: fullAppt.clientName, fecha: formatFecha(fullAppt.date), hora: formatHora12(fullAppt.timeSlot) })
+            : WA_MESSAGES.rechazoConflicto(fullAppt.clientName, formatFecha(fullAppt.date), formatHora12(fullAppt.timeSlot));
+        }
+        setWaModal({ link: waLink(fullAppt.clientPhone, msg), mensaje: msg });
+
         loadData(false);
         // Actualizar localmente la vista del modal
         if (selectedDayInfo) {
@@ -266,35 +270,20 @@ export default function AdminCalendarPage() {
   };
 
   const handleCancelar = async (appt: Appointment) => {
-    // PASO 1: Confirmación de que realmente se quiere cancelar
-    const okCancelar = window.confirm(
-      `¿Confirmas que deseas cancelar la cita de ${appt.clientName}?\n\nEsta acción no se puede deshacer.`
-    );
-    if (!okCancelar) return;
-
-    // PASO 2: ¿Quién inició la cancelación?
-    // SÍ → fue el cliente (no notificar, ya lo sabe)
-    // NO → fue el salón (notificar al cliente por WhatsApp)
-    const fueElCliente = window.confirm(
-      `¿La cancelación fue solicitada por el cliente?\n\n` +
-      `✅ Aceptar  → El cliente lo solicitó (NO se enviará notificación WhatsApp)\n` +
-      `❌ Cancelar → Fue el salón (SÍ se abrirá WhatsApp para notificar al cliente)`
-    );
+    if (!window.confirm(`¿Cancelar la cita de ${appt.clientName}? Esta acción no se puede deshacer.`)) return;
 
     try {
       const res = await appointmentService.updateStatus(appt._id, 'cancelled');
       if (res.success) {
         const fullAppt = res.data || appt;
 
-        if (!fueElCliente) {
-          // El salón canceló → el cliente no lo sabe → abrir WhatsApp
-          sendApptNotification('cancel', fullAppt, siteConfig);
-        }
+        // Abrir modal WA elegante — el admin decide si enviar o no desde ahí
+        const msg = siteConfig?.mensajeCancelacion
+          ? buildMessage(siteConfig.mensajeCancelacion, { nombre: fullAppt.clientName, fecha: formatFecha(fullAppt.date) })
+          : WA_MESSAGES.rechazo(fullAppt.clientName, formatFecha(fullAppt.date));
+        setWaModal({ link: waLink(fullAppt.clientPhone, msg), mensaje: msg });
 
-        setLastAction({ id: appt._id, type: 'cancelled', appt: fullAppt });
         loadData(false);
-
-        // Actualizar localmente la vista del modal (eliminar o cambiar status)
         if (selectedDayInfo) {
           setSelectedDayInfo({
             ...selectedDayInfo,
@@ -325,9 +314,14 @@ export default function AdminCalendarPage() {
       await appointmentService.complete(selectedApptToComplete._id, { finalPrice: Number(finalPriceInput) });
       setShowPriceModal(false);
 
-      if (selectedApptToComplete) {
-        sendApptNotification('complete', selectedApptToComplete, siteConfig);
-      }
+      // Abrir modal WA directamente con agradecimiento
+      const serviceName = typeof selectedApptToComplete.service === 'string'
+        ? selectedApptToComplete.service
+        : (selectedApptToComplete.service as any)?.nombre || 'Servicio';
+      const msg = siteConfig?.mensajeCompletada
+        ? buildMessage(siteConfig.mensajeCompletada, { nombre: selectedApptToComplete.clientName, servicio: serviceName })
+        : `¡Hola ${selectedApptToComplete.clientName}! Gracias por visitarnos hoy para tu servicio de ${serviceName}. ¡Esperamos verte pronto! 💅 — L'Élixir Salon`;
+      setWaModal({ link: waLink(selectedApptToComplete.clientPhone, msg), mensaje: msg });
 
       setSelectedDayInfo(null);
       loadData(false);
@@ -373,44 +367,7 @@ export default function AdminCalendarPage() {
       <div style={{ display: 'flex', minHeight: 'calc(100vh - 72px)' }}>
         <div className="admin-calendar-container" style={{ flex: 1, maxWidth: '1000px', margin: '0 auto', paddingBottom: '64px', padding: '40px 24px', position: 'relative' }}>
 
-          {/* Floating WhatsApp Banner */}
-          {lastAction && (
-            <div style={{
-              position: 'sticky', top: '0', zIndex: 90, marginBottom: '24px',
-              backgroundColor: '#25D366', color: 'white', padding: '16px 24px',
-              borderRadius: '16px', boxShadow: '0 8px 24px rgba(37, 211, 102, 0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              fontFamily: T.fontBody, animation: 'fadeInDown 0.4s ease'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '20px' }}>📲</span>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
-                  {lastAction.type === 'confirmed' && `Cita de ${lastAction.appt.clientName} confirmada.`}
-                  {(lastAction.type === 'cancelled' || lastAction.type === 'rejected') && `Cita de ${lastAction.appt.clientName} rechazada/cancelada.`}
-                  {lastAction.type === 'rescheduled' && `Cita de ${lastAction.appt.clientName} reagendada.`}
-                  {' '}¿Enviar mensaje por WhatsApp?
-                </p>
-              </div>
-              <a
-                href={
-                  lastAction.type === 'confirmed' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.confirmacion(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), formatHora12(lastAction.appt.timeSlot))) :
-                    lastAction.type === 'rejected' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazoConflicto(lastAction.appt.clientName, formatFecha(lastAction.appt.date), formatHora12(lastAction.appt.timeSlot))) :
-                      lastAction.type === 'cancelled' ? waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.rechazo(lastAction.appt.clientName, formatFecha(lastAction.appt.date))) :
-                        waLink(lastAction.appt.clientPhone || lastAction.appt.clientName, WA_MESSAGES.reagendamiento(lastAction.appt.clientName, (lastAction.appt.service as any)?.nombre || 'Servicio', formatFecha(lastAction.appt.date), formatHora12(lastAction.appt.timeSlot)))
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  backgroundColor: 'white', color: '#25D366',
-                  padding: '8px 20px', borderRadius: '9999px',
-                  fontSize: '12px', fontWeight: 800, textDecoration: 'none',
-                  textTransform: 'uppercase', letterSpacing: '0.05em'
-                }}
-              >
-                Enviar Mensaje
-              </a>
-            </div>
-          )}
+
 
           <div className="admin-calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
@@ -730,39 +687,6 @@ export default function AdminCalendarPage() {
                       </div>
 
 
-                      {/* WhatsApp notification link inside modal */}
-                      {lastAction && lastAction.id === a._id && (
-                        <div className="animate-fadeIn" style={{ marginTop: '4px' }}>
-                          <button
-                            onClick={() => {
-                              let msg = "";
-                              if (lastAction.type === 'confirmed') {
-                                msg = siteConfig?.mensajeConfirmacion
-                                  ? buildMessage(siteConfig.mensajeConfirmacion, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio', fecha: formatFecha(a.date), hora: formatHora12(a.timeSlot) })
-                                  : WA_MESSAGES.confirmacion(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), formatHora12(a.timeSlot));
-                              } else if (lastAction.type === 'cancelled') {
-                                msg = siteConfig?.mensajeCancelacion
-                                  ? buildMessage(siteConfig.mensajeCancelacion, { nombre: a.clientName, fecha: formatFecha(a.date) })
-                                  : WA_MESSAGES.rechazo(a.clientName, formatFecha(a.date));
-                              } else {
-                                msg = siteConfig?.mensajeReagendamiento
-                                  ? buildMessage(siteConfig.mensajeReagendamiento, { nombre: a.clientName, servicio: (a.service as any)?.nombre || 'Servicio' })
-                                  : WA_MESSAGES.reagendamiento(a.clientName, (a.service as any)?.nombre || 'Servicio', formatFecha(a.date), formatHora12(a.timeSlot));
-                              }
-                              setWaModal({ link: waLink(a.clientPhone, msg), mensaje: msg });
-                            }}
-                            style={{
-                              backgroundColor: '#25D366', color: 'white', padding: '6px 12px',
-                              borderRadius: '8px', fontSize: '10px', fontWeight: 800,
-                              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
-                            }}
-                          >
-                            📲 {lastAction.type === 'confirmed' ? 'Enviar Confirmación' :
-                              lastAction.type === 'cancelled' ? 'Notificar Cancelación' :
-                                'Notificar Reagendamiento'}
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
