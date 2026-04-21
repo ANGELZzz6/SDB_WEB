@@ -462,11 +462,34 @@ export default function AdminPage() {
                     <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, margin: 0 }}>
                       👩‍🎨 {appt.specialist} · {appt.isFlexible ? 'Horario a convenir' : formatHora12(appt.time)}
                     </p>
-                    <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary, margin: 0, fontWeight: 600 }}>
-                      📅 {appt.isFlexible && appt.flexibleAvailabilities?.length 
-                          ? appt.flexibleAvailabilities.map(f => formatFecha(f.date)).join(' / ') 
-                          : formatFecha(appt.date)}
-                    </p>
+                    {appt.isFlexible && appt.flexibleAvailabilities?.length ? (
+                      <div style={{ marginTop: '8px', backgroundColor: T.surfaceContainerLowest, padding: '10px', borderRadius: '12px', border: `1px solid ${T.outlineVariant}50` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '14px' }}>📅</span>
+                          <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant }}>Fechas sugeridas:</span>
+                        </div>
+                        <div style={{ 
+                          display: 'flex', flexWrap: 'wrap', gap: '6px', 
+                          maxHeight: appt.flexibleAvailabilities.length > 5 ? '72px' : 'auto', 
+                          overflowY: appt.flexibleAvailabilities.length > 5 ? 'auto' : 'visible',
+                          paddingRight: '4px'
+                        }}>
+                          {appt.flexibleAvailabilities.map((f: any, idx: number) => (
+                            <div key={idx} style={{
+                              backgroundColor: '#FCE0D9', color: '#2d1600', 
+                              padding: '4px 10px', borderRadius: '9999px',
+                              fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700
+                            }}>
+                              {formatFecha(f.date)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary, margin: 0, fontWeight: 600, marginTop: '4px' }}>
+                        📅 {formatFecha(appt.date)}
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 w-full">
                     <button
