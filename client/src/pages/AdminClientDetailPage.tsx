@@ -21,6 +21,7 @@ interface ClientStats {
 interface AppointmentHistory {
   _id: string;
   date: string;
+  clientName: string;
   serviceName: string;
   employeeName: string;
   status: string;
@@ -247,6 +248,11 @@ export default function AdminClientDetailPage() {
                   <tr key={a._id} style={{ borderTop: `1px solid ${T.surfaceContainerLow}`, transition: 'background 0.2s' }}>
                     <td style={{ padding: '20px 32px' }}>
                       <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 600, color: T.onSurface, margin: 0 }}>{formatDate(a.date)}</p>
+                      {a.clientName && a.clientName !== data?.client?.name && (
+                        <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, margin: '4px 0 0', fontStyle: 'italic' }}>
+                          Agendado como: {a.clientName}
+                        </p>
+                      )}
                     </td>
                     <td style={{ padding: '20px 32px' }}>
                       <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, margin: 0 }}>{a.serviceName}</p>

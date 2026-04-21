@@ -463,7 +463,9 @@ export default function AdminPage() {
                       👩‍🎨 {appt.specialist} · {appt.isFlexible ? 'Horario a convenir' : formatHora12(appt.time)}
                     </p>
                     <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.primary, margin: 0, fontWeight: 600 }}>
-                      📅 {formatFecha(appt.date)}
+                      📅 {appt.isFlexible && appt.flexibleAvailabilities?.length 
+                          ? appt.flexibleAvailabilities.map(f => formatFecha(f.date)).join(' / ') 
+                          : formatFecha(appt.date)}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 w-full">
@@ -474,13 +476,15 @@ export default function AdminPage() {
                     >
                       {appt.isFlexible ? 'Agendar' : 'Confirmar'}
                     </button>
-                    <button
-                      onClick={() => openReschedule(appt)}
-                      className="text-[13px] font-bold py-2.5 px-3 rounded-xl text-center transition-all active:scale-95 shadow-sm"
-                      style={{ backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, border: 'none', cursor: 'pointer', fontFamily: T.fontBody }}
-                    >
-                      Reagendar
-                    </button>
+                    {!appt.isFlexible && (
+                      <button
+                        onClick={() => openReschedule(appt)}
+                        className="text-[13px] font-bold py-2.5 px-3 rounded-xl text-center transition-all active:scale-95 shadow-sm"
+                        style={{ backgroundColor: T.secondaryContainer, color: T.onSecondaryContainer, border: 'none', cursor: 'pointer', fontFamily: T.fontBody }}
+                      >
+                        Reagendar
+                      </button>
+                    )}
                     <button
                       onClick={() => handleAction(appt.id, 'rejected')}
                       className="text-[13px] font-bold py-2.5 px-3 rounded-xl text-center transition-all active:scale-95 shadow-sm"

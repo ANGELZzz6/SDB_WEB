@@ -302,6 +302,7 @@ export default function ChatbotPage() {
       const pHasta = hasta ? formatter.format(hasta).replace(',00', '') : '';
       return `${pDesde} - ${pHasta}`;
     }
+    if (!precio || precio === 0) return 'Previa consulta';
     return formatter.format(precio || 0).replace(',00', '');
   };
 
@@ -310,6 +311,26 @@ export default function ChatbotPage() {
     const [y, m, d] = isoStr.split('-');
     const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     return dateObj.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+  const handleBack = () => {
+    if (step === 1) {
+      if (cart.length > 0) setStep(4.5);
+      else setStep(0);
+    } else if (step === 4.5) {
+      if (cart.length > 0) {
+        const newCart = [...cart];
+        newCart.pop();
+        setCart(newCart);
+        setStep(4);
+      } else {
+        setStep(0);
+      }
+    } else if (step === 5) {
+      setStep(4.5);
+    } else {
+      setStep(step - 1);
+    }
   };
 
   if (loadingInitial) {
@@ -325,9 +346,9 @@ export default function ChatbotPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 10 
       }}>
-        {step > 1 && step < 6 ? (
+        {step > 0 && step < 6 ? (
           <button 
-            onClick={() => setStep(step - 1)}
+            onClick={handleBack}
             style={{ 
               background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px', color: T.onSurfaceVariant 
             }}

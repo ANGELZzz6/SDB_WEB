@@ -231,6 +231,7 @@ exports.getOne = async (req, res) => {
       appointments: appointments.map(a => ({
         _id: a._id,
         date: a.date,
+        clientName: a.clientName || 'Cliente sin nombre',
         serviceName: a.service?.nombre || 'Servicio eliminado',
         employeeName: a.employee?.nombre || 'Especialista',
         status: a.status,

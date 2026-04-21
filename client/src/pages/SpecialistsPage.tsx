@@ -173,6 +173,19 @@ export default function SpecialistsPage() {
     });
   }, []);
 
+  const renderPriceInfo = (svc: any) => {
+    const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' });
+    const pType = svc.precioTipo || 'fijo';
+    if (pType === 'consultar') return 'Consultar precio';
+    if (pType === 'rango') {
+      const pDesde = svc.precioDesde ? formatter.format(svc.precioDesde).replace(',00', '') : '';
+      const pHasta = svc.precioHasta ? formatter.format(svc.precioHasta).replace(',00', '') : '';
+      return `${pDesde} - ${pHasta}`;
+    }
+    if (!svc.precio || svc.precio === 0) return 'Previa consulta';
+    return formatter.format(svc.precio || 0).replace(',00', '');
+  };
+
   return (
     <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, overflowX: 'hidden' }}>
       <style>{`
@@ -341,7 +354,7 @@ export default function SpecialistsPage() {
                             <span style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface }}>{s.nombre}</span>
                           </div>
                           <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '14px', color: T.primary, fontWeight: 700 }}>
-                            ${(s.precio || 0).toLocaleString()}
+                            {renderPriceInfo(s)}
                           </span>
                         </li>
                       )) : (

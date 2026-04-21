@@ -124,6 +124,7 @@ export default function LandingPage() {
       const pHasta = svc.precioHasta ? formatter.format(svc.precioHasta).replace(',00', '') : '';
       return `${pDesde} - ${pHasta}`;
     }
+    if (!svc.precio || svc.precio === 0) return 'Previa consulta';
     return formatter.format(svc.precio || 0).replace(',00', '');
   };
 

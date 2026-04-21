@@ -146,7 +146,7 @@ export default function AdminCalendarPage() {
       if (!blockForm.isFullDay) {
         // Siempre enviamos rango (startTime + endTime). El backend lo maneja.
         payload.startTime = blockForm.startTime;
-        payload.endTime   = blockForm.endTime;
+        payload.endTime = blockForm.endTime;
       }
 
       await blockedSlotService.create(payload);
