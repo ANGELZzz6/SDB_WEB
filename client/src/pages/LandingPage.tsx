@@ -717,7 +717,7 @@ export default function LandingPage() {
                            <span style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.primary, flexShrink: 0 }} />
                            <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.nombre}</span>
                         </div>
-                        <span style={{ fontWeight: 700, color: T.primary, flexShrink: 0 }}>${(s.precio || 0).toLocaleString()}</span>
+                        <span style={{ fontWeight: 700, color: T.primary, flexShrink: 0 }}>{renderPriceInfo(s)}</span>
                       </li>
                     )) : (
                       <li style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, opacity: 0.6, fontStyle: 'italic' }}>
