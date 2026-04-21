@@ -151,7 +151,7 @@ export default function AdminPage() {
 
       if (apptsRes.success && apptsRes.data) {
         const mapped = apptsRes.data.map(mapAppt);
-        mapped.sort((x: UIAppointment, y: UIAppointment) => x.time.localeCompare(y.time));
+        mapped.sort((x: UIAppointment, y: UIAppointment) => (x.time || "").localeCompare(y.time || ""));
         setAppointments(mapped);
       }
 
