@@ -700,18 +700,32 @@ export default function LandingPage() {
 
                 {/* Body */}
                 <div style={{ padding: '28px 32px 32px' }}>
-                  <span style={{
-                    fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.12em',
-                    backgroundColor: T.primaryFixed, color: T.primary,
-                    padding: '5px 14px', borderRadius: '9999px',
-                    display: 'inline-block', marginBottom: '20px',
-                  }}>
-                    {(emp.especialidades?.[0]) || 'Beauty Expert'}
-                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '20px' }}>
+                    {emp.especialidades && emp.especialidades.length > 0 ? emp.especialidades.map((esp: string, idx: number) => (
+                      <span key={idx} style={{
+                        fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.12em',
+                        backgroundColor: T.primaryFixed, color: T.primary,
+                        padding: '5px 14px', borderRadius: '9999px',
+                        display: 'inline-block',
+                      }}>
+                        {esp}
+                      </span>
+                    )) : (
+                      <span style={{
+                        fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.12em',
+                        backgroundColor: T.primaryFixed, color: T.primary,
+                        padding: '5px 14px', borderRadius: '9999px',
+                        display: 'inline-block',
+                      }}>
+                        Beauty Expert
+                      </span>
+                    )}
+                  </div>
 
                   <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '28px', minHeight: '100px' }}>
-                    {emp.servicios && emp.servicios.length > 0 ? (emp.servicios as any).slice(0, 4).map((s: any) => (
+                    {emp.servicios && (emp.servicios as any).filter((s:any) => s.isActive !== false).length > 0 ? (emp.servicios as any).filter((s:any) => s.isActive !== false).slice(0, 4).map((s: any) => (
                       <li key={s._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
                            <span style={{ width: '4px', height: '4px', borderRadius: '9999px', backgroundColor: T.primary, flexShrink: 0 }} />

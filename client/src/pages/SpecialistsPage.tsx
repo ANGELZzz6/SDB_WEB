@@ -329,7 +329,7 @@ export default function SpecialistsPage() {
                       </p>
                       {/* Specialty pills */}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                        {(emp.especialidades || []).slice(0, 3).map((s) => (
+                        {(emp.especialidades || []).map((s) => (
                           <span key={s} style={{
                             fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700,
                             textTransform: 'uppercase', letterSpacing: '0.1em',
@@ -347,7 +347,7 @@ export default function SpecialistsPage() {
                       Servicios Destacados
                     </h3>
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0', minHeight: '120px' }}>
-                      {emp.servicios && emp.servicios.length > 0 ? (emp.servicios as any).map((s: any) => (
+                      {emp.servicios && (emp.servicios as any).filter((s:any) => s.isActive !== false).length > 0 ? (emp.servicios as any).filter((s:any) => s.isActive !== false).map((s: any) => (
                         <li key={s._id} className="service-row">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '9999px', backgroundColor: T.primaryFixedDim, flexShrink: 0 }} />
