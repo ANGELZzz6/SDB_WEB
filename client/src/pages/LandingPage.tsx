@@ -516,20 +516,6 @@ export default function LandingPage() {
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                 )}
-                {/* Glassmorphism badge on image */}
-                <div style={{
-                  position: 'absolute', bottom: '32px', left: '32px',
-                  padding: '20px 24px',
-                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                  backgroundColor: 'rgba(255,255,255,0.45)',
-                  borderRadius: '20px', border: '1px solid rgba(255,255,255,0.3)',
-                  maxWidth: '200px',
-                }}>
-                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>✨</div>
-                  <p style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 500, color: T.onSurface, lineHeight: 1.5 }}>
-                    Tratamientos exclusivos con productos de alta gama.
-                  </p>
-                </div>
               </div>
 
               {/* Floating circular image — desktop only */}

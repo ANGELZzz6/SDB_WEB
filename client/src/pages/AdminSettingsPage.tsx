@@ -553,9 +553,16 @@ export default function AdminSettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin imagen</div>
                       )}
                     </div>
-                    <button type="button" onClick={() => openCloudinary('heroImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
-                      {siteConfig.heroImagenUrl ? 'Reemplazar Imagen' : 'Subir Imagen'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => openCloudinary('heroImagenUrl')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                        {siteConfig.heroImagenUrl ? 'Reemplazar' : 'Subir Imagen'}
+                      </button>
+                      {siteConfig.heroImagenUrl && (
+                        <button type="button" onClick={() => handleCmsChange('heroImagenUrl', '')} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: '#ffebee', color: '#c62828', cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                          Quitar
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <FieldLabel>Video Hero (Secuencial)</FieldLabel>
@@ -566,9 +573,16 @@ export default function AdminSettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin video</div>
                       )}
                     </div>
-                    <button type="button" onClick={() => openCloudinary('heroVideoUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
-                      {siteConfig.heroVideoUrl ? 'Reemplazar Video' : 'Subir Video'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => openCloudinary('heroVideoUrl')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                        {siteConfig.heroVideoUrl ? 'Reemplazar' : 'Subir Video'}
+                      </button>
+                      {siteConfig.heroVideoUrl && (
+                        <button type="button" onClick={() => handleCmsChange('heroVideoUrl', '')} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: '#ffebee', color: '#c62828', cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                          Quitar
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <FieldLabel>Imagen Fondo / Textura</FieldLabel>
@@ -579,9 +593,16 @@ export default function AdminSettingsPage() {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>Sin imagen</div>
                       )}
                     </div>
-                    <button type="button" onClick={() => openCloudinary('fondoImagenUrl')} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
-                      {siteConfig.fondoImagenUrl ? 'Reemplazar Fondo' : 'Subir Fondo'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button type="button" onClick={() => openCloudinary('fondoImagenUrl')} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}`, background: T.surface, cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                        {siteConfig.fondoImagenUrl ? 'Reemplazar' : 'Subir Fondo'}
+                      </button>
+                      {siteConfig.fondoImagenUrl && (
+                        <button type="button" onClick={() => handleCmsChange('fondoImagenUrl', '')} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: '#ffebee', color: '#c62828', cursor: 'pointer', fontFamily: T.fontBody, fontWeight: 700, fontSize: '12px' }}>
+                          Quitar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
