@@ -862,7 +862,7 @@ export default function LandingPage() {
           </div>
 
           {/* Mapa Embebido */}
-          {config?.mapaUrl && config.mapaUrl.startsWith('https://') && (
+          {config?.mapaUrl && config.mapaUrl.startsWith('https://') && config.mapaUrl.includes('embed') && (
             <div style={{ marginTop: '64px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', backgroundColor: 'rgba(255,255,255,0.05)' }}>
               <iframe
                 src={config.mapaUrl}

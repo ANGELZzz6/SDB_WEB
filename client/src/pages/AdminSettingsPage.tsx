@@ -433,12 +433,21 @@ export default function AdminSettingsPage() {
                     <UnderlineInput value={siteConfig.direccion} onChange={(v) => handleCmsChange('direccion', v)} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant, marginBottom: '6px' }}>Enlace del Mapa (Google Maps Embed URL)</label>
+                    <label style={{ display: 'block', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant, marginBottom: '4px' }}>Enlace del Mapa (Google Maps Embed URL)</label>
+                    <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginBottom: '8px', lineHeight: 1.4 }}>
+                      ⚠️ No uses el enlace normal del navegador. En Google Maps, haz clic en <b>Compartir &gt; Insertar un mapa</b> y copia SÓLO el enlace que está dentro de <code>src="..."</code>.<br/>
+                      (Debe empezar por <i>https://www.google.com/maps/embed...</i>)
+                    </p>
                     <UnderlineInput 
                       value={siteConfig.mapaUrl || ''} 
                       onChange={(v) => handleCmsChange('mapaUrl', v)} 
                       placeholder="https://www.google.com/maps/embed?..."
                     />
+                    {siteConfig.mapaUrl && !siteConfig.mapaUrl.includes('embed') && (
+                      <p style={{ color: '#d32f2f', fontSize: '11px', marginTop: '6px', fontWeight: 600 }}>
+                        ❌ Este enlace no funcionará. Sigue las instrucciones de arriba para obtener el enlace "Insertar un mapa".
+                      </p>
+                    )}
                   </div>
                   <div className="md:col-span-2">
                     <FieldLabel>Horario de Atención (Texto)</FieldLabel>
