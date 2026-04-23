@@ -105,6 +105,7 @@ export default function AdminSettingsPage() {
     whatsapp: '',
     direccion: '',
     horario: '',
+    mapaUrl: '',
     instagram: '',
     facebook: '',
     whatsappLink: '',
