@@ -7,6 +7,10 @@ const SiteConfigSchema = new mongoose.Schema({
   whatsapp: { type: String, default: "3000000000" },
   direccion: { type: String, default: "Calle Falsa 123, Bogotá" },
   horario: { type: String, default: "Lun-Sab 9am-7pm" },
+  mapaUrl: { 
+    type: String, 
+    default: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d127248.88277259163!2d-74.15077271444158!3d4.678125867915575!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9bfd2da6cb29%3A0x239d635520a33914!2sBogot%C3%A1!5e0!3m2!1ses!2sco!4v1713459144865!5m2!1ses!2sco" 
+  },
 
   // Redes sociales
   instagram: { type: String, default: "elixirsulon" },

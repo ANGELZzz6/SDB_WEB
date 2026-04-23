@@ -431,6 +431,14 @@ export default function AdminSettingsPage() {
                     <FieldLabel>Dirección Física</FieldLabel>
                     <UnderlineInput value={siteConfig.direccion} onChange={(v) => handleCmsChange('direccion', v)} />
                   </div>
+                  <div>
+                    <label style={{ display: 'block', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant, marginBottom: '6px' }}>Enlace del Mapa (Google Maps Embed URL)</label>
+                    <UnderlineInput 
+                      value={siteConfig.mapaUrl || ''} 
+                      onChange={(v) => handleCmsChange('mapaUrl', v)} 
+                      placeholder="https://www.google.com/maps/embed?..."
+                    />
+                  </div>
                   <div className="md:col-span-2">
                     <FieldLabel>Horario de Atención (Texto)</FieldLabel>
                     <UnderlineTextarea value={siteConfig.horario} onChange={(v) => handleCmsChange('horario', v)} rows={2} />

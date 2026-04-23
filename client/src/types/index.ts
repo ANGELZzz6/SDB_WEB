@@ -105,6 +105,7 @@ export interface SiteConfig {
   whatsapp: string
   direccion: string
   horario: string
+  mapaUrl: string
   instagram: string
   facebook: string
   whatsappLink: string

@@ -861,6 +861,22 @@ export default function LandingPage() {
             </div>
           </div>
 
+          {/* Mapa Embebido */}
+          {config?.mapaUrl && config.mapaUrl.startsWith('https://') && (
+            <div style={{ marginTop: '64px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+              <iframe
+                src={config.mapaUrl}
+                width="100%"
+                height="400"
+                style={{ border: 0, display: 'block', minHeight: '350px' }}
+                allowFullScreen={true}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Ubicación del salón"
+              ></iframe>
+            </div>
+          )}
+
         </div>
       </section>
 
