@@ -555,6 +555,29 @@ export default function LandingPage() {
                 borderRadius: '9999px', border: `2px solid ${T.primaryFixed}`,
                 opacity: 0.6,
               }} />
+
+              {/* Botón Ver Ubicación (Debajo de la imagen) */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '40px', position: 'relative', zIndex: 10 }}>
+                <button
+                  onClick={() => document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' })}
+                  style={{
+                    fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.1em',
+                    backgroundColor: 'rgba(255,255,255,0.8)', color: T.primary,
+                    padding: '14px 32px', borderRadius: '9999px',
+                    border: `1px solid ${T.primaryFixed}`, cursor: 'pointer',
+                    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+                    boxShadow: '0 8px 24px rgba(148,69,85,0.08)',
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    transition: 'all 0.3s'
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.backgroundColor = T.primaryFixed; e.currentTarget.style.boxShadow = '0 12px 28px rgba(148,69,85,0.15)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.8)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(148,69,85,0.08)'; }}
+                >
+                  <MapPin style={{ width: '16px', height: '16px' }} /> Ver Ubicación
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
