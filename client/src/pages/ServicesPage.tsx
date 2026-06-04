@@ -107,6 +107,7 @@ export default function ServicesPage() {
 
   const navLinks = [
     { label: 'Servicios', path: '/servicios' },
+    { label: 'Productos', path: '/productos' },
     { label: 'Especialistas', path: '/especialistas' },
     { label: 'Galería', path: '/galeria' },
   ];

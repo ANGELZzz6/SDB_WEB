@@ -43,6 +43,7 @@ function Navbar({ navigate, location, salonName }: { navigate: ReturnType<typeof
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const links = [
     { label: 'Servicios', path: '/servicios' },
+    { label: 'Productos', path: '/productos' },
     { label: 'Especialistas', path: '/especialistas' },
     { label: 'Galería', path: '/galeria' },
   ];

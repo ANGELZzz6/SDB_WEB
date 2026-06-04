@@ -86,7 +86,7 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cmsTab, setCmsTab] = useState<'negocio' | 'redes' | 'textos' | 'imagenes' | 'colores' | 'whatsapp'>('negocio');
-  
+
   const [settings, setSettings] = useState<Settings>({
     _id: '',
     businessName: '',
@@ -187,7 +187,7 @@ export default function AdminSettingsPage() {
     try {
       setSaving(true);
       const promises = [];
-      
+
       if (hasChanges) {
         promises.push(settingsService.update(settings));
       }
@@ -196,7 +196,7 @@ export default function AdminSettingsPage() {
       }
 
       const results = await Promise.all(promises);
-      
+
       // Check if all were successful
       const allSuccess = results.every(r => r.success);
       if (allSuccess) {
@@ -263,7 +263,7 @@ export default function AdminSettingsPage() {
     return (
       <AdminLayout searchPlaceholder="Buscar ajustes...">
         <div style={{ padding: '64px', textAlign: 'center', color: T.onSurfaceVariant }}>
-           Cargando configuración...
+          Cargando configuración...
         </div>
       </AdminLayout>
     );
@@ -304,7 +304,7 @@ export default function AdminSettingsPage() {
           <SectionCard>
             <SectionTitle icon="🏪" title="Operación del Negocio" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              
+
               <div>
                 <FieldLabel>Días Máximos de Reserva Adelantada</FieldLabel>
                 <UnderlineInput value={settings.maxDaysInAdvance} onChange={(v) => handleChange('maxDaysInAdvance', Number(v))} type="number" />
@@ -313,14 +313,14 @@ export default function AdminSettingsPage() {
               <div>
                 <FieldLabel>Horarios Generales de Atención</FieldLabel>
                 <div className="settings-inner-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '8px' }}>
-                   <div>
-                      <FieldLabel>Hora Apertura</FieldLabel>
-                      <UnderlineInput type="time" value={settings.businessHours.inicio} onChange={(v) => handleNestedChange('businessHours', 'inicio', v)} />
-                   </div>
-                   <div>
-                      <FieldLabel>Hora Cierre</FieldLabel>
-                      <UnderlineInput type="time" value={settings.businessHours.fin} onChange={(v) => handleNestedChange('businessHours', 'fin', v)} />
-                   </div>
+                  <div>
+                    <FieldLabel>Hora Apertura</FieldLabel>
+                    <UnderlineInput type="time" value={settings.businessHours.inicio} onChange={(v) => handleNestedChange('businessHours', 'inicio', v)} />
+                  </div>
+                  <div>
+                    <FieldLabel>Hora Cierre</FieldLabel>
+                    <UnderlineInput type="time" value={settings.businessHours.fin} onChange={(v) => handleNestedChange('businessHours', 'fin', v)} />
+                  </div>
                 </div>
               </div>
 
@@ -378,7 +378,7 @@ export default function AdminSettingsPage() {
           {/* CMS SECTION — PERSONALIZACIÓN */}
           <SectionCard style={{ marginTop: '16px' }}>
             <SectionTitle icon="🎨" title="Personalización del Sitio" />
-            
+
             {/* CMS Tabs */}
             <div className="cms-tabs-container" style={{ display: 'flex', gap: '8px', marginBottom: '32px', borderBottom: `1px solid ${T.outlineVariant}20`, paddingBottom: '12px' }}>
               {[
@@ -412,7 +412,7 @@ export default function AdminSettingsPage() {
             </div>
 
             <div className="settings-inner-grid">
-              
+
               {/* TAB 1: NEGOCIO */}
               <div style={{ display: cmsTab === 'negocio' ? 'block' : 'none', width: '100%' }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
@@ -435,12 +435,12 @@ export default function AdminSettingsPage() {
                   <div>
                     <label style={{ display: 'block', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant, marginBottom: '4px' }}>Enlace del Mapa (Google Maps Embed URL)</label>
                     <p style={{ fontSize: '11px', color: T.onSurfaceVariant, marginBottom: '8px', lineHeight: 1.4 }}>
-                      ⚠️ No uses el enlace normal del navegador. En Google Maps, haz clic en <b>Compartir &gt; Insertar un mapa</b> y copia SÓLO el enlace que está dentro de <code>src="..."</code>.<br/>
+                      ⚠️ No uses el enlace normal del navegador. En Google Maps, haz clic en <b>Compartir &gt; Insertar un mapa</b> y copia SÓLO el enlace que está dentro de <code>src="..."</code>.<br />
                       (Debe empezar por <i>https://www.google.com/maps/embed...</i>)
                     </p>
-                    <UnderlineInput 
-                      value={siteConfig.mapaUrl || ''} 
-                      onChange={(v) => handleCmsChange('mapaUrl', v)} 
+                    <UnderlineInput
+                      value={siteConfig.mapaUrl || ''}
+                      onChange={(v) => handleCmsChange('mapaUrl', v)}
                       placeholder="https://www.google.com/maps/embed?..."
                     />
                     {siteConfig.mapaUrl && !siteConfig.mapaUrl.includes('embed') && (
@@ -459,7 +459,7 @@ export default function AdminSettingsPage() {
                     <p style={{ fontSize: '13px', color: T.onSurfaceVariant, marginBottom: '24px', marginTop: '-16px' }}>
                       Define el rango de horas en que los clientes pueden agendar citas
                     </p>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                       <div>
                         <FieldLabel>Hora de Apertura</FieldLabel>
@@ -471,8 +471,8 @@ export default function AdminSettingsPage() {
                       </div>
                       <div>
                         <FieldLabel>Duración de cada Turno (Slot)</FieldLabel>
-                        <UnderlineSelect 
-                          value={siteConfig.duracionSlot || 30} 
+                        <UnderlineSelect
+                          value={siteConfig.duracionSlot || 30}
                           onChange={(v) => handleCmsChange('duracionSlot', Number(v))}
                           options={[
                             { value: 15, label: '15 minutos' },
@@ -483,7 +483,7 @@ export default function AdminSettingsPage() {
                         />
                       </div>
                     </div>
-                    
+
                     <p style={{ fontSize: '12px', color: T.onSurfaceVariant, marginTop: '20px', fontStyle: 'italic', opacity: 0.8 }}>
                       ⚠️ Estos cambios afectan la generación de turnos disponibles. Las citas ya agendadas no se verán afectadas.
                     </p>
@@ -627,8 +627,8 @@ export default function AdminSettingsPage() {
 
                   <FieldLabel>Vista previa de marca</FieldLabel>
                   <div style={{ padding: '24px', borderRadius: '16px', backgroundColor: siteConfig.colorAcento, border: `1px solid ${T.outlineVariant}20`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                     <h4 style={{ color: siteConfig.colorSecundario, fontFamily: T.fontHeadline, fontSize: '24px', margin: 0 }}>{siteConfig.nombreSalon}</h4>
-                     <button type="button" style={{ backgroundColor: siteConfig.colorPrimario, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700 }}>{siteConfig.heroBotonTexto}</button>
+                    <h4 style={{ color: siteConfig.colorSecundario, fontFamily: T.fontHeadline, fontSize: '24px', margin: 0 }}>{siteConfig.nombreSalon}</h4>
+                    <button type="button" style={{ backgroundColor: siteConfig.colorPrimario, color: 'white', border: 'none', padding: '12px 24px', borderRadius: '9999px', fontFamily: T.fontBody, fontWeight: 700 }}>{siteConfig.heroBotonTexto}</button>
                   </div>
                 </div>
               </div>
@@ -639,7 +639,7 @@ export default function AdminSettingsPage() {
                   <div style={{ backgroundColor: T.surfaceContainerHighest + '40', padding: '20px', borderRadius: '16px', borderLeft: `4px solid ${T.primary}` }}>
                     <p style={{ fontSize: '13px', color: T.onSurface, fontWeight: 700, marginBottom: '8px' }}>🚀 Potencia tus mensajes con variables</p>
                     <p style={{ fontSize: '12px', color: T.onSurfaceVariant, lineHeight: '1.5' }}>
-                      Copia y pega estos comodines en tus plantillas para personalizarlos automáticamente:<br/>
+                      Copia y pega estos comodines en tus plantillas para personalizarlos automáticamente:<br />
                       <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px', marginRight: '4px' }}>{'{nombre}'}</code>
                       <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px', marginRight: '4px' }}>{'{servicio}'}</code>
                       <code style={{ background: T.surfaceVariant, padding: '2px 6px', borderRadius: '4px', marginRight: '4px' }}>{'{fecha}'}</code>
@@ -651,9 +651,9 @@ export default function AdminSettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
                       <FieldLabel>✅ Mensaje de Confirmación</FieldLabel>
-                      <UnderlineTextarea 
-                        value={siteConfig.mensajeConfirmacion} 
-                        onChange={(v) => handleCmsChange('mensajeConfirmacion', v)} 
+                      <UnderlineTextarea
+                        value={siteConfig.mensajeConfirmacion}
+                        onChange={(v) => handleCmsChange('mensajeConfirmacion', v)}
                         rows={3}
                         placeholder={WA_MESSAGES.confirmacion('{nombre}', '{servicio}', '{fecha}', '{hora}')}
                       />
@@ -662,9 +662,9 @@ export default function AdminSettingsPage() {
 
                     <div>
                       <FieldLabel>🕒 Mensaje de Reagendamiento</FieldLabel>
-                      <UnderlineTextarea 
-                        value={siteConfig.mensajeReagendamiento} 
-                        onChange={(v) => handleCmsChange('mensajeReagendamiento', v)} 
+                      <UnderlineTextarea
+                        value={siteConfig.mensajeReagendamiento}
+                        onChange={(v) => handleCmsChange('mensajeReagendamiento', v)}
                         rows={3}
                         placeholder={WA_MESSAGES.reagendamiento('{nombre}', '{servicio}', '{fecha}', '{hora}')}
                       />
@@ -673,9 +673,9 @@ export default function AdminSettingsPage() {
 
                     <div>
                       <FieldLabel>✕ Mensaje de Cancelación</FieldLabel>
-                      <UnderlineTextarea 
-                        value={siteConfig.mensajeCancelacion} 
-                        onChange={(v) => handleCmsChange('mensajeCancelacion', v)} 
+                      <UnderlineTextarea
+                        value={siteConfig.mensajeCancelacion}
+                        onChange={(v) => handleCmsChange('mensajeCancelacion', v)}
                         rows={3}
                         placeholder={WA_MESSAGES.rechazo('{nombre}', '{fecha}')}
                       />
@@ -684,9 +684,9 @@ export default function AdminSettingsPage() {
 
                     <div>
                       <FieldLabel>⚠️ Mensaje de Rechazo por Conflicto</FieldLabel>
-                      <UnderlineTextarea 
-                        value={siteConfig.mensajeRechazoConflicto} 
-                        onChange={(v) => handleCmsChange('mensajeRechazoConflicto', v)} 
+                      <UnderlineTextarea
+                        value={siteConfig.mensajeRechazoConflicto}
+                        onChange={(v) => handleCmsChange('mensajeRechazoConflicto', v)}
                         rows={3}
                         placeholder="Lo sentimos {nombre}, el espacio para {fecha} a las {hora} ya no está disponible..."
                       />
@@ -695,9 +695,9 @@ export default function AdminSettingsPage() {
 
                     <div className="md:col-span-2">
                       <FieldLabel>✨ Mensaje de Cita Finalizada (Completada)</FieldLabel>
-                      <UnderlineTextarea 
-                        value={siteConfig.mensajeCompletada} 
-                        onChange={(v) => handleCmsChange('mensajeCompletada', v)} 
+                      <UnderlineTextarea
+                        value={siteConfig.mensajeCompletada}
+                        onChange={(v) => handleCmsChange('mensajeCompletada', v)}
                         rows={3}
                         placeholder="¡Hola {nombre}! Gracias por visitarnos hoy..."
                       />

@@ -20,6 +20,11 @@ import AdminItineraryPage from './pages/AdminItineraryPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalWakeUp from './components/GlobalWakeUp';
+import ProductsPage from './pages/ProductsPage';
+import ProductDetailPage from './pages/ProductDetailPage';
+import AdminProductsPage from './pages/AdminProductsPage';
+import AdminProductDetailPage from './pages/AdminProductDetailPage';
+import AdminProductFormPage from './pages/AdminProductFormPage';
 import './index.css';
 
 function App() {
@@ -33,6 +38,8 @@ function App() {
         <Route path="/especialistas" element={<SpecialistsPage />} />
         <Route path="/galeria" element={<GalleryPage />} />
         <Route path="/chatbot" element={<ChatbotPage />} />
+        <Route path="/productos" element={<ProductsPage />} />
+        <Route path="/productos/:id" element={<ProductDetailPage />} />
 
         {/* Admin Login */}
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -72,6 +79,13 @@ function App() {
 
         <Route element={<ProtectedRoute requiredPermission="liquidaciones" />}>
           <Route path="/admin/liquidaciones" element={<AdminLiquidacionesPage />} />
+        </Route>
+
+        <Route element={<ProtectedRoute requiredPermission="productos" />}>
+          <Route path="/admin/productos" element={<AdminProductsPage />} />
+          <Route path="/admin/productos/nuevo" element={<AdminProductFormPage />} />
+          <Route path="/admin/productos/editar/:id" element={<AdminProductFormPage />} />
+          <Route path="/admin/productos/:id" element={<AdminProductDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

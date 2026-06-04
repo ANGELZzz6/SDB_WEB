@@ -1,0 +1,2045 @@
+================================================================================
+CÓDIGOS DE PANTALLAS DE GOOGLE STITCH - SECCIÓN PRODUCTOS
+================================================================================
+Instrucciones:
+1. Pega aquí el código de cada pantalla exportada desde Google Stitch.
+2. Identifica claramente el nombre de cada pantalla usando cabeceras como [PANTALLA: Nombre de la pantalla].
+3. Indica si corresponde a la vista de "Usuario" (Cliente) o de "Administrador" (Admin).
+4. Recuerda que priorizaremos la vista mobile (Mobile-First).
+
+--------------------------------------------------------------------------------
+[EJEMPLO]
+[PANTALLA: CatalogoProductosUsuario - Vista Cliente (Mobile)]
+// Pega aquí el código o la estructura HTML/JS/CSS de la pantalla
+--------------------------------------------------------------------------------
+
+[Pega tus pantallas abajo de esta línea]
+================================================================================
+pantalla usaurio_catalogo_productos
+
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
+<title>Velvet &amp; Bloom - Apothecary Collection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#3e0215",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#ffdcbf",
+                        "on-secondary-container": "#7a532e",
+                        "on-tertiary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#f0bd8f",
+                        "tertiary-fixed-dim": "#ecbbba",
+                        "surface-variant": "#e6e2df",
+                        "on-surface": "#1c1b1a",
+                        "on-tertiary-container": "#523132",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#f8f3f0",
+                        "surface-container": "#f2edea",
+                        "primary": "#944555",
+                        "inverse-primary": "#ffb2be",
+                        "tertiary": "#7b5455",
+                        "outline-variant": "#d9c1c3",
+                        "on-background": "#1c1b1a",
+                        "on-surface-variant": "#534245",
+                        "tertiary-container": "#c79999",
+                        "on-primary-container": "#682233",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#623f1b",
+                        "on-secondary-fixed": "#2d1600",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#32302e",
+                        "on-primary-fixed-variant": "#772e3e",
+                        "surface-container-highest": "#e6e2df",
+                        "on-tertiary-fixed-variant": "#603d3e",
+                        "on-tertiary-fixed": "#2f1314",
+                        "surface-bright": "#fdf8f5",
+                        "surface-tint": "#944555",
+                        "on-secondary": "#ffffff",
+                        "primary-fixed": "#ffd9de",
+                        "surface-container-high": "#ece7e4",
+                        "surface": "#fdf8f5",
+                        "primary-fixed-dim": "#ffb2be",
+                        "tertiary-fixed": "#ffdad9",
+                        "surface-dim": "#ded9d6",
+                        "secondary": "#7d5630",
+                        "inverse-on-surface": "#f5f0ed",
+                        "background": "#fdf8f5",
+                        "secondary-container": "#ffca9b",
+                        "outline": "#867274",
+                        "error": "#ba1a1a",
+                        "primary-container": "#e8899a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Noto Serif", "serif"],
+                        "display": ["Noto Serif", "serif"],
+                        "body": ["Plus Jakarta Sans", "sans-serif"],
+                        "label": ["Plus Jakarta Sans", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .glass-panel {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body antialiased selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen pb-24 md:pb-0">
+<!-- TopAppBar from JSON -->
+<header class="sticky top-0 w-full z-50 bg-surface/70 dark:bg-surface/70 backdrop-blur-xl">
+<div class="flex items-center justify-between px-6 py-4 w-full bg-surface dark:bg-surface">
+<button aria-label="Go back" class="text-primary dark:text-primary-fixed hover:opacity-80 transition-opacity duration-200 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline text-headline-md tracking-tight font-bold text-primary dark:text-primary-fixed">The Ethereal Editor</h1>
+<button aria-label="Shopping Bag" class="text-primary dark:text-primary-fixed hover:opacity-80 transition-opacity duration-200 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">shopping_bag</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="w-full max-w-7xl mx-auto md:flex">
+<!-- Web SideNav (Hidden on Mobile) -->
+<aside class="hidden md:flex h-full w-72 rounded-r-xl bg-surface-container dark:bg-surface-container shadow-2xl flex-col p-6 gap-4 sticky top-[72px] h-[calc(100vh-72px)] overflow-y-auto">
+<h2 class="font-body text-label-md uppercase tracking-widest text-on-surface-variant dark:text-on-surface-variant mb-4">Menu</h2>
+<a class="flex items-center gap-3 p-3 rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors ease-out duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">spa</span>
+<span class="font-body text-label-md uppercase tracking-widest">Bespoke Facials</span>
+</a>
+<a class="flex items-center gap-3 p-3 rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors ease-out duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">self_care</span>
+<span class="font-body text-label-md uppercase tracking-widest">Body Rituals</span>
+</a>
+<a class="flex items-center gap-3 p-3 rounded-full bg-primary-fixed dark:bg-on-primary-fixed-variant text-on-primary-container dark:text-primary-fixed-dim ease-out duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-body text-label-md uppercase tracking-widest font-bold">Product Apothecary</span>
+</a>
+<a class="flex items-center gap-3 p-3 rounded-full text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors ease-out duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+<span class="font-body text-label-md uppercase tracking-widest">My Journey</span>
+</a>
+</aside>
+<!-- Content Area -->
+<div class="flex-1 w-full">
+<!-- Hero Section -->
+<section class="px-6 py-10 md:py-16 md:px-12 flex flex-col gap-6 relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-br from-surface-container-low to-surface-container -z-10 rounded-b-3xl"></div>
+<div class="max-w-2xl">
+<p class="font-label text-label-md text-primary tracking-widest uppercase mb-3">Velvet &amp; Bloom</p>
+<h2 class="font-display text-4xl md:text-5xl text-on-background mb-4 leading-tight">Apothecary Collection</h2>
+<p class="font-body text-body-lg text-on-surface-variant leading-relaxed">Curated botanicals and clinical efficacy blended for your most radiant, balanced complexion. Explore our high-performance formulations.</p>
+</div>
+<!-- Search & Filter Bar -->
+<div class="mt-4 relative">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant/20 py-4 pl-12 pr-4 focus:ring-0 focus:border-b-2 focus:border-primary transition-all duration-300 text-body-lg placeholder:text-on-surface-variant/60 rounded-t-lg bg-surface-container-lowest/50" placeholder="Search rituals, ingredients..." type="text"/>
+</div>
+</section>
+<!-- Category Pills (Horizontal Scroll) -->
+<section class="pl-6 pr-2 py-6 md:px-12 w-full overflow-hidden">
+<div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+<button class="px-5 py-2.5 rounded-full bg-primary text-on-primary font-label text-label-md uppercase tracking-wider whitespace-nowrap transition-colors duration-200">All Rituals</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-variant text-on-surface font-label text-label-md uppercase tracking-wider whitespace-nowrap hover:bg-surface-container-high transition-colors duration-200">Face Oils</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-variant text-on-surface font-label text-label-md uppercase tracking-wider whitespace-nowrap hover:bg-surface-container-high transition-colors duration-200">Cleansers</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-variant text-on-surface font-label text-label-md uppercase tracking-wider whitespace-nowrap hover:bg-surface-container-high transition-colors duration-200">Serums</button>
+<button class="px-5 py-2.5 rounded-full bg-surface-variant text-on-surface font-label text-label-md uppercase tracking-wider whitespace-nowrap hover:bg-surface-container-high transition-colors duration-200">Masks</button>
+</div>
+</section>
+<!-- Product Grid -->
+<section class="px-6 md:px-12 pb-24 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-16">
+<!-- Product Card 1 -->
+<article class="group cursor-pointer flex flex-col gap-4">
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-low">
+<img alt="Rosehip Face Oil" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" data-alt="A minimalist photograph of a frosted glass dropper bottle filled with golden rosehip face oil, resting on a smooth beige stone plinth. The background is a soft, warm gradient of blush pink and ivory. Natural, diffused lighting highlights the translucency of the bottle and creates a high-end, clean editorial aesthetic fitting for a luxury beauty brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuARcSb1Bw6QezDw8pG3mt0RSj7L9i6XNoa70vQWMG8_8Gt7e9fxJ6UM5rrRvZ868NS6ONW-1rxIquuvGjF-DQiT5N6iZGnqpQRMkYawGEosNZ-nPOt1Mb1VpQixM_UkTobl-uYiMZFbPM7UGHXUlzpP_ZnaMSdRGd7eE6g_QY0NZtDazSRt9J2iUhVpRmnlOzbFgVjd9jzRy-wXIWjcHawMhmUJGkPx0vx-KN8omvTXjgidrGuxiZvlNsY95FG1Bd8BhzXILGP0H4d3"/>
+<button aria-label="Add to favorites" class="absolute top-3 right-3 w-8 h-8 rounded-full glass-panel flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">favorite</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<p class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Velvet &amp; Bloom</p>
+<h3 class="font-display text-lg text-on-surface leading-tight">Radiance Rosehip Oil</h3>
+<div class="flex items-center justify-between mt-1">
+<span class="font-body font-medium text-primary">$42</span>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label text-xs">4.9</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Product Card 2 -->
+<article class="group cursor-pointer flex flex-col gap-4 md:mt-8"> <!-- Asymmetric layout hint -->
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-low">
+<img alt="Botanical Cleanser" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" data-alt="A high-end editorial shot of a sleek, pale pink ceramic pump bottle containing botanical cleanser. The bottle is positioned slightly off-center against a textured, light cream background. Delicate shadows from an unseen palm frond softly dapple the scene. The lighting is soft and warm, emphasizing the premium, natural quality of the skincare product." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAykEESOovyaJCJdWrXJ7SO6PZiqtVFvLw1htEMLuI3GXQrFGCpy61ybWMHKiSX6vORPM1vHOFpEWMqMYHe5dwP8l2P_K-L6PLplI36xsHTAIxvHU8SaJH1wVkNTmv6tBBlUU0L9E-OyNKXygxs4w08KenQdiV1igH8go0a2XRTBC3XP4ArByQx0pAKMP6ejxX3I4pCfNN9cFjbWbn4sUXzpCh2hT_tH9yGmJ1pOK4JGQoDwEiV68HiROZKLRqxgLz_KuN706TwKxf9"/>
+<button aria-label="Add to favorites" class="absolute top-3 right-3 w-8 h-8 rounded-full glass-panel flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">favorite</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<p class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Velvet &amp; Bloom</p>
+<h3 class="font-display text-lg text-on-surface leading-tight">Purifying Gel Cleanser</h3>
+<div class="flex items-center justify-between mt-1">
+<span class="font-body font-medium text-primary">$38</span>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label text-xs">4.7</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Product Card 3 -->
+<article class="group cursor-pointer flex flex-col gap-4">
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-low">
+<img alt="Hydrating Serum" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" data-alt="A minimalist composition featuring a small, clear glass bottle of hydrating serum with a white dropper. The bottle stands on a reflective acrylic surface that hints at a pale peach hue. The background is a stark, clean white, allowing the simplicity and purity of the product to stand out. High-key lighting creates a bright, clinical yet luxurious aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaMkKmoZPt9rzbeKuAM7j6IdbcFcrAm1ex3X12-07_GiBkH2EoA2cVJegAjNxNK_9X12oK0UJpt-EcUzc9a7TbQ2ycRIfMAxXlwZlDCS3f14bHylbQyovvN9I8BapFEZcyQgJ6H0JM2Bq9SX67aoGy9nIIlbv3EmNA_BkoJS17Xp5JxLTZrjvszxE8yNBwI4YxroOesL55R7tYtSGolLPqXdRPaSo6ne6KqOqpUkqJUD-8MzxbIjoz7K2HMc4bh4sni0uOsDbw4Ryl"/>
+<button aria-label="Remove from favorites" class="absolute top-3 right-3 w-8 h-8 rounded-full glass-panel flex items-center justify-center text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<p class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Velvet &amp; Bloom</p>
+<h3 class="font-display text-lg text-on-surface leading-tight">Hyaluronic Dew Drops</h3>
+<div class="flex items-center justify-between mt-1">
+<span class="font-body font-medium text-primary">$54</span>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label text-xs">5.0</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Product Card 4 -->
+<article class="group cursor-pointer flex flex-col gap-4 md:mt-8">
+<div class="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-surface-container-low">
+<img alt="Clay Mask" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" data-alt="An editorial still life of a wide, low-profile frosted glass jar containing a terracotta-colored clay mask. The jar sits slightly open, revealing the rich texture of the mask, with a smooth wooden spatula leaning against it. The setting is a minimalist, warm beige surface, bathed in soft, diffused light that emphasizes the organic, earthy nature of the beauty product." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXDzb7TdPAPiJF2xBolCYv5nWh0WZGfMpwwWSk-umfWJolcWBFeeQmQ8NhaGSyxDJbc8vmFWNutiErve-0sigt8aGgU6CiW1SGAC1TbwQXtRk3QOaBWJn1OklTMJ_qy2HqudslScrZghvzfyQkPbbr8Z4lg3UcJhqcYV3VlM5ujZ1Tfc0Ulrrwy2ymV7kLaEYkZ3BBvX4s-LZqa8UOHAAb1y_JIDRQkzYhqDehsBMilNganem-UXOhIMyhvzCFLWm-JjokK8QJh-ow"/>
+<button aria-label="Add to favorites" class="absolute top-3 right-3 w-8 h-8 rounded-full glass-panel flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">favorite</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<p class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Velvet &amp; Bloom</p>
+<h3 class="font-display text-lg text-on-surface leading-tight">Botanical Detox Mask</h3>
+<div class="flex items-center justify-between mt-1">
+<span class="font-body font-medium text-primary">$48</span>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label text-xs">4.8</span>
+</div>
+</div>
+</div>
+</article>
+</section>
+</div>
+</main>
+<!-- Mobile Bottom NavBar from JSON -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-surface-container-lowest/80 dark:bg-surface-container-lowest/80 backdrop-blur-md shadow-[0_-20px_40px_rgba(62,2,21,0.04)] pt-3 pb-safe px-4 flex justify-around items-center">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/60 dark:text-on-surface-variant/60 hover:text-primary transition-colors scale-110 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">auto_awesome</span>
+<span class="font-label text-[10px] uppercase tracking-tighter mt-1">Curate</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed font-bold hover:text-primary transition-colors scale-110 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shutter_speed</span>
+<span class="font-label text-[10px] uppercase tracking-tighter mt-1">Rituals</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/60 dark:text-on-surface-variant/60 hover:text-primary transition-colors scale-110 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">shopping_bag</span>
+<span class="font-label text-[10px] uppercase tracking-tighter mt-1">Bag</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/60 dark:text-on-surface-variant/60 hover:text-primary transition-colors scale-110 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">person</span>
+<span class="font-label text-[10px] uppercase tracking-tighter mt-1">Account</span>
+</a>
+</nav>
+<!-- Sticky Filter/Sort Bar for Mobile (Floating Concierge style) -->
+<div class="md:hidden fixed bottom-[72px] left-0 w-full px-6 z-40 flex justify-center pb-4 pointer-events-none">
+<button class="pointer-events-auto glass-panel px-6 py-3 rounded-full flex items-center gap-2 text-on-surface font-label text-sm uppercase tracking-wider shadow-[0_10px_20px_rgba(62,2,21,0.08)] active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+            Filter &amp; Sort
+        </button>
+</div>
+</body></html>
+================================================================================
+pantalla Usuario_detalle_producto
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Velvet &amp; Bloom - Luminous Hair Elixir</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#3e0215",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#ffdcbf",
+                    "on-secondary-container": "#7a532e",
+                    "on-tertiary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed-dim": "#f0bd8f",
+                    "tertiary-fixed-dim": "#ecbbba",
+                    "surface-variant": "#e6e2df",
+                    "on-surface": "#1c1b1a",
+                    "on-tertiary-container": "#523132",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-low": "#f8f3f0",
+                    "surface-container": "#f2edea",
+                    "primary": "#944555",
+                    "inverse-primary": "#ffb2be",
+                    "tertiary": "#7b5455",
+                    "outline-variant": "#d9c1c3",
+                    "on-background": "#1c1b1a",
+                    "on-surface-variant": "#534245",
+                    "tertiary-container": "#c79999",
+                    "on-primary-container": "#682233",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed-variant": "#623f1b",
+                    "on-secondary-fixed": "#2d1600",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#32302e",
+                    "on-primary-fixed-variant": "#772e3e",
+                    "surface-container-highest": "#e6e2df",
+                    "on-tertiary-fixed-variant": "#603d3e",
+                    "on-tertiary-fixed": "#2f1314",
+                    "surface-bright": "#fdf8f5",
+                    "surface-tint": "#944555",
+                    "on-secondary": "#ffffff",
+                    "primary-fixed": "#ffd9de",
+                    "surface-container-high": "#ece7e4",
+                    "surface": "#fdf8f5",
+                    "primary-fixed-dim": "#ffb2be",
+                    "tertiary-fixed": "#ffdad9",
+                    "surface-dim": "#ded9d6",
+                    "secondary": "#7d5630",
+                    "inverse-on-surface": "#f5f0ed",
+                    "background": "#fdf8f5",
+                    "secondary-container": "#ffca9b",
+                    "outline": "#867274",
+                    "error": "#ba1a1a",
+                    "primary-container": "#e8899a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": [
+                            "Noto Serif"
+                    ],
+                    "display": [
+                            "Noto Serif"
+                    ],
+                    "body": [
+                            "Plus Jakarta Sans"
+                    ],
+                    "label": [
+                            "Plus Jakarta Sans"
+                    ]
+            },
+            "fontSize": {}
+    },
+        },
+      }
+    </script>
+<style>
+        /* Hide scrollbar for carousels */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="sticky top-0 w-full z-50 bg-surface/70 dark:bg-surface/70 backdrop-blur-xl flex items-center justify-between px-6 py-4 w-full flat no shadows">
+<button aria-label="Go Back" class="text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity duration-200 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline text-headline-md tracking-tight font-headline text-headline-md text-primary dark:text-primary-fixed">The Ethereal Editor</h1>
+<button aria-label="Shopping Bag" class="text-on-surface-variant dark:text-on-surface-variant hover:opacity-80 transition-opacity duration-200 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">shopping_bag</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-grow pb-32"> <!-- Padding bottom for fixed booking bar -->
+<!-- Product Image Carousel -->
+<section class="relative w-full h-[530px] md:h-[618px] bg-surface-container-low overflow-hidden">
+<div class="flex h-full overflow-x-auto snap-x snap-mandatory no-scrollbar" id="product-carousel">
+<div class="w-full h-full flex-shrink-0 snap-center relative">
+<img alt="Luminous Hair Elixir bottle" class="w-full h-full object-cover" data-alt="A luxurious, frosted glass bottle of hair elixir resting on a piece of smooth, beige silk fabric. The lighting is soft and diffused, creating a serene, lit-from-within glow typical of high-end skincare editorials. The color palette features warm skin-tones and botanical hues, with subtle hints of primary-fixed pink. The composition is elegantly asymmetrical, leaving generous negative space for a premium feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4inNgROw3DBbw5VOFUqOGtepcaDDUpPQRnPZAzc0shJEgcVBXTOeHF0gg9eXsGeutXOF6j_2GSYSEDcaACTHjRWyw_a3eMeXL57Zoka1x6xn9y-PEpcpcueWwiZaU_phdw4zuBniAMwNSUdlRVW-a9iUEHkwzLxJMfVlVHTBKrxq0F_Y4s6BJ1tp0ml8RuOIYpMbVp32vZSOtUG92lJJMKDOGpxteeAyUUHyt9ejOlFuVqwx8rek5JUm5qeggS_pYX2YJTQ0Jkgql"/>
+</div>
+<div class="w-full h-full flex-shrink-0 snap-center relative">
+<img alt="Texture of the Hair Elixir" class="w-full h-full object-cover" data-alt="A macro close-up shot of a single, golden drop of hair elixir resting delicately on a botanical leaf. The background is a soft-focus blur of warm surface-container tones (#F2EDEA). The lighting highlights the glossy texture of the oil, emphasizing its purity and premium quality. The overall mood is natural, organic, and highly luxurious, fitting an ethereal beauty brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwfdJAwlasLuK8T8YSLfKAMacbZ1ugKZeOBtql7hGZdYQb-BNVpCoLb01uhAQ0opymNbb6rwThMJ8rgW-jB_aAyDuOTUuth1EuOTsxdoz7mRkFEs-5fQlA6wQJPT-NPtvsXps59MFaG-E4HCCD9zUJhVUpZXkogcregO6qhZGPro5szoJQv3TDZldB7eSY7KuPvxQqt1_04THPrd9C8mll1SnifD1zCJvpx2-nqElCShUuXhTvjfTHw5nJzAtGjq9JQd5LtzaFBcS7"/>
+</div>
+</div>
+<!-- Swipe Indicators (Dots) -->
+<div class="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-10">
+<div class="w-2 h-2 rounded-full bg-primary transition-all duration-300"></div>
+<div class="w-2 h-2 rounded-full bg-surface-variant transition-all duration-300"></div>
+</div>
+</section>
+<!-- Product Header & Price -->
+<section class="px-6 pt-10 pb-6 relative z-10 -mt-6 bg-surface rounded-t-3xl">
+<div class="flex flex-col gap-2">
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Velvet &amp; Bloom</span>
+<h2 class="font-display text-4xl text-primary leading-tight">Luminous Hair Elixir</h2>
+<p class="font-body text-xl font-medium text-on-surface mt-2">$58.00</p>
+</div>
+<!-- Quick Rating/Reviews (Optional Polish) -->
+<div class="flex items-center gap-2 mt-4 text-primary">
+<div class="flex">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star_half</span>
+</div>
+<span class="font-body text-sm text-on-surface-variant underline decoration-outline-variant/30 hover:decoration-primary transition-colors cursor-pointer">124 Reviews</span>
+</div>
+</section>
+<!-- Product Description (Asymmetric Layout) -->
+<section class="px-6 py-8 bg-surface-container-low transition-colors duration-500">
+<div class="max-w-prose mx-auto">
+<p class="font-body text-base text-on-surface-variant leading-relaxed">
+                    A transformative blend of rare botanical oils designed to restore brilliance and strength to every strand. This lightweight, silicone-free elixir mimics the natural lipids of your hair, providing deep nourishment without weighing it down. Experience the subtle, lingering scent of white lotus and wild fig.
+                </p>
+<div class="mt-8 flex justify-end">
+<button class="font-label text-xs uppercase tracking-widest text-primary border-b border-primary-fixed pb-1 hover:opacity-70 transition-opacity">Read Full Story</button>
+</div>
+</div>
+</section>
+<!-- Key Benefits (Bento/Glassmorphism Grid) -->
+<section class="px-6 py-12">
+<h3 class="font-headline text-2xl text-primary mb-8 text-center">The Ritual Benefits</h3>
+<div class="grid grid-cols-2 gap-4">
+<!-- Benefit Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col items-center text-center shadow-[0_8px_24px_rgba(62,2,21,0.02)] border border-outline-variant/20 hover:-translate-y-1 transition-transform duration-300">
+<div class="w-12 h-12 rounded-full bg-primary-fixed/30 flex items-center justify-center text-primary mb-4">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">water_drop</span>
+</div>
+<h4 class="font-body text-sm font-semibold mb-2">Deep Hydration</h4>
+<p class="font-body text-xs text-on-surface-variant">Locks in moisture for 48 hours.</p>
+</div>
+<!-- Benefit Card 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col items-center text-center shadow-[0_8px_24px_rgba(62,2,21,0.02)] border border-outline-variant/20 hover:-translate-y-1 transition-transform duration-300">
+<div class="w-12 h-12 rounded-full bg-primary-fixed/30 flex items-center justify-center text-primary mb-4">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">auto_awesome</span>
+</div>
+<h4 class="font-body text-sm font-semibold mb-2">Luminous Shine</h4>
+<p class="font-body text-xs text-on-surface-variant">Restores natural, healthy gloss.</p>
+</div>
+<!-- Benefit Card 3 (Spans full width for asymmetry) -->
+<div class="col-span-2 bg-surface-container-low p-6 rounded-xl flex items-center gap-6 shadow-[0_8px_24px_rgba(62,2,21,0.02)] border border-outline-variant/20 hover:-translate-y-1 transition-transform duration-300">
+<div class="w-14 h-14 rounded-full bg-surface-lowest flex items-center justify-center text-primary flex-shrink-0 shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">spa</span>
+</div>
+<div>
+<h4 class="font-body text-sm font-semibold mb-1">Heat Protection</h4>
+<p class="font-body text-xs text-on-surface-variant">Shields against styling damage up to 450°F while maintaining structural integrity.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ / Details Accordion -->
+<section class="px-6 py-8 bg-surface-container-low">
+<h3 class="font-headline text-2xl text-primary mb-6">Curated Details</h3>
+<div class="flex flex-col gap-4">
+<!-- Accordion Item 1 -->
+<details class="group bg-surface-container-lowest rounded-lg [&amp;_summary::-webkit-details-marker]:hidden border border-outline-variant/20 shadow-[0_4px_12px_rgba(62,2,21,0.01)]">
+<summary class="flex items-center justify-between cursor-pointer p-4 font-body text-sm font-medium">
+                         How to Use
+                         <span class="material-symbols-outlined text-primary group-open:-rotate-180 transition-transform duration-300">keyboard_arrow_down</span>
+</summary>
+<div class="p-4 pt-0 text-on-surface-variant font-body text-sm leading-relaxed border-t border-outline-variant/10 mt-2">
+                         Apply 2-3 drops to palms, warm between hands, and smooth evenly through damp or dry hair, focusing on mid-lengths to ends. Do not rinse.
+                     </div>
+</details>
+<!-- Accordion Item 2 -->
+<details class="group bg-surface-container-lowest rounded-lg [&amp;_summary::-webkit-details-marker]:hidden border border-outline-variant/20 shadow-[0_4px_12px_rgba(62,2,21,0.01)]">
+<summary class="flex items-center justify-between cursor-pointer p-4 font-body text-sm font-medium">
+                         Ingredients
+                         <span class="material-symbols-outlined text-primary group-open:-rotate-180 transition-transform duration-300">keyboard_arrow_down</span>
+</summary>
+<div class="p-4 pt-0 text-on-surface-variant font-body text-sm leading-relaxed border-t border-outline-variant/10 mt-2">
+                         Argania Spinosa Kernel Oil, Camellia Oleifera Seed Oil, Squalane, Fragrance (Parfum)*, Tocopherol. *Naturally derived.
+                     </div>
+</details>
+</div>
+</section>
+</main>
+<!-- Floating Concierge: Add to Cart Bar -->
+<div class="fixed bottom-0 left-0 w-full z-50 bg-surface-container-lowest/80 dark:bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_-20px_40px_rgba(62,2,21,0.06)] px-6 py-4 flex items-center justify-between pb-safe">
+<!-- Quantity Selector (Ghost style) -->
+<div class="flex items-center gap-4 bg-surface-container px-4 py-2 rounded-full">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">remove</span>
+</button>
+<span class="font-body text-sm font-medium w-4 text-center">1</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+<!-- Primary Add to Cart Button -->
+<button class="bg-primary text-on-primary font-label text-xs uppercase tracking-widest px-8 py-4 rounded-full shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all duration-200">
+            Add to Bag - $58
+        </button>
+</div>
+<!-- No global Footer or BottomNavBar needed as this is a transactional detail view -->
+<script>
+        // Simple logic for carousel dots (purely visual for prototype)
+        const carousel = document.getElementById('product-carousel');
+        const dots = document.querySelectorAll('.bottom-6 .rounded-full');
+
+        if(carousel && dots.length > 0) {
+            carousel.addEventListener('scroll', () => {
+                const scrollLeft = carousel.scrollLeft;
+                const width = carousel.offsetWidth;
+                const index = Math.round(scrollLeft / width);
+                
+                dots.forEach((dot, i) => {
+                    if (i === index) {
+                        dot.classList.remove('bg-surface-variant');
+                        dot.classList.add('bg-primary');
+                    } else {
+                        dot.classList.remove('bg-primary');
+                        dot.classList.add('bg-surface-variant');
+                    }
+                });
+            });
+        }
+    </script>
+</body></html>
+
+--- 
+pantalla admin productos
+
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Productos - The Ethereal Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-variant": "#e6e2df",
+                      "tertiary-fixed-dim": "#ecbbba",
+                      "surface-container-low": "#f8f3f0",
+                      "secondary-fixed-dim": "#f0bd8f",
+                      "on-background": "#1c1b1a",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-high": "#ece7e4",
+                      "tertiary-fixed": "#ffdad9",
+                      "secondary-fixed": "#ffdcbf",
+                      "on-secondary-fixed-variant": "#623f1b",
+                      "primary": "#944555",
+                      "on-primary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "on-secondary": "#ffffff",
+                      "surface-tint": "#944555",
+                      "background": "#fdf8f5",
+                      "surface": "#fdf8f5",
+                      "on-error-container": "#93000a",
+                      "surface-container-lowest": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#fdf8f5",
+                      "on-tertiary-fixed-variant": "#603d3e",
+                      "tertiary": "#7b5455",
+                      "primary-fixed": "#ffd9de",
+                      "on-secondary-container": "#7a532e",
+                      "primary-fixed-dim": "#ffb2be",
+                      "surface-container-highest": "#e6e2df",
+                      "primary-container": "#e8899a",
+                      "on-primary-container": "#682233",
+                      "on-primary-fixed-variant": "#772e3e",
+                      "on-tertiary-container": "#523132",
+                      "surface-container": "#f2edea",
+                      "tertiary-container": "#c79999",
+                      "surface-dim": "#ded9d6",
+                      "outline-variant": "#d9c1c3",
+                      "on-secondary-fixed": "#2d1600",
+                      "secondary": "#7d5630",
+                      "on-tertiary-fixed": "#2f1314",
+                      "inverse-on-surface": "#f5f0ed",
+                      "secondary-container": "#ffca9b",
+                      "on-error": "#ffffff",
+                      "inverse-primary": "#ffb2be",
+                      "on-surface": "#1c1b1a",
+                      "on-primary-fixed": "#3e0215",
+                      "outline": "#867274",
+                      "on-surface-variant": "#534245",
+                      "inverse-surface": "#32302e"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Noto Serif"
+                      ],
+                      "display": [
+                              "Noto Serif"
+                      ],
+                      "body": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {}
+      },
+          },
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); }
+        /* Ghost Border for inputs */
+        .ghost-input {
+            border: none;
+            border-bottom: 1px solid theme('colors.outline-variant' / 20%);
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+        .ghost-input:focus {
+            outline: none;
+            border-bottom: 2px solid theme('colors.primary');
+            box-shadow: none;
+        }
+        /* Hide scrollbar for cleaner look */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: theme('colors.surface-variant'); border-radius: theme('borderRadius.full'); }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.outline-variant'); }
+    </style>
+</head>
+<body class="text-on-background font-body antialiased min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low dark:bg-surface-container-lowest flex flex-col border-r-0 z-50">
+<div class="p-6">
+<h1 class="font-headline text-2xl font-bold text-primary dark:text-primary-fixed-dim">The Ethereal Editor</h1>
+<p class="text-label-sm font-label text-on-surface-variant mt-1">Management Suite</p>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary text-on-primary rounded-full py-3 px-4 flex items-center justify-center gap-2 hover:bg-primary-container hover:text-on-primary-container transition-all duration-200">
+<span class="material-symbols-outlined">add</span>
+<span class="font-label text-label-md uppercase tracking-wider">Nueva Cita</span>
+</button>
+</div>
+<ul class="flex flex-col gap-2 px-2 flex-grow overflow-y-auto">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container rounded-lg font-label text-label-md uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+                    Citas
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container rounded-lg font-label text-label-md uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">spa</span>
+                    Servicios
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container rounded-lg font-label text-label-md uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">face</span>
+                    Especialistas
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container rounded-lg font-label text-label-md uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">group</span>
+                    Clientes
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-primary dark:text-primary-fixed-dim bg-primary-fixed/20 rounded-lg font-bold font-label text-label-md uppercase tracking-wider scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+                    Productos
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container rounded-lg font-label text-label-md uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    Configuración
+                </a>
+</li>
+</ul>
+<div class="p-4 mt-auto border-t border-surface-variant/30">
+<div class="flex items-center gap-3">
+<img alt="Admin Avatar" class="w-10 h-10 rounded-full object-cover" data-alt="A close up portrait of a professional woman with natural glowing skin, looking softly towards the camera. The background is a blurred, bright minimalist office space with warm lighting. High key, elegant, soft focus on the edges, emphasizing a high-end luxury wellness aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1a-2m4ebryoLTIk8m1H-PU0g4fmK2c3bT2yieChKAoZ6WtQknrAnTBso0jcLiVC3HGJnXIsmpP90sKPcPs_VcnUVf1lfeoSmQDefm33e9amiHU-EDPu2Jm-jORxv3yVZiU7m1JKkw4zEfYOQbpDaj4pGMnU3EaiTaPLCh49IbzISKioivCyoVk5I_s7u4Qs3iTiZL099Z0C4rhyi8zdbX58YQ9R_dvR8tLTv_c7N7N9iXItT-i_5uIMHyqKCIYcG4QyZu9uCty9hO"/>
+<div>
+<p class="font-body text-sm font-semibold text-on-surface">Admin User</p>
+<p class="font-label text-xs text-on-surface-variant">admin@ethereal.com</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="docked full-width top-0 sticky z-40 bg-surface/70 dark:bg-surface-dim/70 backdrop-blur-md flex justify-between items-center w-full px-8 py-4">
+<div class="flex-1">
+<!-- Search bar in top nav (as per TopNavBar spec, though design requires it in content area too, we keep header clean) -->
+</div>
+<div class="flex items-center gap-4 text-primary dark:text-primary-fixed-dim font-label text-label-sm font-medium">
+<button class="hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mail</span>
+</button>
+<button class="hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+</button>
+<div class="h-6 w-px bg-surface-variant mx-2"></div>
+<button class="flex items-center gap-2 hover:bg-surface-container-lowest/50 rounded-full p-1 pr-3 transition-colors">
+<img alt="Admin Profile Picture" class="w-8 h-8 rounded-full object-cover" data-alt="A close up portrait of a professional woman with natural glowing skin, looking softly towards the camera. The background is a blurred, bright minimalist office space with warm lighting. High key, elegant, soft focus on the edges, emphasizing a high-end luxury wellness aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAX9URyK9VV9H3V2YVMNpztSBbnWylhPJOngQD_US2c16YznBaU1dgnyGVznz2rkB7k3kSru1PRbQFbgZ01IzRyB8pUlkzUSzNIkEs9KmDv1N8FPXMWBxsNIY7tp59sgHh17dAhWzZLQxbIwrFGrgAiBZYDkunFZGKkQPaOMjYXPo362C9W-O5BBTX6atb-1hvZpyBCLgx10cZc6-5v_l3CFHvw9EIV8mZ_dryHKwdvESXBoB7NEGKG3l3UOUENDB1oavJO2hCBkMla"/>
+<span>Perfil</span>
+</button>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 p-8 lg:p-12 max-w-7xl mx-auto w-full">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+<div>
+<h2 class="font-headline text-4xl text-on-surface mb-2">Productos</h2>
+<p class="font-body text-body-lg text-on-surface-variant">Gestión de inventario y catálogo. <span class="font-semibold text-primary">124 en total</span></p>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant/50 ml-2">search</span>
+<input class="ghost-input pl-10 pr-4 py-2 w-64 font-body text-sm text-on-surface placeholder:text-on-surface-variant/50" placeholder="Buscar producto..." type="text"/>
+</div>
+<button class="bg-surface-container-lowest text-primary px-4 py-2 rounded-full font-label text-label-md uppercase tracking-wider flex items-center gap-2 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                        Filtros
+                    </button>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-full font-label text-label-md uppercase tracking-wider flex items-center gap-2 hover:bg-primary-container hover:text-on-primary-container transition-all duration-200">
+<span class="material-symbols-outlined text-sm">add</span>
+                        Nuevo Producto
+                    </button>
+</div>
+</div>
+<!-- Dashboard Cards (Bento Grid Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+<!-- Total -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-primary-fixed/20 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+<p class="font-label text-label-md uppercase tracking-wider text-on-surface-variant mb-4">Total Productos</p>
+<div class="flex items-end justify-between">
+<p class="font-headline text-3xl text-on-surface">124</p>
+<span class="material-symbols-outlined text-primary mb-1">inventory_2</span>
+</div>
+</div>
+<!-- Valor -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-secondary-container/30 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+<p class="font-label text-label-md uppercase tracking-wider text-on-surface-variant mb-4">Valor Inventario</p>
+<div class="flex items-end justify-between">
+<p class="font-headline text-3xl text-on-surface">$12,450</p>
+<span class="material-symbols-outlined text-secondary mb-1">payments</span>
+</div>
+</div>
+<!-- Low Stock -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/20 relative overflow-hidden">
+<p class="font-label text-label-md uppercase tracking-wider text-on-surface-variant mb-4">Stock Bajo</p>
+<div class="flex items-end justify-between">
+<p class="font-headline text-3xl text-tertiary">5</p>
+<span class="material-symbols-outlined text-tertiary mb-1">warning</span>
+</div>
+</div>
+<!-- Out of Stock -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/20 relative overflow-hidden">
+<p class="font-label text-label-md uppercase tracking-wider text-on-surface-variant mb-4">Agotados</p>
+<div class="flex items-end justify-between">
+<p class="font-headline text-3xl text-error">2</p>
+<span class="material-symbols-outlined text-error mb-1">error</span>
+</div>
+</div>
+</div>
+<!-- Table Area (Editorial interpretation: List with generous spacing) -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_20px_40px_rgba(62,2,21,0.02)]">
+<div class="flex justify-between items-center mb-8">
+<h3 class="font-headline text-2xl text-on-surface">Catálogo Principal</h3>
+<button class="text-primary font-label text-label-md uppercase tracking-wider flex items-center gap-1 hover:text-primary-container transition-colors">
+<span class="material-symbols-outlined text-sm">download</span>
+                        Exportar
+                    </button>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b-0">
+<th class="pb-6 font-label text-label-md uppercase tracking-wider text-on-surface-variant font-medium">Producto</th>
+<th class="pb-6 font-label text-label-md uppercase tracking-wider text-on-surface-variant font-medium">SKU</th>
+<th class="pb-6 font-label text-label-md uppercase tracking-wider text-on-surface-variant font-medium">Categoría / Marca</th>
+<th class="pb-6 font-label text-label-md uppercase tracking-wider text-on-surface-variant font-medium text-right">Precio</th>
+<th class="pb-6 font-label text-label-md uppercase tracking-wider text-on-surface-variant font-medium text-right">Stock</th>
+<th class="pb-6 font-label text-label-md uppercase tracking-wider text-on-surface-variant font-medium text-center">Estado</th>
+<th class="pb-6 font-label text-label-md uppercase tracking-wider text-on-surface-variant font-medium text-right"></th>
+</tr>
+</thead>
+<tbody class="align-middle">
+<!-- Item 1 -->
+<tr class="group hover:bg-surface-container-low transition-colors duration-200">
+<td class="py-6 pr-6 rounded-l-lg">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-md bg-surface-container overflow-hidden flex-shrink-0">
+<img alt="Radiance Rosehip Oil" class="w-full h-full object-cover" data-alt="A minimalist glass dropper bottle of facial oil sitting on a light stone surface. Soft, warm natural lighting casting a subtle shadow. The brand aesthetic is high-end skincare, clean beauty, with a warm muted color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGKpqJGEDWFzFGl_xyQU3IN49JubwVCBW5zuFKb3abWenNAuSGO_D0zjD1ve8DiwlSFdUBWbJArU7zpCx0DBAkwucKZ-djlyaHKig53WJQbCSzA7PqveYRZ5h7K4lBYhbuSB27JJLmVEIEUkaPMDOf9yvtbGvZSM260GvukGtHNjCprjfaCpv1OPq8FUiZ19pzpbsylStOVqJN99I3Jc_2QleEni21CpFrAb9WhFowbMcKgJJ4nXZ0qQtHuyFjkm6laY5zq62rBsc1"/>
+</div>
+<div>
+<p class="font-body text-body-lg font-semibold text-on-surface">Radiance Rosehip Oil</p>
+</div>
+</div>
+</td>
+<td class="py-6 pr-6 font-body text-sm text-on-surface-variant">VB-RRO-01</td>
+<td class="py-6 pr-6">
+<p class="font-body text-sm text-on-surface">Skin Care</p>
+<p class="font-label text-xs text-on-surface-variant mt-1">Velvet &amp; Bloom</p>
+</td>
+<td class="py-6 pr-6 font-body text-body-lg text-on-surface text-right">$42.00</td>
+<td class="py-6 pr-6 font-body text-body-lg text-on-surface text-right">45</td>
+<td class="py-6 pr-6 text-center">
+<span class="inline-block px-3 py-1 bg-surface-variant text-on-surface-variant font-label text-xs uppercase tracking-wider rounded-full">Activo</span>
+</td>
+<td class="py-6 pl-6 rounded-r-lg text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-lowest">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Item 2 (To show list formatting) -->
+<tr class="group hover:bg-surface-container-low transition-colors duration-200">
+<td class="py-6 pr-6 rounded-l-lg">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-md bg-surface-container overflow-hidden flex-shrink-0">
+<img alt="Luminous Clay Mask" class="w-full h-full object-cover" data-alt="A sleek matte jar of clay mask sitting on a pristine white marble surface. Elegant lighting highlighting the smooth texture of the packaging. Luxury minimalist aesthetic, soft muted tones, editorial style photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1F-liBHBfq__YiwqhXPdvgafPmTdQZM_ojUPd9OiSfIToO6s6e1k60lgSsrB_wYLVu9SwIdoUxCQX7HiRRpZul6mYfeyWClPevTYDrBnmvz_WkC_0SaAs4HJgMzKQYl2UuIr-hQxIIY4OsyfYC6qo3cMxox0_DyGKC-Pr2ROQGO2z_iBJ-4mZTPMHNMNTA8DlUQebNb-dtVxkWeY0ADr1AfQ1CaUqRruiNqP8XGFNkisxlCeEOyL67wSRnNlw1OrAbiMWI39gWYrW"/>
+</div>
+<div>
+<p class="font-body text-body-lg font-semibold text-on-surface">Luminous Clay Mask</p>
+</div>
+</div>
+</td>
+<td class="py-6 pr-6 font-body text-sm text-on-surface-variant">VB-LCM-02</td>
+<td class="py-6 pr-6">
+<p class="font-body text-sm text-on-surface">Skin Care</p>
+<p class="font-label text-xs text-on-surface-variant mt-1">Velvet &amp; Bloom</p>
+</td>
+<td class="py-6 pr-6 font-body text-body-lg text-on-surface text-right">$38.00</td>
+<td class="py-6 pr-6 font-body text-body-lg text-tertiary text-right font-medium">5</td>
+<td class="py-6 pr-6 text-center">
+<span class="inline-block px-3 py-1 bg-primary-fixed/30 text-on-primary-fixed-variant font-label text-xs uppercase tracking-wider rounded-full">Bajo Stock</span>
+</td>
+<td class="py-6 pl-6 rounded-r-lg text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-lowest">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+</body></html>
+
+admin   detalle de producto
+
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard - Product Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e6e2df",
+                    "tertiary-fixed-dim": "#ecbbba",
+                    "surface-container-low": "#f8f3f0",
+                    "secondary-fixed-dim": "#f0bd8f",
+                    "on-background": "#1c1b1a",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#ece7e4",
+                    "tertiary-fixed": "#ffdad9",
+                    "secondary-fixed": "#ffdcbf",
+                    "on-secondary-fixed-variant": "#623f1b",
+                    "primary": "#944555",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "on-secondary": "#ffffff",
+                    "surface-tint": "#944555",
+                    "background": "#fdf8f5",
+                    "surface": "#fdf8f5",
+                    "on-error-container": "#93000a",
+                    "surface-container-lowest": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#fdf8f5",
+                    "on-tertiary-fixed-variant": "#603d3e",
+                    "tertiary": "#7b5455",
+                    "primary-fixed": "#ffd9de",
+                    "on-secondary-container": "#7a532e",
+                    "primary-fixed-dim": "#ffb2be",
+                    "surface-container-highest": "#e6e2df",
+                    "primary-container": "#e8899a",
+                    "on-primary-container": "#682233",
+                    "on-primary-fixed-variant": "#772e3e",
+                    "on-tertiary-container": "#523132",
+                    "surface-container": "#f2edea",
+                    "tertiary-container": "#c79999",
+                    "surface-dim": "#ded9d6",
+                    "outline-variant": "#d9c1c3",
+                    "on-secondary-fixed": "#2d1600",
+                    "secondary": "#7d5630",
+                    "on-tertiary-fixed": "#2f1314",
+                    "inverse-on-surface": "#f5f0ed",
+                    "secondary-container": "#ffca9b",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#ffb2be",
+                    "on-surface": "#1c1b1a",
+                    "on-primary-fixed": "#3e0215",
+                    "outline": "#867274",
+                    "on-surface-variant": "#534245",
+                    "inverse-surface": "#32302e"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Noto Serif"],
+                    "display": ["Noto Serif"],
+                    "body": ["Plus Jakarta Sans"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fdf8f5; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d9c1c3; 
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #944555; 
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        .ambient-shadow {
+            box-shadow: 0 20px 40px rgba(62, 2, 21, 0.06);
+        }
+        
+        .ghost-border {
+            border-bottom: 1px solid rgba(217, 193, 195, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body antialiased selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full border-r-0 bg-surface-container-low dark:bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 z-50">
+<div class="p-6">
+<h1 class="font-headline text-2xl font-bold text-primary dark:text-primary-fixed-dim">The Ethereal Editor</h1>
+<p class="text-on-surface-variant text-sm mt-1">Management Suite</p>
+</div>
+<div class="px-4 py-2">
+<button class="w-full bg-primary hover:bg-surface-tint text-on-primary rounded-full py-3 px-4 font-label text-label-md uppercase tracking-wider transition-colors duration-200 flex justify-center items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+                Nueva Cita
+            </button>
+</div>
+<ul class="flex flex-col gap-1 mt-4 px-2 flex-grow overflow-y-auto">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label text-label-md uppercase tracking-wider">Citas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">spa</span>
+<span class="font-label text-label-md uppercase tracking-wider">Servicios</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">face</span>
+<span class="font-label text-label-md uppercase tracking-wider">Especialistas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label text-label-md uppercase tracking-wider">Clientes</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-primary dark:text-primary-fixed-dim bg-primary-fixed/20 rounded-lg font-bold scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-label text-label-md uppercase tracking-wider">Productos</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg mt-auto" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label text-label-md uppercase tracking-wider">Configuración</span>
+</a>
+</li>
+</ul>
+<div class="p-4 mt-auto mb-4 border-t ghost-border mx-4">
+<div class="flex items-center gap-3">
+<img alt="Admin Avatar" class="w-10 h-10 rounded-full object-cover" data-alt="A close up portrait of a professional woman with clean glowing skin, reflecting the high end beauty and wellness aesthetic of the platform. The lighting is soft and flattering, creating a premium look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5it5gpfUoxTPmPv-PcfGYfhRltWtEEwvs45TIHrLP6kgrAXupMTgYgE8mDB1vrkNxua09SHKztpoKciyc7vfqLv9Uxd0yUU-l6E1MlcMzLL0XeCHwajAlZ6teeKAzfGEI9WSmdpGMgsfGmNnVsJmvjN6bUE4LCbn79jRcLLSo2aCNxH1P2tYfz5FKpAyYOExB-T6zaTLYSQoX3dsno6Ff-QA0deyelJWnAHTbcd5yqV7CTjsKVbw2WxvnIiKoBoGucDf1xAw8Wb0c"/>
+<div>
+<p class="font-label text-sm font-medium text-on-surface">Jane Doe</p>
+<p class="text-xs text-on-surface-variant">Admin</p>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 min-h-screen flex flex-col w-full">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-8 py-4 bg-surface/70 dark:bg-surface-dim/70 backdrop-blur-md docked full-width top-0 sticky z-40">
+<div class="flex items-center gap-4">
+<!-- Mobile Menu Toggle (Visible only on small screens) -->
+<button class="md:hidden text-on-surface-variant p-2 rounded-full hover:bg-surface-container-lowest/50">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="relative hidden sm:flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant">search</span>
+<input class="bg-transparent border-0 ghost-border pl-10 pr-4 py-2 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all w-64 text-on-surface placeholder-on-surface-variant font-body" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined">mail</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2 flex items-center justify-center">
+<span class="material-symbols-outlined">chat_bubble</span>
+</button>
+<button class="ml-4 font-label text-label-sm font-medium text-primary border-b-2 border-primary pb-1 uppercase tracking-wider">
+                    Perfil
+                </button>
+<img alt="Admin Profile Picture" class="w-8 h-8 rounded-full object-cover ml-2 sm:hidden" data-alt="A close up portrait of a professional woman with clean glowing skin, reflecting the high end beauty and wellness aesthetic of the platform. The lighting is soft and flattering, creating a premium look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtrJwfRv6E7VZSZJgfUgWR0XknUgHOlIUA30A_Y_P_-HGB9In3o-Y6L1VBimWmmoSIXkyZ7p0kLlIVYwWokqoFXDSB5lPC8CEviQsoHJTd4Cha_iZdn0qggsdiamzEq-6kHVrG57DHTvtfBamx2kBKbnWlZMJ_mX0lZOi3Y1OK5Vyh6XUVIrlsggGEu9rM0EyieBWSBSoq2gYiVxsd28WgPV36N6KrTGAxmxh6TJ1338kuNStbE7EASQIk08vtwqAz65O4BbSLkTfU"/>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-8 max-w-7xl mx-auto w-full">
+<!-- Header Section -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 gap-6">
+<div>
+<a class="flex items-center gap-2 text-on-surface-variant text-sm font-label uppercase tracking-wider mb-2 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+                        Volver a Productos
+                    </a>
+<h2 class="font-headline text-display-sm sm:text-headline-md font-bold text-on-surface">Luminous Hydration Serum</h2>
+<p class="text-on-surface-variant font-body mt-1">SKU: LHS-001-50ML</p>
+</div>
+<div class="flex gap-3">
+<button class="bg-transparent border border-outline-variant text-primary hover:bg-primary-fixed/10 px-6 py-2 rounded-full font-label text-label-md uppercase tracking-wider transition-all duration-200">
+                        Archivar
+                    </button>
+<button class="bg-primary hover:bg-surface-tint text-on-primary px-6 py-2 rounded-full font-label text-label-md uppercase tracking-wider transition-all duration-200 ambient-shadow">
+                        Editar
+                    </button>
+</div>
+</div>
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+<!-- Left Column: Images & Core Info (Bento-ish) -->
+<div class="lg:col-span-7 flex flex-col gap-8">
+<!-- Product Image Gallery (Asymmetric) -->
+<div class="grid grid-cols-2 gap-4 h-[400px]">
+<div class="col-span-2 sm:col-span-1 rounded-xl overflow-hidden h-full relative group">
+<img alt="Product Main Image" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A high-end glass bottle of facial serum resting on a soft, creamy silk fabric. The lighting is warm and natural, casting soft shadows, evoking a sense of luxury and pure skincare ingredients in a minimalist studio setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtLC4X-Mh7kf_ggush_ftQLpn4C8vJxu0_Xr-xD_C6b_8AJNb_AEzY7T8x1jpoBHt9xp4FqQLbt9Kyy6EITG_H-_TKNyDeQQ1XQmZcwMoIdlZuXvJC3G9cldm4odshTUdEAb-_4JhkmoxctbCjS65xKyQ21o5sB0TenepFWf0ip0TGMY5ylhauEfl8yXZET5R7fsVTHgFKAqx8Zn-yYitchW6zkwEIjQGDqA2E8FTHbgSjwbwkebvHec-GrmNk5A0XKctiv9oa6KXs"/>
+<div class="absolute top-4 left-4 bg-surface-container-lowest/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-label uppercase tracking-wider text-primary">
+                                Main
+                            </div>
+</div>
+<div class="col-span-2 sm:col-span-1 grid grid-rows-2 gap-4 h-full">
+<div class="rounded-xl overflow-hidden h-full relative group">
+<img alt="Product Detail 1" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A close-up shot of a single drop of clear, glowing serum being dispensed from a glass dropper. The background is a soft, out-of-focus beige, highlighting the purity and texture of the skincare product." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqtREbcrmJSqpOnhOkzyPKuajhPSwC6wPtohTwyS2HfW2gAqdfyeSjn5xtKgdK2DsyzgUp9r2xcBoAs_PaouwOsNQ9T5o0LHpaIzUlgmVIo6aDjeJFsLbbsrthRFRCo-U2zXGExctMPYJsjuVeunPkmz9jHcyEZTbua5NYPrsOYOO4A_znIpYbLhhHjGzFIHLla8wUD3y5BiosZwCfWXm_MC2fva6vgThyY_JzmGEu0CCmV0_NhDnspQyh06o1NuI4gx9jVKyLyKE8"/>
+</div>
+<div class="rounded-xl overflow-hidden h-full relative group bg-surface-container-high flex items-center justify-center cursor-pointer hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-4xl text-primary/50">add_photo_alternate</span>
+<span class="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+</div>
+</div>
+</div>
+<!-- Core Info Card -->
+<div class="bg-surface-container-lowest rounded-xl p-8 ambient-shadow">
+<h3 class="font-headline text-xl text-on-surface mb-6 border-b ghost-border pb-4">Product Details</h3>
+<div class="space-y-6">
+<div>
+<h4 class="text-sm font-label uppercase tracking-wider text-on-surface-variant mb-2">Description</h4>
+<p class="text-body-lg text-on-surface leading-relaxed">A lightweight, deeply penetrating serum formulated with hyaluronic acid and botanical extracts to restore moisture balance and give skin a radiant, ethereal glow. Perfect for daily use under makeup or as a night treatment.</p>
+</div>
+<div class="grid grid-cols-2 gap-6 pt-4 border-t ghost-border">
+<div>
+<h4 class="text-sm font-label uppercase tracking-wider text-on-surface-variant mb-1">Category</h4>
+<p class="text-on-surface font-medium">Skincare / Serums</p>
+</div>
+<div>
+<h4 class="text-sm font-label uppercase tracking-wider text-on-surface-variant mb-1">Brand</h4>
+<p class="text-on-surface font-medium">Ethereal Botanics</p>
+</div>
+<div>
+<h4 class="text-sm font-label uppercase tracking-wider text-on-surface-variant mb-1">Price</h4>
+<p class="text-headline-md font-headline text-primary">$85.00</p>
+</div>
+<div>
+<h4 class="text-sm font-label uppercase tracking-wider text-on-surface-variant mb-1">Cost</h4>
+<p class="text-on-surface font-medium">$22.50</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Stats & Activity -->
+<div class="lg:col-span-5 flex flex-col gap-8">
+<!-- KPI Cards (Glassmorphism twist) -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute -right-4 -top-4 w-24 h-24 bg-primary-fixed/30 rounded-full blur-2xl group-hover:bg-primary-fixed/50 transition-colors duration-500"></div>
+<h4 class="text-xs font-label uppercase tracking-wider text-on-surface-variant mb-2 relative z-10">Total Revenue</h4>
+<p class="font-headline text-2xl text-on-surface relative z-10">$12,450</p>
+<div class="flex items-center gap-1 mt-2 text-green-700 relative z-10">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="text-xs font-medium">+14.5%</span>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute -right-4 -top-4 w-24 h-24 bg-secondary-container/30 rounded-full blur-2xl group-hover:bg-secondary-container/50 transition-colors duration-500"></div>
+<h4 class="text-xs font-label uppercase tracking-wider text-on-surface-variant mb-2 relative z-10">Units Sold</h4>
+<p class="font-headline text-2xl text-on-surface relative z-10">146</p>
+<div class="flex items-center gap-1 mt-2 text-green-700 relative z-10">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="text-xs font-medium">+5.2%</span>
+</div>
+</div>
+</div>
+<!-- Inventory Status -->
+<div class="bg-surface-container-lowest rounded-xl p-8 ambient-shadow border border-outline-variant/10">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline text-xl text-on-surface">Inventory</h3>
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-label uppercase tracking-wider">Low Stock</span>
+</div>
+<div class="flex items-end gap-4 mb-6">
+<div class="flex-1">
+<p class="text-4xl font-headline text-on-surface">24</p>
+<p class="text-sm text-on-surface-variant font-medium mt-1">Units Available</p>
+</div>
+<div class="text-right">
+<p class="text-sm text-on-surface-variant">Turnover Rate</p>
+<p class="text-lg font-medium text-primary">12 days</p>
+</div>
+</div>
+<!-- Progress bar abstract -->
+<div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-1/4 rounded-full"></div>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 text-right">Reorder point: 50</p>
+</div>
+<!-- Recent Activity -->
+<div class="bg-surface-container-low rounded-xl p-8 flex-1">
+<h3 class="font-headline text-xl text-on-surface mb-6">Recent Orders</h3>
+<div class="space-y-6">
+<!-- Order Item -->
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-sm">shopping_bag</span>
+</div>
+<div>
+<p class="font-medium text-on-surface text-sm">ORD-8892</p>
+<p class="text-xs text-on-surface-variant mt-0.5">2 units • Elena R.</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-medium text-on-surface text-sm">$170.00</p>
+<p class="text-xs text-on-surface-variant mt-0.5">Today, 10:42 AM</p>
+</div>
+</div>
+<!-- Order Item -->
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-sm">shopping_bag</span>
+</div>
+<div>
+<p class="font-medium text-on-surface text-sm">ORD-8885</p>
+<p class="text-xs text-on-surface-variant mt-0.5">1 unit • Sarah M.</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-medium text-on-surface text-sm">$85.00</p>
+<p class="text-xs text-on-surface-variant mt-0.5">Yesterday</p>
+</div>
+</div>
+<!-- Order Item -->
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-sm">shopping_bag</span>
+</div>
+<div>
+<p class="font-medium text-on-surface text-sm">ORD-8871</p>
+<p class="text-xs text-on-surface-variant mt-0.5">3 units • Spa Clinic A.</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-medium text-on-surface text-sm">$255.00</p>
+<p class="text-xs text-on-surface-variant mt-0.5">Oct 24</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-8 py-3 text-sm font-label uppercase tracking-wider text-primary border border-outline-variant/30 rounded-full hover:bg-primary/5 transition-colors">
+                            View All Orders
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
+
+admin añadir o editar producto
+
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edit Product - Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#e6e2df",
+                    "tertiary-fixed-dim": "#ecbbba",
+                    "surface-container-low": "#f8f3f0",
+                    "secondary-fixed-dim": "#f0bd8f",
+                    "on-background": "#1c1b1a",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#ece7e4",
+                    "tertiary-fixed": "#ffdad9",
+                    "secondary-fixed": "#ffdcbf",
+                    "on-secondary-fixed-variant": "#623f1b",
+                    "primary": "#944555",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "on-secondary": "#ffffff",
+                    "surface-tint": "#944555",
+                    "background": "#fdf8f5",
+                    "surface": "#fdf8f5",
+                    "on-error-container": "#93000a",
+                    "surface-container-lowest": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "surface-bright": "#fdf8f5",
+                    "on-tertiary-fixed-variant": "#603d3e",
+                    "tertiary": "#7b5455",
+                    "primary-fixed": "#ffd9de",
+                    "on-secondary-container": "#7a532e",
+                    "primary-fixed-dim": "#ffb2be",
+                    "surface-container-highest": "#e6e2df",
+                    "primary-container": "#e8899a",
+                    "on-primary-container": "#682233",
+                    "on-primary-fixed-variant": "#772e3e",
+                    "on-tertiary-container": "#523132",
+                    "surface-container": "#f2edea",
+                    "tertiary-container": "#c79999",
+                    "surface-dim": "#ded9d6",
+                    "outline-variant": "#d9c1c3",
+                    "on-secondary-fixed": "#2d1600",
+                    "secondary": "#7d5630",
+                    "on-tertiary-fixed": "#2f1314",
+                    "inverse-on-surface": "#f5f0ed",
+                    "secondary-container": "#ffca9b",
+                    "on-error": "#ffffff",
+                    "inverse-primary": "#ffb2be",
+                    "on-surface": "#1c1b1a",
+                    "on-primary-fixed": "#3e0215",
+                    "outline": "#867274",
+                    "on-surface-variant": "#534245",
+                    "inverse-surface": "#32302e"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": [
+                            "Noto Serif", "serif"
+                    ],
+                    "display": [
+                            "Noto Serif", "serif"
+                    ],
+                    "body": [
+                            "Plus Jakarta Sans", "sans-serif"
+                    ],
+                    "label": [
+                            "Plus Jakarta Sans", "sans-serif"
+                    ]
+            },
+            "fontSize": {}
+    },
+        },
+      }
+    </script>
+<style>
+        /* Custom ghost border styles for inputs to align with design system */
+        .ghost-input {
+            background-color: transparent !important;
+            border: none !important;
+            border-bottom: 1px solid rgba(217, 193, 195, 0.5) !important; /* outline-variant at opacity */
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            transition: border-color 0.2s ease;
+        }
+        .ghost-input:focus {
+            border-bottom: 2px solid #944555 !important; /* primary */
+            outline: none !important;
+            box-shadow: none !important;
+        }
+        
+        /* Hide scrollbar for clean aesthetic but allow scrolling */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex antialiased">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low dark:bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 flex flex-col h-full border-r-0 z-50">
+<div class="p-6">
+<h1 class="font-headline text-2xl font-bold text-primary dark:text-primary-fixed-dim">The Ethereal Editor</h1>
+<p class="font-label text-label-md uppercase tracking-wider text-on-surface-variant mt-1">Management Suite</p>
+</div>
+<div class="px-4 py-6">
+<button class="w-full bg-primary text-on-primary rounded-full py-3 px-6 font-label text-label-md uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-surface-tint transition-colors duration-200">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Nueva Cita
+            </button>
+</div>
+<ul class="flex-1 flex flex-col gap-2 px-2 mt-4 no-scrollbar overflow-y-auto">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-body text-body-lg">Citas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">spa</span>
+<span class="font-body text-body-lg">Servicios</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">face</span>
+<span class="font-body text-body-lg">Especialistas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body text-body-lg">Clientes</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-primary dark:text-primary-fixed-dim bg-primary-fixed/20 rounded-lg font-bold scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-body text-body-lg">Productos</span>
+</a>
+</li>
+<li class="mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body text-body-lg">Configuración</span>
+</a>
+</li>
+</ul>
+<div class="p-6 border-t-0 flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="Admin Avatar" class="w-full h-full object-cover" data-alt="A close-up portrait of a professional woman with natural makeup, embodying the sophisticated, lit-from-within glow characteristic of our ethereal editorial brand. Soft, high-key lighting creates a warm, premium feel. Background is a neutral, soft studio tone, emphasizing the minimalist luxury aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUDayvtET2Yt1AroEN2gdIvpTKzUD59zrjObmCv-Kr26mzxhmLjczanmqxGVkgxpuOC-7H733sCY2R5dVvGQBVhRLmg087GLkIfdiGNt0IFk0UkOPHWeuPGSWojlLiWRBzbohCZTH8wBvHmT0NMEL8MzHrnLLaagy5R-IeHz-jF_7EWfhZa5rhwNdhrvVAX75mtcTzXM0e3VxReC0mopcq0cJS2GrQZHgE1gUb6L7Cvu-WwGo6NM27nywShAnXYNvwNTMAsLi9eG8J"/>
+</div>
+<div>
+<p class="font-body font-semibold text-sm text-on-surface">Admin User</p>
+<p class="font-label text-xs text-on-surface-variant">Director</p>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="docked full-width top-0 sticky z-40 bg-surface/70 dark:bg-surface-dim/70 backdrop-blur-md flex justify-between items-center w-full pl-8 pr-8 py-4">
+<div class="flex items-center gap-4">
+<h2 class="font-headline text-headline-md text-primary dark:text-primary-fixed-dim hidden">Admin Dashboard</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">search</span>
+<input class="ghost-input pl-8 py-2 w-64 text-body-lg text-on-surface placeholder-on-surface-variant focus:outline-none" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2">
+<span class="material-symbols-outlined">mail</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors hover:bg-surface-container-lowest/50 dark:hover:bg-surface-container-highest/30 rounded-full p-2">
+<span class="material-symbols-outlined">chat_bubble</span>
+</button>
+</div>
+<button class="font-label text-label-sm font-medium text-primary hover:text-primary-container transition-colors">
+                    Perfil
+                </button>
+</div>
+</header>
+<!-- Form Canvas -->
+<main class="flex-1 p-8 lg:p-12 overflow-y-auto">
+<div class="max-w-6xl mx-auto">
+<!-- Page Header with Glassmorphism Sticky Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 sticky top-24 z-30 bg-surface-container-lowest/80 backdrop-blur-[12px] p-6 rounded-xl shadow-[0_20px_40px_rgba(62,2,21,0.02)] -mx-6 px-6">
+<div>
+<a class="inline-flex items-center gap-2 text-on-surface-variant hover:text-primary font-label text-sm mb-4 transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+                            Volver a Productos
+                        </a>
+<h1 class="font-headline text-display-sm text-on-background tracking-tight">Editar Producto</h1>
+<p class="font-body text-on-surface-variant mt-2 text-lg">Actualiza la información de tu producto de belleza.</p>
+</div>
+<div class="flex items-center gap-4 mt-6 md:mt-0">
+<button class="font-label text-label-md uppercase tracking-wider text-on-surface-variant px-4 py-2 hover:text-primary transition-colors">
+                            Preview
+                        </button>
+<button class="font-label text-label-md uppercase tracking-wider text-secondary px-6 py-3 bg-secondary-container/50 rounded-full hover:bg-secondary-container transition-colors">
+                            Save Draft
+                        </button>
+<button class="font-label text-label-md uppercase tracking-wider text-on-primary bg-primary px-8 py-3 rounded-full hover:bg-surface-tint transition-colors shadow-sm">
+                            Publish
+                        </button>
+</div>
+</div>
+<form class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+<!-- LEFT COLUMN (Main Content) -->
+<div class="lg:col-span-8 space-y-16">
+<!-- Basic Info Section -->
+<section class="bg-surface-container-low rounded-[1.5rem] p-8 md:p-10 transition-all hover:bg-surface-container-high">
+<h3 class="font-headline text-2xl text-on-background mb-8 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container">info</span>
+                                Información Básica
+                            </h3>
+<div class="space-y-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="product_name">Nombre del Producto</label>
+<input class="ghost-input w-full py-2 text-lg text-on-background placeholder-on-surface-variant/50" id="product_name" type="text" value="Serum Renovador Celular"/>
+</div>
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="product_brand">Marca</label>
+<input class="ghost-input w-full py-2 text-lg text-on-background placeholder-on-surface-variant/50" id="product_brand" type="text" value="Lumière Skin"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="product_category">Categoría</label>
+<select class="ghost-input w-full py-2 text-lg text-on-background appearance-none bg-transparent" id="product_category">
+<option value="skincare">Cuidado Facial</option>
+<option value="body">Cuidado Corporal</option>
+<option value="hair">Cabello</option>
+</select>
+<span class="material-symbols-outlined absolute right-0 top-8 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="product_sku">SKU</label>
+<input class="ghost-input w-full py-2 text-lg text-on-background placeholder-on-surface-variant/50" id="product_sku" type="text" value="LUM-SER-001"/>
+</div>
+</div>
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-4" for="product_description">Descripción Larga</label>
+<textarea class="ghost-input w-full py-2 text-base text-on-background placeholder-on-surface-variant/50 resize-none" id="product_description" rows="5">Un suero ligero pero potente diseñado para revitalizar la piel cansada. Formulado con un complejo patentado de péptidos y ácido hialurónico, este elixir penetra profundamente para restaurar el brillo natural desde el interior.</textarea>
+</div>
+</div>
+</section>
+<!-- Media Section -->
+<section class="bg-surface-container-lowest rounded-[1.5rem] p-8 md:p-10 shadow-[0_10px_30px_rgba(62,2,21,0.03)]">
+<h3 class="font-headline text-2xl text-on-background mb-8 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container">imagesmode</span>
+                                Multimedia
+                            </h3>
+<!-- Drag & Drop Area -->
+<div class="border-2 border-dashed border-outline-variant/30 rounded-xl p-12 flex flex-col items-center justify-center text-center bg-surface hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-16 h-16 rounded-full bg-primary-fixed/30 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl">cloud_upload</span>
+</div>
+<p class="font-body text-lg font-medium text-on-background mb-1">Arrastra tus imágenes aquí</p>
+<p class="font-body text-sm text-on-surface-variant">o haz clic para explorar archivos (Max 5MB)</p>
+</div>
+<!-- Gallery -->
+<div class="mt-8">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-4">Galería de Producto</label>
+<div class="grid grid-cols-3 md:grid-cols-4 gap-4">
+<div class="relative group rounded-lg overflow-hidden aspect-square bg-surface-container">
+<img alt="Product Image 1" class="w-full h-full object-cover" data-alt="A minimalist photograph of a high-end skincare serum bottle sitting on a textured, light beige stone surface. The lighting is soft and ethereal, casting gentle shadows that emphasize the glassmorphism of the bottle. The overall aesthetic is clean, premium, and lit-from-within, aligning with a luxury wellness brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-1fVS9GC37Ms1JdyjmIOxDd0Dk5wCW0TVa2y91K2hdkp1kf-82MZ5BAH2Lq8CMM95C9b59fX1caCbJlfQyfKt4HbjDukmkeO6bgDFAadVpyl60atGAS8Z73Ei8QlZdv4bHl2kteq9UaAC6dM88McuJCLewDhZs14o3UyJBKKHEuMg5agYAz_MDx34lduTnW9_CeonMnxbo-Dr3WMQcUTzXthE8rNHvI6pIKkDAhtV6_R4ZIgPj-3QQvOkP5TTpT1cotpGYI3jHpkL"/>
+<button class="absolute top-2 right-2 w-8 h-8 rounded-full bg-surface-container-lowest/80 backdrop-blur text-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" type="button">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+<div class="absolute bottom-2 left-2 bg-primary text-on-primary text-[10px] uppercase px-2 py-1 rounded-sm font-label">Principal</div>
+</div>
+<div class="relative group rounded-lg overflow-hidden aspect-square bg-surface-container">
+<img alt="Product Image 2" class="w-full h-full object-cover" data-alt="A macro shot of a luxurious face cream texture smeared on a clear glass plate against a pale, warm background. The lighting is bright and airy, highlighting the smooth, velvety consistency of the product. The color palette features skin-tones and soft whites, perfectly matching an editorial beauty design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVkwgK12qXlxlH9ML2MhWspAroUs7IBN9xm41hYUlkOQll98hKL_iBPiDWUMxc5wZqC9svkLOf_NmMFLQDbR8qXka3hVoNTZFqHu0eHjWYbELfd9xHJw2tFvNqzuFeS4qPznaET7mzAiTGNmOkelCA8VZYW0VjtqKRPH-nhOn2TP0fSCEWVRiZUSl3l12qBZpF7UA5gltl3bBISSmL7xyHnogo5bBet5ODcFqtccJ2yKWYhyxLopprFIWq4UlZ6RVGS1iXN8eeze5v"/>
+<button class="absolute top-2 right-2 w-8 h-8 rounded-full bg-surface-container-lowest/80 backdrop-blur text-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" type="button">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<div class="relative rounded-lg overflow-hidden aspect-square border border-dashed border-outline-variant flex items-center justify-center hover:bg-surface-container-low cursor-pointer transition-colors">
+<span class="material-symbols-outlined text-outline">add</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Product Details (Ingredients/Benefits) -->
+<section class="bg-surface-container-low rounded-[1.5rem] p-8 md:p-10">
+<h3 class="font-headline text-2xl text-on-background mb-8 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container">local_florist</span>
+                                Detalles del Tratamiento
+                            </h3>
+<div class="space-y-10">
+<div>
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-4">Ingredientes Activos (Separados por coma)</label>
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="px-4 py-2 bg-primary text-on-primary rounded-full font-body text-sm flex items-center gap-2">
+                                            Ácido Hialurónico <button class="material-symbols-outlined text-sm hover:text-primary-container" type="button">close</button>
+</span>
+<span class="px-4 py-2 bg-primary text-on-primary rounded-full font-body text-sm flex items-center gap-2">
+                                            Vitamina C <button class="material-symbols-outlined text-sm hover:text-primary-container" type="button">close</button>
+</span>
+<span class="px-4 py-2 bg-primary text-on-primary rounded-full font-body text-sm flex items-center gap-2">
+                                            Péptidos <button class="material-symbols-outlined text-sm hover:text-primary-container" type="button">close</button>
+</span>
+</div>
+<input class="ghost-input w-full py-2 text-base text-on-background placeholder-on-surface-variant/50" placeholder="Añadir ingrediente..." type="text"/>
+</div>
+<div>
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-4" for="product_benefits">Beneficios Clave</label>
+<textarea class="ghost-input w-full py-2 text-base text-on-background placeholder-on-surface-variant/50 resize-none" id="product_benefits" rows="4">• Hidratación profunda 24h
+• Mejora la elasticidad de la piel
+• Unifica el tono y reduce manchas
+• Textura ligera de rápida absorción</textarea>
+</div>
+</div>
+</section>
+</div>
+<!-- RIGHT COLUMN (Sidebar Metrics & SEO) -->
+<div class="lg:col-span-4 space-y-8">
+<!-- Pricing Status Card -->
+<div class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_15px_35px_rgba(62,2,21,0.04)] relative overflow-hidden">
+<!-- Subtle decorative gradient -->
+<div class="absolute -top-10 -right-10 w-32 h-32 bg-primary-container rounded-full blur-[40px] opacity-20 pointer-events-none"></div>
+<h4 class="font-headline text-xl text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">sell</span>
+                                Precios
+                            </h4>
+<div class="space-y-6">
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="price_regular">Precio Regular ($)</label>
+<div class="flex items-center">
+<span class="text-on-surface-variant mr-2 text-lg font-body">$</span>
+<input class="ghost-input w-full py-2 text-xl font-medium text-on-background" id="price_regular" type="number" value="85.00"/>
+</div>
+</div>
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="price_sale">Precio Oferta ($) <span class="text-xs lowercase text-outline">(Opcional)</span></label>
+<div class="flex items-center">
+<span class="text-on-surface-variant mr-2 text-lg font-body">$</span>
+<input class="ghost-input w-full py-2 text-lg text-on-background" id="price_sale" placeholder="0.00" type="number"/>
+</div>
+</div>
+<div class="relative pt-4 mt-4 border-t border-surface-variant">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="price_cost">Costo del Artículo ($)</label>
+<div class="flex items-center">
+<span class="text-on-surface-variant mr-2 text-base font-body">$</span>
+<input class="ghost-input w-full py-1 text-base text-on-background" id="price_cost" type="number" value="25.00"/>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 font-body">Margen estimado: 70.5%</p>
+</div>
+</div>
+</div>
+<!-- Inventory Card -->
+<div class="bg-surface-container-low rounded-xl p-8">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-headline text-xl text-on-background flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary">inventory</span>
+                                    Inventario
+                                </h4>
+<span class="px-3 py-1 bg-surface-container-lowest text-primary rounded-full text-xs font-label uppercase tracking-wide">En Stock</span>
+</div>
+<div class="space-y-6">
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="stock_qty">Cantidad Disponible</label>
+<input class="ghost-input w-full py-2 text-lg text-on-background" id="stock_qty" type="number" value="124"/>
+</div>
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="stock_alert">Alerta de Stock Bajo</label>
+<input class="ghost-input w-full py-2 text-lg text-on-background" id="stock_alert" type="number" value="15"/>
+</div>
+<div class="flex items-center gap-3 mt-4 pt-4 border-t border-surface-variant/50">
+<input checked="" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary-fixed bg-transparent" id="track_inventory" type="checkbox"/>
+<label class="font-body text-sm text-on-background" for="track_inventory">Rastrear cantidad de inventario</label>
+</div>
+</div>
+</div>
+<!-- SEO & Meta Card -->
+<div class="bg-surface-container-low rounded-xl p-8">
+<h4 class="font-headline text-xl text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">search</span>
+                                SEO &amp; Meta
+                            </h4>
+<div class="space-y-6">
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="seo_title">Meta Título</label>
+<input class="ghost-input w-full py-2 text-sm text-on-background" id="seo_title" type="text" value="Serum Renovador Celular | Lumière Skin"/>
+<p class="text-[10px] text-right mt-1 text-on-surface-variant">42/60</p>
+</div>
+<div class="relative">
+<label class="block font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2" for="seo_desc">Meta Descripción</label>
+<textarea class="ghost-input w-full py-2 text-sm text-on-background resize-none" id="seo_desc" rows="3">Revitaliza tu piel con nuestro serum rico en péptidos y ácido hialurónico. Hidratación profunda para un brillo natural y luminoso.</textarea>
+<p class="text-[10px] text-right mt-1 text-on-surface-variant">132/160</p>
+</div>
+<div class="mt-4 pt-4 border-t border-surface-variant/50">
+<p class="font-label text-xs text-on-surface-variant uppercase tracking-wider mb-2">Previsualización en Buscadores</p>
+<div class="bg-surface-container-lowest p-4 rounded-lg">
+<p class="text-[#1a0dab] text-sm font-medium truncate">Serum Renovador Celular | Lumière Skin</p>
+<p class="text-[#006621] text-xs truncate">www.etherealeditor.com/productos/serum-renovador</p>
+<p class="text-on-surface-variant text-xs mt-1 line-clamp-2">Revitaliza tu piel con nuestro serum rico en péptidos y ácido hialurónico. Hidratación profunda para un brillo natural y luminoso.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</form>
+<!-- Bottom spacing for breathing room -->
+<div class="h-24"></div>
+</div>
+</main>
+</div>
+</body></html>
+
+admin-gension de productos mobile
+
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ethereal Editor - Product Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400..700;1,400..700&amp;family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-variant": "#e6e2df",
+                      "tertiary-fixed-dim": "#ecbbba",
+                      "surface-container-low": "#f8f3f0",
+                      "secondary-fixed-dim": "#f0bd8f",
+                      "on-background": "#1c1b1a",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-high": "#ece7e4",
+                      "tertiary-fixed": "#ffdad9",
+                      "secondary-fixed": "#ffdcbf",
+                      "on-secondary-fixed-variant": "#623f1b",
+                      "primary": "#944555",
+                      "on-primary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "on-secondary": "#ffffff",
+                      "surface-tint": "#944555",
+                      "background": "#fdf8f5",
+                      "surface": "#fdf8f5",
+                      "on-error-container": "#93000a",
+                      "surface-container-lowest": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#fdf8f5",
+                      "on-tertiary-fixed-variant": "#603d3e",
+                      "tertiary": "#7b5455",
+                      "primary-fixed": "#ffd9de",
+                      "on-secondary-container": "#7a532e",
+                      "primary-fixed-dim": "#ffb2be",
+                      "surface-container-highest": "#e6e2df",
+                      "primary-container": "#e8899a",
+                      "on-primary-container": "#682233",
+                      "on-primary-fixed-variant": "#772e3e",
+                      "on-tertiary-container": "#523132",
+                      "surface-container": "#f2edea",
+                      "tertiary-container": "#c79999",
+                      "surface-dim": "#ded9d6",
+                      "outline-variant": "#d9c1c3",
+                      "on-secondary-fixed": "#2d1600",
+                      "secondary": "#7d5630",
+                      "on-tertiary-fixed": "#2f1314",
+                      "inverse-on-surface": "#f5f0ed",
+                      "secondary-container": "#ffca9b",
+                      "on-error": "#ffffff",
+                      "inverse-primary": "#ffb2be",
+                      "on-surface": "#1c1b1a",
+                      "on-primary-fixed": "#3e0215",
+                      "outline": "#867274",
+                      "on-surface-variant": "#534245",
+                      "inverse-surface": "#32302e"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Noto Serif"
+                      ],
+                      "display": [
+                              "Noto Serif"
+                      ],
+                      "body": [
+                              "Plus Jakarta Sans"
+                      ],
+                      "label": [
+                              "Plus Jakarta Sans"
+                      ]
+              },
+              "fontSize": {}
+      },
+          },
+        }
+      </script>
+<style>
+        .glass-header {
+            background-color: rgba(253, 248, 245, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .ghost-border {
+            border-bottom: 1px solid rgba(217, 193, 195, 0.2);
+        }
+        .ghost-border:focus {
+            border-bottom: 2px solid #944555;
+            outline: none;
+        }
+        .soft-shadow {
+             box-shadow: 0 20px 40px rgba(62, 2, 21, 0.06);
+        }
+        /* Custom scrollbar to match theme */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d9c1c3;
+            border-radius: 4px;
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Top Navigation Bar - Derived from Shared JSON (TopNavBar) -->
+<header class="docked full-width top-0 sticky z-40 bg-surface/70 dark:bg-surface-dim/70 backdrop-blur-md flex justify-between items-center w-full px-4 py-4 md:pl-72 md:pr-8">
+<div class="flex items-center gap-3">
+<!-- Mobile Menu Icon (Hidden on Web) -->
+<button class="md:hidden text-primary p-2 hover:bg-surface-container-lowest/50 rounded-full transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline text-headline-md font-bold text-primary dark:text-primary-fixed-dim">Admin Dashboard</h1>
+</div>
+<!-- Search Bar (on_left in JSON, but moved to center-ish for mobile optimization) -->
+<div class="hidden md:flex flex-1 max-w-md mx-6">
+<div class="relative w-full flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant/50">search</span>
+<input class="w-full bg-surface-container-lowest ghost-border py-2 pl-10 pr-4 text-body-lg text-on-surface placeholder:text-on-surface-variant/50 transition-colors" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<!-- Trailing Icons -->
+<button class="text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest/50 rounded-full p-2 transition-all duration-200 hidden sm:block">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest/50 rounded-full p-2 transition-all duration-200 hidden sm:block">
+<span class="material-symbols-outlined">mail</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary hover:bg-surface-container-lowest/50 rounded-full p-2 transition-all duration-200 hidden sm:block">
+<span class="material-symbols-outlined">chat_bubble</span>
+</button>
+<!-- Trailing Primary Action / Profile -->
+<div class="flex items-center gap-2 ml-2">
+<span class="font-label text-label-sm font-medium text-primary hidden sm:block">Perfil</span>
+<img alt="Admin Profile Picture" class="w-8 h-8 rounded-full object-cover" data-alt="A close-up portrait of a professional woman with natural, glowing skin, reflecting the high-end, skin-toned color palette of the Ethereal Editor aesthetic. The lighting is soft and flattering, creating a lit-from-within look. The background is a warm, neutral surface color." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZYGIW2YZgV3rjM9DEIfszPx3teJZejp8ZTnZOSm0zztdrRSac6kj5VI0bmg4vHWBmamzwrgQ2IMqew5_5i58MRKlgAl1anMS34vzo29ZROSeVfBKV265qqniJht0SLSjyeLA9hAa3L04l47TlhiCCKQ0g2MH3CnBnf6XkMllGrpt61-N9m1wOUSGX35PKR-xjwsURIqY1o_qnzdnQbDBXXxQhSRGM2jUZmilL2SBSFFPZqRGNDrk-e8ypIxFNtmAjGGdCaCN6t26E"/>
+</div>
+</div>
+</header>
+<div class="flex">
+<!-- Side Navigation Bar - Derived from Shared JSON (SideNavBar) -->
+<nav class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 border-r-0 bg-surface-container-low dark:bg-surface-container-lowest z-50">
+<!-- Header Brand -->
+<div class="p-6 pb-8">
+<h2 class="font-headline text-2xl font-bold text-primary dark:text-primary-fixed-dim">The Ethereal Editor</h2>
+<p class="font-body text-body-sm text-on-surface-variant mt-1">Management Suite</p>
+</div>
+<!-- CTA -->
+<div class="px-4 mb-6">
+<button class="w-full bg-primary text-on-primary rounded-full py-3 px-4 font-label text-label-md uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-surface-tint transition-all duration-200">
+<span class="material-symbols-outlined">add</span>
+                    Nueva Cita
+                </button>
+</div>
+<!-- Nav Tabs -->
+<ul class="flex flex-col gap-2 px-2 flex-1">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label text-label-md uppercase tracking-wider">Citas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">spa</span>
+<span class="font-label text-label-md uppercase tracking-wider">Servicios</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">face</span>
+<span class="font-label text-label-md uppercase tracking-wider">Especialistas</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label text-label-md uppercase tracking-wider">Clientes</span>
+</a>
+</li>
+<!-- ACTIVE TAB: Productos -->
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-primary dark:text-primary-fixed-dim bg-primary-fixed/20 rounded-lg font-bold scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="font-label text-label-md uppercase tracking-wider">Productos</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface-variant/80 hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container transition-all duration-200 rounded-lg mt-auto mb-4" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label text-label-md uppercase tracking-wider">Configuración</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-64 w-full min-h-screen pb-24 relative">
+<!-- Mobile Search and Filter Header (One-handed use optimized) -->
+<div class="md:hidden px-4 pt-2 pb-4 glass-header sticky top-[72px] z-30 flex items-center gap-3">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant/50">search</span>
+<input class="w-full bg-surface-container-lowest ghost-border py-2 pl-10 pr-4 text-body-lg text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none transition-colors" placeholder="Search products..." type="text"/>
+</div>
+<button class="bg-surface-container-lowest p-2 rounded-lg text-primary soft-shadow">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</div>
+<div class="px-4 md:px-8 py-6 max-w-5xl mx-auto">
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-8 mt-4 md:mt-0">
+<div>
+<h2 class="font-headline text-display-lg text-primary leading-tight">Curated<br/>Collection</h2>
+<p class="font-body text-body-lg text-on-surface-variant mt-2 max-w-md">Manage your premium botanical skincare inventory.</p>
+</div>
+<!-- Desktop Filter -->
+<div class="hidden md:flex gap-3">
+<button class="bg-surface-container-lowest px-4 py-2 rounded-full text-on-surface-variant flex items-center gap-2 hover:bg-surface-container-high transition-colors">
+<span class="font-label text-label-md">Status</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="bg-surface-container-lowest px-4 py-2 rounded-full text-on-surface-variant flex items-center gap-2 hover:bg-surface-container-high transition-colors">
+<span class="font-label text-label-md">Category</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Product Grid (Bento/Card Style) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Product Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden group hover:bg-surface-container-low transition-colors duration-300">
+<div class="h-48 w-full relative overflow-hidden bg-surface-container">
+<img alt="Rose Quartz Serum" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" data-alt="A luxury skincare bottle containing rose-colored serum resting on a smooth, warm-toned stone surface. Soft, natural lighting creates a delicate glass reflection. The color palette features skin-tones, blush pinks (primary-fixed), and off-whites, embodying an editorial, high-end beauty aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiug8mtCkGwolyo-rbLHhvrkwyCcdZspVjDXorkDkOPRRVy80GKSXJjjVE_Wm0Di-aQ8R0r9gWlai0IyzxXYyt3dMum7YijPaoJkg_z0fVJcHrZP3sUId1NKKRylvpzMeudWDaCe_GTjddsit-lBKhtYfe96QVdJxoAtqwCnB72sq1rlicBcTuCKs8qywsYdkxIkJ4G1ZYp44oFMnlWznoaN97XLY_RV2zIfYfJbo8rkPO84IDUVIlEmyqwsyLzmtqZXED69dMc68O"/>
+<div class="absolute top-3 right-3">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full font-label text-[10px] uppercase tracking-wider backdrop-blur-sm">In Stock (24)</span>
+</div>
+</div>
+<div class="p-5">
+<h3 class="font-headline text-headline-md text-on-surface mb-1">Rose Quartz Elixir</h3>
+<p class="font-body text-body-sm text-on-surface-variant mb-4">Hydrating botanical serum.</p>
+<div class="flex justify-between items-center mt-2">
+<span class="font-body text-body-lg text-primary font-medium">$85.00</span>
+<button class="text-primary hover:bg-primary-fixed/30 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden group hover:bg-surface-container-low transition-colors duration-300">
+<div class="h-48 w-full relative overflow-hidden bg-surface-container">
+<img alt="Velvet Cleansing Balm" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" data-alt="A frosted glass jar of cleansing balm placed asymmetrically on a pristine white surface (surface-container-lowest). Subtle botanical shadows fall across the background. The scene emphasizes negative space, high-key lighting, and warm neutral tones consistent with the Ethereal Editor design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcq9cTLWRAnc9-NEqQqIVH3GdMK_zP2xfNON6wfqnrDj0WCo6jqgupN07wDBvohXgyshIEjx0ToPSjpNDUqzoBD2kzaSZpYYWfk3XoUJypGp-1NMN-hK8E5GfI-YzBW-nFXzxNEdvgsR1euyby-b5Dz3DZC22JtJ0v4p9aoILsHHqtjxWENQEpuddfP3BRlSj-xJ6i-IX744f32CEqft3ZqMkrePFWmY-KdlVuqU5fJlG0YOaw4LxghESsx_r3r2oPVovxAIywSB8H"/>
+<div class="absolute top-3 right-3">
+<span class="bg-surface-variant text-on-surface-variant px-3 py-1 rounded-full font-label text-[10px] uppercase tracking-wider backdrop-blur-sm">Low Stock (3)</span>
+</div>
+</div>
+<div class="p-5">
+<h3 class="font-headline text-headline-md text-on-surface mb-1">Velvet Cleansing Balm</h3>
+<p class="font-body text-body-sm text-on-surface-variant mb-4">Deep pore organic cleanse.</p>
+<div class="flex justify-between items-center mt-2">
+<span class="font-body text-body-lg text-primary font-medium">$60.00</span>
+<button class="text-primary hover:bg-primary-fixed/30 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Product Card 3 (Out of Stock) -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden group hover:bg-surface-container-low transition-colors duration-300 opacity-75">
+<div class="h-48 w-full relative overflow-hidden bg-surface-container grayscale-[50%]">
+<img alt="Botanical Toner" class="w-full h-full object-cover opacity-80" data-alt="A minimalist pump bottle of facial toner against a subtle textured background in surface-container hues. The lighting is soft and ambient. The composition is clean and editorial, using generous negative space to convey luxury beauty packaging." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNl8WS7p_tOHUvp-sxuhgVPzpX49pGgjNCxAO8sH01miy6x_P8l3aHoMhLwGW2_YoxH42P9D6o5IJ--5GTYP2uWLalX_mZx_Yc4adwIv2_hdmq2X3vFZbMLYN--S8vHBR_S9g9epzrwzdvzbLtHBVX3nYNhu26DntfoOvdZwi5YwkEsiC1mB5Iqis6WsUAsiylaNEOX35SfLN3VeJgAS2RzkmMSp4g91S-U_hW36YZrPmAsZVaQHiduc1leKUrLpEKEG-SM893HQOD"/>
+<div class="absolute top-3 right-3">
+<span class="bg-error-container text-on-error-container px-3 py-1 rounded-full font-label text-[10px] uppercase tracking-wider backdrop-blur-sm">Out of Stock</span>
+</div>
+</div>
+<div class="p-5">
+<h3 class="font-headline text-headline-md text-on-surface mb-1">Botanical Essence Tone</h3>
+<p class="font-body text-body-sm text-on-surface-variant mb-4">Balancing floral water.</p>
+<div class="flex justify-between items-center mt-2">
+<span class="font-body text-body-lg text-on-surface-variant font-medium">$45.00</span>
+<button class="text-primary hover:bg-primary-fixed/30 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Floating Action Button (FAB) - Mobile Only, suppressed on Desktop via design system logic for list views -->
+<button class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-primary text-on-primary rounded-full soft-shadow flex items-center justify-center z-50 hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-2xl">add</span>
+</button>
+</body></html>

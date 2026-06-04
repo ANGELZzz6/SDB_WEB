@@ -321,6 +321,7 @@ export default function LandingPage() {
           <div className="nav-links" style={{ alignItems: 'center', gap: '40px' }}>
             {[
               { label: 'Servicios', path: '/servicios' },
+              { label: 'Productos', path: '/productos' },
               { label: 'Especialistas', path: '/especialistas' },
               { label: 'Galería', path: '/galeria' },
             ].map(({ label, path }) => (
@@ -366,6 +367,7 @@ export default function LandingPage() {
         <div className={`mobile-menu ${isMenuOpen ? 'open' : ''}`}>
            {[
               { label: 'Servicios', path: '/servicios' },
+              { label: 'Productos', path: '/productos' },
               { label: 'Especialistas', path: '/especialistas' },
               { label: 'Galería', path: '/galeria' },
               { label: 'Agendar Cita', path: '/chatbot' },
@@ -408,7 +410,8 @@ export default function LandingPage() {
           <div className="hero-layout">
 
             {/* Left: Editorial Text */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '32px', position: 'relative' }}>
+
               {/* Luxury badge */}
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '10px',

@@ -131,6 +131,31 @@ export interface SiteConfig {
   duracionSlot: number
 }
 
+export interface Product {
+  _id: string
+  nombre: string
+  marca: string
+  sku: string
+  descripcion: string
+  categoria: string
+  imagenes: string[]
+  ingredientes: string[]
+  beneficios: string[]
+  precio: number
+  precioOferta?: number
+  costo?: number           // Solo visible para admins (proyección server-side)
+  stock: number
+  stockMinimo: number
+  rastrearStock: boolean
+  isActive: boolean
+  seoTitle?: string
+  seoDesc?: string
+  likesCount: number
+  rating: number
+  createdAt?: string
+  updatedAt?: string
+}
+
 // Respuesta genérica de la API
 export interface ApiResponse<T> {
   success: boolean

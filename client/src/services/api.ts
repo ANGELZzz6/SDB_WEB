@@ -7,7 +7,8 @@ import type {
   ApiResponse,
   GalleryCategory,
   GalleryItem,
-  SiteConfig
+  SiteConfig,
+  Product
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
@@ -227,3 +228,23 @@ export const siteConfigService = {
   get: () => api.get<ApiResponse<SiteConfig>>('/config'),
   update: (data: Partial<SiteConfig>) => api.put<ApiResponse<SiteConfig>>('/config', data),
 };
+
+export const productService = {
+  /** Lista pública de productos (admins ven costo; anónimos no). */
+  getAll: (options?: { categoria?: string; search?: string; includeInactive?: boolean }) => {
+    const params = new URLSearchParams();
+    if (options?.includeInactive) params.append('includeInactive', 'true');
+    if (options?.categoria && options.categoria !== 'Todos') params.append('categoria', options.categoria);
+    if (options?.search) params.append('search', options.search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return api.get<ApiResponse<Product[]> & { stats?: any }>(`/products${query}`);
+  },
+  /** Categorías únicas de productos activos. */
+  getCategorias: () => api.get<ApiResponse<string[]>>('/products/categorias'),
+  getById: (id: string) => api.get<ApiResponse<Product>>(`/products/${id}`),
+  create: (data: Partial<Product>) => api.post<ApiResponse<Product>>('/products', data),
+  update: (id: string, data: Partial<Product>) => api.put<ApiResponse<Product>>(`/products/${id}`, data),
+  deactivate: (id: string) => api.delete<ApiResponse<Product>>(`/products/${id}`),
+  reactivate: (id: string) => api.patch<ApiResponse<Product>>(`/products/${id}/reactivate`, {}),
+};
+

@@ -36,6 +36,7 @@ export const ADMIN_NAV = [
   { icon: '✂️', label: 'Servicios',      path: '/admin/servicios',     key: 'servicios' },
   { icon: '👩‍🎨', label: 'Especialistas', path: '/admin/especialistas', key: 'especialistas' },
   { icon: '👥', label: 'Clientes',       path: '/admin/clientes',      key: 'clientes' },
+  { icon: '📦', label: 'Productos',      path: '/admin/productos',     key: 'productos' },
   { icon: '💰', label: 'Liquidaciones',  path: '/admin/liquidaciones', key: 'liquidaciones' },
   { icon: '🖼️', label: 'Galería',        path: '/admin/galeria',       key: 'galeria' },
   { icon: '🔐', label: 'Accesos',        path: '/admin/accesos',       key: 'accesos' },
