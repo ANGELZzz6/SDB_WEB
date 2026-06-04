@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getCart, saveCart, CartItem } from '../pages/ProductsPage';
+import { getCart, saveCart } from '../pages/ProductsPage';
+import type { CartItem } from '../pages/ProductsPage';
 import { productService } from '../services/api';
 import type { SiteConfig } from '../types';
 
