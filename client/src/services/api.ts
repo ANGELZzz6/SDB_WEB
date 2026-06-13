@@ -8,7 +8,8 @@ import type {
   GalleryCategory,
   GalleryItem,
   SiteConfig,
-  Product
+  Product,
+  ProductMovement
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
@@ -246,5 +247,10 @@ export const productService = {
   update: (id: string, data: Partial<Product>) => api.put<ApiResponse<Product>>(`/products/${id}`, data),
   deactivate: (id: string) => api.delete<ApiResponse<Product>>(`/products/${id}`),
   reactivate: (id: string) => api.patch<ApiResponse<Product>>(`/products/${id}/reactivate`, {}),
+  checkout: (items: { productId: string; qty: number }[]) => api.post<ApiResponse<any>>('/products/checkout', { items }),
+  getMovements: (productId: string) => api.get<ApiResponse<ProductMovement[]>>(`/products/${productId}/movements`),
+  createMovement: (productId: string, data: { tipo: 'ingreso' | 'egreso'; cantidad: number; motivo?: string; confirmado?: boolean }) => api.post<ApiResponse<ProductMovement>>(`/products/${productId}/movements`, data),
+  confirmMovement: (movementId: string) => api.post<ApiResponse<ProductMovement>>(`/products/movements/${movementId}/confirm`, {}),
+  deleteMovement: (movementId: string) => api.delete<ApiResponse<null>>(`/products/movements/${movementId}`),
 };
 

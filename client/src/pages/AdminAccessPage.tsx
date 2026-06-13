@@ -10,6 +10,7 @@ const PERMISSION_LABELS: { key: string; label: string; fixed?: boolean }[] = [
   { key: 'clientes', label: 'Clientes' },
   { key: 'servicios', label: 'Servicios' },
   { key: 'especialistas', label: 'Especialistas' },
+  { key: 'productos', label: 'Productos' },
   { key: 'accesos', label: 'Accesos' },
   { key: 'galeria', label: 'Galería' },
   { key: 'configuracion', label: 'Configuración' },
@@ -18,8 +19,8 @@ const PERMISSION_LABELS: { key: string; label: string; fixed?: boolean }[] = [
 
 const DEFAULT_PERMS = {
   citas: true, calendario: true, clientes: false,
-  servicios: false, especialistas: false, accesos: false,
-  galeria: false, configuracion: false, liquidaciones: false,
+  servicios: false, especialistas: false, productos: false,
+  accesos: false, galeria: false, configuracion: false, liquidaciones: false,
 };
 
 export default function AdminAccessPage() {

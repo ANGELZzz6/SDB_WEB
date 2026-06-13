@@ -1,195 +1,427 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout';
+import { T } from '../lib/adminTokens';
 import { productService } from '../services/api';
-import type { Product } from '../types';
+import type { Product, ProductMovement } from '../types';
 
 export default function AdminProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
+  const [movements, setMovements] = useState<ProductMovement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Formulario para movimiento manual
+  const [showAddMov, setShowAddMov] = useState(false);
+  const [movTipo, setMovTipo] = useState<'ingreso' | 'egreso'>('ingreso');
+  const [movQty, setMovQty] = useState(1);
+  const [movMotivo, setMovMotivo] = useState('');
+
+  const loadData = () => {
+    if (!id) return;
+    setLoading(true);
+    Promise.all([
+      productService.getById(id),
+      productService.getMovements(id)
+    ]).then(([resProd, resMovs]) => {
+      if (resProd.success && resProd.data) {
+        setProduct(resProd.data);
+      }
+      if (resMovs.success && resMovs.data) {
+        setMovements(resMovs.data);
+      }
+      setLoading(false);
+    }).catch((err) => {
+      console.error(err);
+      alert('Error cargando detalles del producto');
+      navigate('/admin/productos');
+    });
+  };
 
   useEffect(() => {
-    if (id) {
-      productService.getById(id).then(res => {
-        if (res.success && res.data) setProduct(res.data);
-        setLoading(false);
-      }).catch(() => {
-        alert('Error cargando detalles del producto');
-        navigate('/admin/productos');
-      });
+    loadData();
+  }, [id]);
+
+  const handleConfirmMovement = async (movId: string) => {
+    if (!window.confirm('¿Seguro que deseas confirmar este movimiento y ajustar el inventario?')) return;
+    setActionLoading(true);
+    try {
+      const res = await productService.confirmMovement(movId);
+      if (res.success) {
+        alert(res.message || 'Movimiento confirmado e inventario actualizado.');
+        loadData();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al confirmar movimiento');
+    } finally {
+      setActionLoading(false);
     }
-  }, [id, navigate]);
+  };
+
+  const handleDeleteMovement = async (movId: string) => {
+    if (!window.confirm('¿Seguro que deseas cancelar/eliminar este movimiento pendiente?')) return;
+    setActionLoading(true);
+    try {
+      const res = await productService.deleteMovement(movId);
+      if (res.success) {
+        alert(res.message || 'Movimiento pendiente cancelado.');
+        loadData();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar movimiento');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddMovementSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || movQty <= 0) return;
+    setActionLoading(true);
+    try {
+      const res = await productService.createMovement(id, {
+        tipo: movTipo,
+        cantidad: movQty,
+        motivo: movMotivo.trim() || undefined,
+        confirmado: true // Al crearlo el admin, se descuenta/ingresa de inmediato
+      });
+      if (res.success) {
+        alert('Movimiento de inventario registrado con éxito.');
+        setMovQty(1);
+        setMovMotivo('');
+        setShowAddMov(false);
+        loadData();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al registrar movimiento');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val);
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+  };
 
-  if (loading) return <div className="p-8 text-center text-gray-500">Cargando...</div>;
-  if (!product) return <div className="p-8 text-center text-red-500">Producto no encontrado.</div>;
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div style={{ padding: '64px', textAlign: 'center', color: T.onSurfaceVariant, fontFamily: T.fontBody }}>
+          Cargando detalles del producto...
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!product) {
+    return (
+      <AdminLayout>
+        <div style={{ padding: '64px', textAlign: 'center', color: T.error, fontFamily: T.fontBody }}>
+          Producto no encontrado.
+        </div>
+      </AdminLayout>
+    );
+  }
 
   const isLow = product.rastrearStock && product.stock > 0 && product.stock <= product.stockMinimo;
   const isOut = product.rastrearStock && product.stock === 0;
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto">
-      {/* ── HEADER ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/admin/productos')} className="text-gray-500 hover:text-gray-900 bg-white p-2 rounded-full shadow-sm transition-colors">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          </button>
+    <AdminLayout searchPlaceholder="Buscar en este producto...">
+      <style>{`
+        .glass-panel {
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+        .ambient-shadow {
+          box-shadow: 0 20px 40px rgba(62, 2, 21, 0.04);
+        }
+        .ghost-border {
+          border-bottom: 1px solid rgba(217, 193, 195, 0.2);
+        }
+        .detail-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+        .detail-header-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 32px;
+          margin-bottom: 32px;
+        }
+        @media (min-width: 640px) {
+          .detail-header-grid {
+            grid-template-columns: 240px 1fr;
+          }
+        }
+        @media (min-width: 1024px) {
+          .detail-grid {
+            grid-template-columns: 7fr 5fr;
+          }
+        }
+        @media (max-width: 768px) {
+          .admin-detail-container { padding: 24px 16px 120px !important; }
+          .detail-header { flex-direction: column; align-items: flex-start !important; gap: 16px; margin-bottom: 24px !important; }
+        }
+      `}</style>
+
+      <div className="admin-detail-container" style={{ padding: '40px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Header Section */}
+        <div className="detail-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">{product.nombre}</h1>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${product.isActive ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+            <button
+              onClick={() => navigate('/admin/productos')}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.15em',
+                color: T.onSurfaceVariant, display: 'flex', alignItems: 'center', gap: '4px',
+                marginBottom: '8px', padding: 0
+              }}
+            >
+              <span>⬅</span> Volver a Productos
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(24px, 5vw, 36px)', color: T.primary, fontWeight: 700, margin: 0 }}>
+                {product.nombre}
+              </h1>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                padding: '4px 12px', borderRadius: '9999px',
+                backgroundColor: product.isActive ? '#e2f0d9' : T.surfaceContainerHigh,
+                color: product.isActive ? '#2e7d32' : T.onSurfaceVariant
+              }}>
                 {product.isActive ? 'Activo' : 'Inactivo'}
               </span>
             </div>
-            <p className="text-sm text-gray-500 mt-1">{product.sku} • {product.marca} • {product.categoria}</p>
+            <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, marginTop: '4px', margin: 0 }}>
+              SKU: {product.sku}
+            </p>
           </div>
+          <button
+            onClick={() => navigate(`/admin/productos/editar/${product._id}`)}
+            style={{
+              backgroundColor: '#fff', color: T.onSurface,
+              border: `1px solid ${T.outlineVariant}60`,
+              padding: '12px 24px', borderRadius: '9999px',
+              fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700,
+              cursor: 'pointer', transition: 'background-color 0.2s',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              display: 'flex', alignItems: 'center', gap: '6px'
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = T.surfaceContainerLow)}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#fff')}
+          >
+            <span>✏️</span> Editar
+          </button>
         </div>
-        <button
-          onClick={() => navigate(`/admin/productos/editar/${product._id}`)}
-          className="bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-6 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2"
-        >
-          <span>✏️</span> Editar Producto
-        </button>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* ── COLUMNA IZQUIERDA (Info y KPIs) ── */}
-        <div className="lg:col-span-2 space-y-8">
-          
-          {/* Main Card */}
-          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-8">
-            {/* Img */}
-            <div className="w-full md:w-48 flex-shrink-0">
-              <div className="aspect-[4/5] bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
-                <img src={product.imagenes?.[0] || 'https://via.placeholder.com/400'} alt={product.nombre} className="w-full h-full object-cover" />
-              </div>
-            </div>
-            {/* Data */}
-            <div className="flex-1">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Métricas del Producto</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Precio Venta</p>
-                  <p className="text-xl font-bold text-[#944555] mt-1">{formatCurrency(product.precioOferta || product.precio)}</p>
-                  {product.precioOferta && product.precioOferta > 0 && (
-                    <p className="text-xs text-gray-400 line-through mt-0.5">{formatCurrency(product.precio)}</p>
-                  )}
+        {/* Main Grid */}
+        <div className="detail-grid">
+          {/* Left Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Gallery & Description */}
+            <div style={{ backgroundColor: T.surfaceContainerLowest, padding: '32px', borderRadius: '24px', border: `1px solid ${T.outlineVariant}20` }} className="ambient-shadow">
+              <div className="detail-header-grid">
+                <div style={{ width: '100%', maxWidth: '240px', aspectRatio: '4/5', borderRadius: '16px', overflow: 'hidden', backgroundColor: T.surfaceContainerLow, border: `1px solid ${T.outlineVariant}30` }}>
+                  <img src={product.imagenes?.[0] || 'https://via.placeholder.com/400'} alt={product.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-                <div className="bg-gray-50 p-4 rounded-xl">
-                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Costo</p>
-                  <p className="text-xl font-bold text-gray-700 mt-1">{product.costo !== undefined ? formatCurrency(product.costo) : 'N/D'}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Rentabilidad: {product.costo ? (((product.precioOferta || product.precio) - product.costo) / (product.precioOferta || product.precio) * 100).toFixed(1) + '%' : '-'}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-xl col-span-2">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Inventario</p>
-                    {product.rastrearStock && (
-                      <span className={`text-xs font-bold ${isOut ? 'text-red-600' : isLow ? 'text-orange-500' : 'text-green-600'}`}>
-                        {isOut ? 'Agotado' : isLow ? 'Bajo' : 'Óptimo'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900">{product.rastrearStock ? product.stock : 'Ilimitado'} <span className="text-sm font-medium text-gray-500">unidades</span></p>
-                  {product.rastrearStock && (
-                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-3">
-                      <div className={`h-1.5 rounded-full ${isOut ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-green-500'}`} style={{ width: `${Math.min(100, (product.stock / product.stockMinimo) * 50)}%` }}></div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, marginTop: 0, marginBottom: '16px' }}>Métricas & Precios</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ backgroundColor: T.surfaceContainerLow, padding: '16px', borderRadius: '12px' }}>
+                      <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant }}>Precio Venta</span>
+                      <p style={{ fontFamily: T.fontHeadline, fontSize: '20px', color: T.primary, margin: '4px 0 0' }}>{formatCurrency(product.precioOferta && product.precioOferta > 0 ? product.precioOferta : product.precio)}</p>
+                      {product.precioOferta && product.precioOferta > 0 && <p style={{ fontSize: '11px', color: T.onSurfaceVariant, margin: 0, textDecoration: 'line-through' }}>{formatCurrency(product.precio)}</p>}
                     </div>
-                  )}
+                    <div style={{ backgroundColor: T.surfaceContainerLow, padding: '16px', borderRadius: '12px' }}>
+                      <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant }}>Costo Artículo</span>
+                      <p style={{ fontFamily: T.fontHeadline, fontSize: '20px', color: T.onSurface, margin: '4px 0 0' }}>{product.costo ? formatCurrency(product.costo) : 'N/D'}</p>
+                      {product.costo ? <p style={{ fontSize: '11px', color: '#2e7d32', margin: 0 }}>Margen: {(((product.precioOferta || product.precio) - product.costo) / (product.precioOferta || product.precio) * 100).toFixed(1)}%</p> : null}
+                    </div>
+                    <div style={{ backgroundColor: T.surfaceContainerLow, padding: '16px', borderRadius: '12px', gridColumn: 'span 2' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant }}>Cantidad Inventario</span>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, color: isOut ? T.error : isLow ? '#e2725b' : '#2e7d32' }}>
+                          {isOut ? 'AGOTADO' : isLow ? 'STOCK BAJO' : 'STOCK ÓPTIMO'}
+                        </span>
+                      </div>
+                      <p style={{ fontFamily: T.fontHeadline, fontSize: '24px', color: T.onSurface, margin: '4px 0 0' }}>{product.rastrearStock ? `${product.stock} unidades` : 'Ilimitado'}</p>
+                      {product.rastrearStock && (
+                        <div style={{ width: '100%', height: '6px', borderRadius: '9999px', backgroundColor: T.surfaceVariant, marginTop: '12px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', borderRadius: '9999px', backgroundColor: isOut ? T.error : isLow ? '#e2725b' : '#2e7d32', width: `${Math.min(100, (product.stock / product.stockMinimo) * 50)}%` }} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              <div>
+                <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant, display: 'block', marginBottom: '8px' }}>Descripción</span>
+                <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, lineHeight: 1.8, margin: 0 }}>
+                  {product.descripcion || 'Sin descripción provista.'}
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px', borderTop: `1px solid ${T.outlineVariant}30`, paddingTop: '24px' }}>
+                <div>
+                  <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant, display: 'block', marginBottom: '8px' }}>Categoría</span>
+                  <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, margin: 0 }}>{product.categoria}</p>
+                </div>
+                <div>
+                  <span style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant, display: 'block', marginBottom: '8px' }}>Marca</span>
+                  <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurface, margin: 0 }}>{product.marca}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bento Grid: Details */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+              <div style={{ backgroundColor: T.surfaceContainerLowest, padding: '24px', borderRadius: '20px', border: `1px solid ${T.outlineVariant}20` }} className="ambient-shadow">
+                <h4 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '18px', color: T.primary, marginTop: 0, marginBottom: '16px' }}>🌸 Ingredientes Clave</h4>
+                <ul style={{ paddingLeft: '16px', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {product.ingredientes && product.ingredientes.length > 0 ? product.ingredientes.map((ing, i) => (
+                    <li key={i} style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant }}>{ing}</li>
+                  )) : <li style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, fontStyle: 'italic' }}>No especificados</li>}
+                </ul>
+              </div>
+              <div style={{ backgroundColor: T.surfaceContainerLowest, padding: '24px', borderRadius: '20px', border: `1px solid ${T.outlineVariant}20` }} className="ambient-shadow">
+                <h4 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '18px', color: T.primary, marginTop: 0, marginBottom: '16px' }}>✓ Beneficios Clave</h4>
+                <ul style={{ paddingLeft: '16px', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {product.beneficios && product.beneficios.length > 0 ? product.beneficios.map((ben, i) => (
+                    <li key={i} style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant }}>{ben}</li>
+                  )) : <li style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, fontStyle: 'italic' }}>No especificados</li>}
+                </ul>
               </div>
             </div>
           </div>
 
-          {/* Detalles Bento Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="p-2 bg-[#ffd9de]/30 text-[#944555] rounded-lg">✨</span>
-                <h3 className="font-bold text-gray-900">Ingredientes</h3>
+          {/* Right Column (Inventory & Movements) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Inventory Movements */}
+            <div style={{ backgroundColor: T.surfaceContainerLowest, padding: '32px', borderRadius: '24px', border: `1px solid ${T.outlineVariant}20`, display: 'flex', flexDirection: 'column' }} className="ambient-shadow">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, margin: 0 }}>Últimos Movimientos</h3>
+                <button
+                  onClick={() => setShowAddMov(!showAddMov)}
+                  style={{
+                    backgroundColor: T.primaryFixed, color: T.primary,
+                    border: 'none', padding: '6px 12px', borderRadius: '9999px',
+                    fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer'
+                  }}
+                >
+                  {showAddMov ? 'Cancelar' : '+ Registrar'}
+                </button>
               </div>
-              <ul className="space-y-2">
-                {product.ingredientes && product.ingredientes.length > 0 ? product.ingredientes.map((ing, i) => (
-                  <li key={i} className="text-sm text-gray-600 flex items-start gap-2"><span className="text-[#944555] mt-0.5">•</span> {ing}</li>
-                )) : <li className="text-sm text-gray-400 italic">No especificados</li>}
-              </ul>
-            </div>
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="p-2 bg-[#ffd9de]/30 text-[#944555] rounded-lg">💎</span>
-                <h3 className="font-bold text-gray-900">Beneficios</h3>
+
+              {/* Formulario de movimiento manual */}
+              {showAddMov && (
+                <form onSubmit={handleAddMovementSubmit} style={{ padding: '16px', backgroundColor: T.surfaceContainerLow, borderRadius: '16px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h4 style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, margin: 0, color: T.onSurface }}>Registrar Ajuste Manual (Afecta stock al guardar)</h4>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <label style={{ flex: 1, display: 'flex', flexDirection: 'column', fontSize: '11px', color: T.onSurfaceVariant, gap: '4px' }}>
+                      Tipo
+                      <select value={movTipo} onChange={e => setMovTipo(e.target.value as any)} style={{ padding: '8px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}50`, outline: 'none' }}>
+                        <option value="ingreso">Ingreso (+)</option>
+                        <option value="egreso">Egreso (-)</option>
+                      </select>
+                    </label>
+                    <label style={{ flex: 1, display: 'flex', flexDirection: 'column', fontSize: '11px', color: T.onSurfaceVariant, gap: '4px' }}>
+                      Cantidad
+                      <input type="number" min="1" value={movQty} onChange={e => setMovQty(Math.max(1, Number(e.target.value)))} style={{ padding: '8px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}50`, outline: 'none' }} />
+                    </label>
+                  </div>
+                  <label style={{ display: 'flex', flexDirection: 'column', fontSize: '11px', color: T.onSurfaceVariant, gap: '4px' }}>
+                    Motivo / Descripción
+                    <input type="text" placeholder="Ej: Ajuste manual, pérdida, etc." value={movMotivo} onChange={e => setMovMotivo(e.target.value)} style={{ padding: '8px', borderRadius: '8px', border: `1px solid ${T.outlineVariant}50`, outline: 'none' }} />
+                  </label>
+                  <button type="submit" disabled={actionLoading} style={{ backgroundColor: T.primary, color: '#fff', border: 'none', padding: '10px', borderRadius: '8px', fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
+                    Guardar Ajuste
+                  </button>
+                </form>
+              )}
+
+              {/* Movements Timeline */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }}>
+                {movements.length === 0 ? (
+                  <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant, margin: '20px 0', textAlign: 'center' }}>No hay movimientos registrados.</p>
+                ) : (
+                  movements.map((mov) => {
+                    const isIngreso = mov.tipo === 'ingreso';
+                    return (
+                      <div key={mov._id} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', paddingBottom: '16px', borderBottom: `1px solid ${T.outlineVariant}20` }}>
+                        <div style={{
+                          width: '28px', height: '28px', borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: isIngreso ? '#e2f0d9' : T.errorContainer,
+                          color: isIngreso ? '#2e7d32' : T.error,
+                          fontWeight: 700, fontSize: '16px', flexShrink: 0
+                        }}>
+                          {isIngreso ? '+' : '−'}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <p style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 700, color: T.onSurface, margin: 0 }}>
+                              {mov.motivo}
+                            </p>
+                            <span style={{
+                              fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px',
+                              backgroundColor: mov.confirmado ? '#e5e7eb' : T.primaryFixed,
+                              color: mov.confirmado ? '#4b5563' : T.primary
+                            }}>
+                              {mov.confirmado ? 'Confirmado' : 'Pendiente'}
+                            </span>
+                          </div>
+                          <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant, margin: '2px 0 6px' }}>
+                            {isIngreso ? 'Ingreso' : 'Egreso'} de {mov.cantidad} uds • {formatDate(mov.createdAt)}
+                          </p>
+
+                          {/* Acciones para movimientos pendientes (ventas de WhatsApp) */}
+                          {!mov.confirmado && (
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleConfirmMovement(mov._id)}
+                                style={{
+                                  backgroundColor: '#2e7d32', color: '#fff',
+                                  border: 'none', padding: '6px 12px', borderRadius: '6px',
+                                  fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                                  boxShadow: '0 2px 4px rgba(46,125,50,0.15)'
+                                }}
+                              >
+                                Confirmar Resta
+                              </button>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleDeleteMovement(mov._id)}
+                                style={{
+                                  backgroundColor: 'transparent', color: T.error,
+                                  border: `1px solid ${T.error}40`, padding: '6px 12px', borderRadius: '6px',
+                                  fontSize: '11px', fontWeight: 700, cursor: 'pointer'
+                                }}
+                              >
+                                Descartar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              <ul className="space-y-2">
-                {product.beneficios && product.beneficios.length > 0 ? product.beneficios.map((ben, i) => (
-                  <li key={i} className="text-sm text-gray-600 flex items-start gap-2"><span className="text-green-500 mt-0.5">✓</span> {ben}</li>
-                )) : <li className="text-sm text-gray-400 italic">No especificados</li>}
-              </ul>
             </div>
           </div>
         </div>
-
-        {/* ── COLUMNA DERECHA (Historial dummy) ── */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-            <h3 className="font-bold text-gray-900 mb-4 flex justify-between items-center">
-              <span>Últimos Movimientos</span>
-              <span className="text-xs font-normal text-gray-400 px-2 py-1 bg-gray-50 rounded-md">Próximamente</span>
-            </h3>
-            
-            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
-              {/* Dummy Entry 1 */}
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full border border-white bg-[#944555] text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                  <span className="text-[10px]">−</span>
-                </div>
-                <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-sm">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-xs font-semibold text-gray-900">Venta (WhatsApp)</span>
-                    <span className="text-[10px] text-gray-400">Hoy</span>
-                  </div>
-                  <p className="text-xs text-gray-500">-2 unidades</p>
-                </div>
-              </div>
-
-              {/* Dummy Entry 2 */}
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full border border-white bg-green-500 text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                  <span className="text-[10px]">+</span>
-                </div>
-                <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-sm">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-xs font-semibold text-gray-900">Ingreso Inventario</span>
-                    <span className="text-[10px] text-gray-400">Hace 3 días</span>
-                  </div>
-                  <p className="text-xs text-gray-500">+10 unidades</p>
-                </div>
-              </div>
-
-              {/* Dummy Entry 3 */}
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-6 h-6 rounded-full border border-white bg-[#944555] text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
-                  <span className="text-[10px]">−</span>
-                </div>
-                <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] bg-gray-50 p-3 rounded-xl border border-gray-100 shadow-sm">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-xs font-semibold text-gray-900">Uso en cabina</span>
-                    <span className="text-[10px] text-gray-400">Hace 5 días</span>
-                  </div>
-                  <p className="text-xs text-gray-500">-1 unidad</p>
-                </div>
-              </div>
-            </div>
-            
-            <button className="w-full mt-6 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 text-sm font-medium rounded-xl transition-colors">
-              Ver Historial Completo
-            </button>
-          </div>
-        </div>
-
       </div>
-    </div>
+    </AdminLayout>
   );
 }

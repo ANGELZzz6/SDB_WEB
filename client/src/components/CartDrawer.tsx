@@ -40,7 +40,7 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
   const remove = (id: string) => updateQty(id, 0);
 
   const formatPrice = (price: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(price);
-  
+
   const total = cartItems.reduce((acc, item) => {
     const price = item.product.precioOferta && item.product.precioOferta > 0 ? item.product.precioOferta : item.product.precio;
     return acc + (price * item.qty);
@@ -61,10 +61,10 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
       for (let i = 0; i < cartItems.length; i++) {
         const item = cartItems[i];
         const res = results[i];
-        
+
         if (res.success && res.data) {
           const actualProduct = res.data;
-          
+
           if (actualProduct.rastrearStock && actualProduct.stock < item.qty) {
             if (actualProduct.stock === 0) {
               discrepancies.push(`• ${actualProduct.nombre} (Agotado)`);
@@ -73,7 +73,7 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
               validCart.push({ ...item, qty: actualProduct.stock }); // Ajustar a la cantidad real
             }
           } else {
-             validCart.push(item);
+            validCart.push(item);
           }
         } else {
           discrepancies.push(`• ${item.product.nombre} (No encontrado)`);
@@ -90,6 +90,9 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
         return; // Detenemos aquí para que el usuario confirme su nueva bolsa antes de mandar a WhatsApp
       }
 
+      // Registrar los movimientos de venta como pendientes en el backend
+      await productService.checkout(cartItems.map(i => ({ productId: i.product._id, qty: i.qty })));
+
       // Si todo está bien, construir y enviar a WhatsApp
       const salonName = config?.nombreSalon || "L'Élixir Salon";
       const waNumber = config?.whatsapp?.replace(/\D/g, '') || '573000000000';
@@ -97,10 +100,10 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
         const price = i.product.precioOferta && i.product.precioOferta > 0 ? i.product.precioOferta : i.product.precio;
         return `• ${i.product.nombre} (x${i.qty}) — ${formatPrice(price * i.qty)}`;
       }).join('\n');
-      
+
       const msg = `Hola ${salonName}! 🌸\n\nMe gustaría pedir los siguientes productos:\n\n${itemsText}\n\n*Total: ${formatPrice(total)}*\n\n¿Tienen disponibilidad? Gracias!`;
       window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, '_blank');
-      
+
       // Opcional: limpiar carrito después de pedir? (Lo dejamos para que no se pierda si hay error en WA)
     } catch (err) {
       alert('Hubo un problema al verificar el inventario. Por favor intenta de nuevo.');
@@ -114,7 +117,7 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
     <>
       {/* Overlay */}
       {isOpen && (
-        <div 
+        <div
           onClick={onClose}
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] transition-opacity duration-300"
           style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
@@ -122,7 +125,7 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
       )}
 
       {/* Drawer */}
-      <div 
+      <div
         className={`fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white z-[110] shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
       >
@@ -149,7 +152,7 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 truncate text-sm">{p.nombre}</p>
                     <p className="text-[#944555] font-semibold text-sm">{formatPrice(price)}</p>
-                    
+
                     {/* Controles cantidad */}
                     <div className="flex items-center gap-3 mt-2">
                       <div className="flex items-center bg-white border border-gray-200 rounded-full px-2 py-0.5">
@@ -172,7 +175,7 @@ export default function CartDrawer({ isOpen, onClose, config }: CartDrawerProps)
               <span className="text-gray-500 font-semibold text-sm uppercase tracking-wider">Subtotal</span>
               <span className="text-2xl font-bold text-gray-900">{formatPrice(total)}</span>
             </div>
-            <button 
+            <button
               onClick={handleCheckout}
               disabled={validating}
               className="w-full bg-[#944555] hover:bg-[#7a3845] text-white py-4 rounded-full font-bold text-sm uppercase tracking-widest transition-all disabled:opacity-70 flex justify-center items-center gap-2"

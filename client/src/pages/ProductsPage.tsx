@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { productService, siteConfigService } from '../services/api';
 import type { Product, SiteConfig } from '../types';
-import CartDrawer from '../components/CartDrawer';
+import CartModal from '../components/CartModal';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -159,6 +159,22 @@ export default function ProductsPage() {
         .cat-pill { transition: all 0.2s; white-space: nowrap; cursor: pointer; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @media (min-width: 768px) {
+          .hide-scrollbar::-webkit-scrollbar {
+            display: block;
+            height: 6px;
+          }
+          .hide-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .hide-scrollbar::-webkit-scrollbar-thumb {
+            background: #d9c1c3;
+            border-radius: 9999px;
+          }
+          .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #944555;
+          }
+        }
         .glass-btn {
           background: rgba(255,255,255,0.7);
           backdrop-filter: blur(12px);
@@ -265,10 +281,10 @@ export default function ProductsPage() {
             lineHeight: 1.1, letterSpacing: '-0.03em', fontWeight: 400,
             marginBottom: '16px',
           }}>
-            Colección Apothecary
+            {config?.seccionProductosTitulo || "Colección Apothecary"}
           </h1>
           <p style={{ fontFamily: T.fontBody, fontSize: '16px', color: T.onSurfaceVariant, lineHeight: 1.8, maxWidth: '560px', marginBottom: '32px' }}>
-            Botanicals seleccionados con eficacia clínica formulados para tu tez más radiante y equilibrada.
+            {config?.seccionProductosSubtitulo || "Botanicals seleccionados con eficacia clínica formulados para tu tez más radiante y equilibrada."}
           </p>
           {/* Barra de búsqueda */}
           <div style={{ position: 'relative', maxWidth: '480px' }}>
@@ -405,31 +421,55 @@ export default function ProductsPage() {
         </div>
       </main>
 
-      {/* ── FAB Carrito (mobile) ── */}
+      {/* ── Botón Flotante Circular del Carrito (Sigue al usuario en la página de productos) ── */}
       {cartCount > 0 && (
-        <div style={{ position: 'fixed', bottom: '28px', left: '50%', transform: 'translateX(-50%)', zIndex: 100 }}>
+        <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 100 }}>
           <button
             onClick={() => setIsCartOpen(true)}
             style={{
-              backgroundColor: T.primary, color: '#fff',
-              padding: '16px 28px', borderRadius: '9999px', border: 'none',
-              fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700,
-              display: 'flex', alignItems: 'center', gap: '10px',
-              boxShadow: '0 20px 50px rgba(148,69,85,0.30)', cursor: 'pointer',
-              transition: 'transform 0.2s',
+              backgroundColor: T.primary,
+              color: '#fff',
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 30px rgba(148,69,85,0.4)',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'transform 0.2s, background-color 0.2s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.04)')}
+            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.08)')}
             onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            🛍️ Ver Bolsa ({cartCount})
+            <span style={{ fontSize: '24px' }}>🛍️</span>
+            <span style={{
+              position: 'absolute',
+              top: '-2px',
+              right: '-2px',
+              minWidth: '20px',
+              height: '20px',
+              borderRadius: '10px',
+              backgroundColor: '#ffd9de',
+              color: '#944555',
+              fontSize: '11px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 6px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}>{cartCount}</span>
           </button>
         </div>
       )}
 
-      <CartDrawer 
-        isOpen={isCartOpen} 
-        onClose={() => setIsCartOpen(false)} 
-        config={config} 
+      <CartModal
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        config={config}
       />
     </div>
   );

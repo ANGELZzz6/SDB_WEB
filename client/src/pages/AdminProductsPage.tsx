@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout';
+import { T } from '../lib/adminTokens';
 import { productService } from '../services/api';
 import type { Product } from '../types';
 
@@ -11,7 +13,7 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // debounce
+  // Debounce de búsqueda
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
     return () => clearTimeout(t);
@@ -47,154 +49,231 @@ export default function AdminProductsPage() {
   const formatCurrency = (val: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(val);
 
   return (
-    <div className="p-4 md:p-8 max-w-[1400px] mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Catálogo de Productos</h1>
-          <p className="text-sm text-gray-500 mt-1">Gestiona el inventario, precios y visualización en tienda.</p>
+    <AdminLayout 
+      searchPlaceholder="Buscar producto por SKU, nombre, marca..." 
+      searchValue={search} 
+      onSearchChange={setSearch}
+    >
+      <style>{`
+        .ghost-input {
+          border: none !important;
+          border-bottom: 1px solid ${T.outlineVariant}50 !important;
+          background: transparent !important;
+          border-radius: 0 !important;
+          outline: none !important;
+          box-shadow: none !important;
+          transition: all 0.3s ease;
+        }
+        .ghost-input:focus {
+          border-bottom: 2px solid ${T.primary} !important;
+        }
+        .soft-shadow {
+          box-shadow: 0 20px 40px rgba(62, 2, 21, 0.02);
+        }
+        @media (max-width: 768px) {
+          .admin-prod-container { padding: 24px 16px 120px !important; }
+        }
+      `}</style>
+      
+      <div className="admin-prod-container" style={{ padding: '40px 24px', maxWidth: '1280px', margin: '0 auto' }}>
+        {/* Header Section */}
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: '24px', marginBottom: '40px', flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: 'clamp(28px, 5vw, 40px)', color: T.primary, fontWeight: 700, margin: 0 }}>
+              Colección Curada
+            </h1>
+            <p style={{ fontFamily: T.fontBody, fontSize: '15px', color: T.onSurfaceVariant, marginTop: '4px' }}>
+              Gestión de inventario y catálogo premium de productos. <span style={{ fontWeight: 600, color: T.primary }}>{products.length} en total</span>
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/admin/productos/nuevo')}
+            style={{
+              backgroundColor: T.primary, color: '#ffffff',
+              padding: '14px 28px', borderRadius: '9999px',
+              fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.12em',
+              border: 'none', cursor: 'pointer',
+              boxShadow: `0 6px 20px rgba(148,69,85,0.30)`,
+              display: 'flex', alignItems: 'center', gap: '8px',
+              transition: 'transform 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')}
+            onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            <span>➕</span> Nuevo Producto
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/admin/productos/nuevo')}
-          className="bg-[#944555] hover:bg-[#7a3845] text-white px-6 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
-        >
-          + Nuevo Producto
-        </button>
-      </div>
 
-      {/* ── KPIs Bento Grid ── */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Productos</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalProductos}</p>
+        {/* Dashboard Cards (Bento Grid) */}
+        {stats && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+            {/* Total */}
+            <div style={{ backgroundColor: T.surfaceContainerLowest, padding: '24px', borderRadius: '16px', border: `1px solid ${T.outlineVariant}30`, position: 'relative', overflow: 'hidden' }}>
+              <p style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, marginBottom: '16px' }}>Total Productos</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <p style={{ fontFamily: T.fontHeadline, fontSize: '32px', color: T.onSurface, margin: 0 }}>{stats.totalProductos}</p>
+                <span style={{ fontSize: '24px' }}>📦</span>
+              </div>
+            </div>
+            {/* Valor */}
+            <div style={{ backgroundColor: T.surfaceContainerLowest, padding: '24px', borderRadius: '16px', border: `1px solid ${T.outlineVariant}30`, position: 'relative', overflow: 'hidden' }}>
+              <p style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, marginBottom: '16px' }}>Valor Inventario</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <p style={{ fontFamily: T.fontHeadline, fontSize: '32px', color: T.primary, margin: 0 }}>{formatCurrency(stats.valorInventario)}</p>
+                <span style={{ fontSize: '24px' }}>💰</span>
+              </div>
+            </div>
+            {/* Low Stock */}
+            <div style={{ backgroundColor: T.surfaceContainerLow, padding: '24px', borderRadius: '16px', border: `1px solid ${T.outlineVariant}30`, position: 'relative', overflow: 'hidden' }}>
+              <p style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, marginBottom: '16px' }}>Stock Bajo</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <p style={{ fontFamily: T.fontHeadline, fontSize: '32px', color: '#e2725b', margin: 0 }}>{stats.stockBajo}</p>
+                <span style={{ fontSize: '24px' }}>⚠️</span>
+              </div>
+            </div>
+            {/* Out of stock */}
+            <div style={{ backgroundColor: T.surfaceContainerLow, padding: '24px', borderRadius: '16px', border: `1px solid ${T.outlineVariant}30`, position: 'relative', overflow: 'hidden' }}>
+              <p style={{ fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, marginBottom: '16px' }}>Agotados</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <p style={{ fontFamily: T.fontHeadline, fontSize: '32px', color: T.error, margin: 0 }}>{stats.agotados}</p>
+                <span style={{ fontSize: '24px' }}>🚨</span>
+              </div>
+            </div>
           </div>
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Valor Inventario (Costo)</p>
-            <p className="text-3xl font-bold text-[#944555] mt-2">{formatCurrency(stats.valorInventario)}</p>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock Bajo / Crítico</p>
-            <p className="text-3xl font-bold text-orange-500 mt-2">{stats.stockBajo}</p>
-          </div>
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Agotados</p>
-            <p className="text-3xl font-bold text-red-500 mt-2">{stats.agotados}</p>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Buscador ── */}
-      <div className="bg-white p-4 rounded-t-2xl border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-          <input
-            type="text"
-            placeholder="Buscar por SKU, nombre, marca..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#944555]/20 focus:border-[#944555] outline-none transition-all"
-          />
-        </div>
-      </div>
+        {/* Catalog Main area */}
+        <div className="soft-shadow" style={{ backgroundColor: T.surfaceContainerLowest, borderRadius: '20px', padding: '32px', border: `1px solid ${T.outlineVariant}20` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.onSurface, margin: 0 }}>Catálogo Principal</h3>
+          </div>
 
-      {loading ? (
-        <div className="p-8 text-center text-gray-500">Cargando catálogo...</div>
-      ) : (
-        <>
-          {/* Desktop Table */}
-          <div className="hidden md:block bg-white rounded-b-2xl shadow-sm overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
-                  <th className="px-6 py-4 font-semibold">Producto</th>
-                  <th className="px-6 py-4 font-semibold">SKU / Marca</th>
-                  <th className="px-6 py-4 font-semibold">Precio</th>
-                  <th className="px-6 py-4 font-semibold">Stock</th>
-                  <th className="px-6 py-4 font-semibold text-center">Estado</th>
-                  <th className="px-6 py-4 font-semibold text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {products.map(p => {
-                  const isLow = p.rastrearStock && p.stock > 0 && p.stock <= p.stockMinimo;
-                  const isOut = p.rastrearStock && p.stock === 0;
-                  return (
-                    <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img src={p.imagenes?.[0] || 'https://via.placeholder.com/40'} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-100" />
-                          <div>
-                            <p className="font-medium text-gray-900">{p.nombre}</p>
-                            <p className="text-xs text-gray-500">{p.categoria}</p>
+          {loading ? (
+            <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant, textAlign: 'center', padding: '40px' }}>Cargando catálogo...</p>
+          ) : products.length === 0 ? (
+            <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant, textAlign: 'center', padding: '40px' }}>No hay productos registrados.</p>
+          ) : (
+            <>
+              {/* Desktop View */}
+              <div style={{ overflowX: 'auto', display: 'none' }} className="md-block">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${T.outlineVariant}30` }}>
+                      <th style={{ paddingBottom: '16px', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant }}>Producto</th>
+                      <th style={{ paddingBottom: '16px', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant }}>SKU</th>
+                      <th style={{ paddingBottom: '16px', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant }}>Categoría / Marca</th>
+                      <th style={{ paddingBottom: '16px', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant, textAlign: 'right' }}>Precio</th>
+                      <th style={{ paddingBottom: '16px', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant, textAlign: 'right' }}>Stock</th>
+                      <th style={{ paddingBottom: '16px', fontFamily: T.fontBody, fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: T.onSurfaceVariant, textAlign: 'center' }}>Estado</th>
+                      <th style={{ paddingBottom: '16px', width: '120px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map(p => {
+                      const isLow = p.rastrearStock && p.stock > 0 && p.stock <= p.stockMinimo;
+                      const isOut = p.rastrearStock && p.stock === 0;
+                      return (
+                        <tr key={p._id} style={{ borderBottom: `1px solid ${T.outlineVariant}15` }}>
+                          <td style={{ padding: '20px 0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <img src={p.imagenes?.[0] || 'https://via.placeholder.com/80'} alt="" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', backgroundColor: T.surfaceContainerLow }} />
+                              <span style={{ fontFamily: T.fontBody, fontWeight: 700, fontSize: '16px', color: T.onSurface }}>{p.nombre}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding: '20px 0', fontFamily: T.fontBody, fontSize: '14px', color: T.onSurfaceVariant }}>{p.sku}</td>
+                          <td style={{ padding: '20px 0' }}>
+                            <p style={{ fontFamily: T.fontBody, fontSize: '14px', color: T.onSurface, margin: 0 }}>{p.categoria}</p>
+                            <p style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, margin: 0 }}>{p.marca}</p>
+                          </td>
+                          <td style={{ padding: '20px 0', fontFamily: T.fontBody, fontSize: '15px', fontWeight: 600, color: T.onSurface, textAlign: 'right' }}>
+                            {formatCurrency(p.precioOferta && p.precioOferta > 0 ? p.precioOferta : p.precio)}
+                            {p.costo !== undefined && <p style={{ fontSize: '11px', color: T.onSurfaceVariant, fontWeight: 400, margin: 0 }}>Costo: {formatCurrency(p.costo)}</p>}
+                          </td>
+                          <td style={{ padding: '20px 0', textAlign: 'right' }}>
+                            <span style={{
+                              fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600,
+                              color: isOut ? T.error : isLow ? '#e2725b' : '#2e7d32'
+                            }}>
+                              {p.rastrearStock ? `${p.stock} un.` : 'Ilimitado'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '20px 0', textAlign: 'center' }}>
+                            <button
+                              onClick={() => toggleStatus(p)}
+                              style={{
+                                border: 'none', background: 'none', cursor: 'pointer',
+                                display: 'inline-flex', alignItems: 'center',
+                                padding: '4px 12px', borderRadius: '9999px',
+                                fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                                backgroundColor: p.isActive ? '#e2f0d9' : T.surfaceContainerHigh,
+                                color: p.isActive ? '#2e7d32' : T.onSurfaceVariant
+                              }}
+                            >
+                              {p.isActive ? 'Activo' : 'Pausado'}
+                            </button>
+                          </td>
+                          <td style={{ padding: '20px 0', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                              <button onClick={() => navigate(`/admin/productos/${p._id}`)} style={{ border: `1px solid ${T.outlineVariant}`, background: 'none', padding: '6px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600, color: T.onSurface, cursor: 'pointer' }}>Ver</button>
+                              <button onClick={() => navigate(`/admin/productos/editar/${p._id}`)} style={{ border: 'none', backgroundColor: T.primaryFixed, padding: '6px 12px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600, color: T.primary, cursor: 'pointer' }}>Editar</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile View */}
+              <div style={{ display: 'none' }} className="mobile-block">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {products.map(p => {
+                    const isOut = p.rastrearStock && p.stock === 0;
+                    return (
+                      <div key={p._id} style={{ padding: '16px', borderRadius: '16px', backgroundColor: T.surfaceContainerLow, border: `1px solid ${T.outlineVariant}30` }}>
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                          <img src={p.imagenes?.[0] || 'https://via.placeholder.com/80'} alt="" style={{ width: '64px', height: '64px', borderRadius: '8px', objectFit: 'cover' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                              <h4 style={{ fontFamily: T.fontBody, fontSize: '16px', fontWeight: 700, color: T.onSurface, margin: 0, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{p.nombre}</h4>
+                              <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '9999px', backgroundColor: p.isActive ? '#e2f0d9' : T.surfaceVariant, color: p.isActive ? '#2e7d32' : T.onSurfaceVariant }}>
+                                {p.isActive ? 'Activo' : 'Pausado'}
+                              </span>
+                            </div>
+                            <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant, margin: '2px 0 6px' }}>{p.sku} • {p.marca}</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 600, color: T.primary }}>{formatCurrency(p.precioOferta || p.precio)}</span>
+                              <span style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 600, color: isOut ? T.error : T.onSurface }}>Stock: {p.rastrearStock ? p.stock : '∞'}</span>
+                            </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-mono text-sm text-gray-900">{p.sku}</p>
-                        <p className="text-xs text-gray-500">{p.marca}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-gray-900">{formatCurrency(p.precioOferta && p.precioOferta > 0 ? p.precioOferta : p.precio)}</p>
-                        {p.costo !== undefined && <p className="text-xs text-gray-400">Costo: {formatCurrency(p.costo)}</p>}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isOut ? 'bg-red-100 text-red-800' : isLow ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}`}>
-                          {p.rastrearStock ? `${p.stock} un.` : 'Ilimitado'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => toggleStatus(p)}
-                          className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${p.isActive ? 'bg-[#944555]' : 'bg-gray-200'}`}
-                        >
-                          <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${p.isActive ? 'translate-x-4' : 'translate-x-0'}`} />
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 text-right space-x-3">
-                        <button onClick={() => navigate(`/admin/productos/${p._id}`)} className="text-[#944555] hover:text-[#7a3845] font-medium text-sm">Ver</button>
-                        <button onClick={() => navigate(`/admin/productos/editar/${p._id}`)} className="text-blue-600 hover:text-blue-800 font-medium text-sm">Editar</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {products.length === 0 && (
-                  <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-500">No hay productos que coincidan.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Cards */}
-          <div className="md:hidden grid grid-cols-1 gap-4 mt-4">
-            {products.map(p => {
-              const isOut = p.rastrearStock && p.stock === 0;
-              return (
-                <div key={p._id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                  <div className="flex gap-4">
-                    <img src={p.imagenes?.[0] || 'https://via.placeholder.com/80'} alt="" className="w-20 h-20 rounded-lg object-cover bg-gray-100" />
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium text-gray-900 leading-tight">{p.nombre}</h3>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${p.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                          {p.isActive ? 'Activo' : 'Inactivo'}
-                        </span>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                          <button onClick={() => navigate(`/admin/productos/${p._id}`)} style={{ flex: 1, border: `1px solid ${T.outlineVariant}40`, backgroundColor: '#fff', padding: '10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 700, color: T.onSurface, cursor: 'pointer' }}>Ver</button>
+                          <button onClick={() => navigate(`/admin/productos/editar/${p._id}`)} style={{ flex: 1, border: 'none', backgroundColor: T.primaryFixed, padding: '10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 700, color: T.primary, cursor: 'pointer' }}>Editar</button>
+                          <button onClick={() => toggleStatus(p)} style={{ flex: 1, border: `1px solid ${T.outlineVariant}40`, backgroundColor: 'transparent', padding: '10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 700, color: T.onSurfaceVariant, cursor: 'pointer' }}>
+                            {p.isActive ? 'Pausar' : 'Activar'}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{p.sku} • {p.marca}</p>
-                      <p className="font-medium text-[#944555] mt-1">{formatCurrency(p.precioOferta || p.precio)}</p>
-                      <p className={`text-xs mt-1 ${isOut ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>Stock: {p.rastrearStock ? p.stock : '∞'}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <button onClick={() => navigate(`/admin/productos/${p._id}`)} className="flex-1 py-2 text-sm border border-gray-200 rounded-lg text-gray-700">Ver</button>
-                    <button onClick={() => navigate(`/admin/productos/editar/${p._id}`)} className="flex-1 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg text-gray-700">Editar</button>
-                    <button onClick={() => toggleStatus(p)} className="flex-1 py-2 text-sm border border-gray-200 rounded-lg text-gray-700">{p.isActive ? 'Pausar' : 'Activar'}</button>
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
+              </div>
+
+              <style>{`
+                .md-block { display: block !important; }
+                .mobile-block { display: none !important; }
+                @media (max-width: 768px) {
+                  .md-block { display: none !important; }
+                  .mobile-block { display: block !important; }
+                }
+              `}</style>
+            </>
+          )}
+        </div>
+      </div>
+    </AdminLayout>
   );
 }

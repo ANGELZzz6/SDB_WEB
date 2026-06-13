@@ -23,6 +23,8 @@ const SiteConfigSchema = new mongoose.Schema({
   heroBotonTexto: { type: String, default: "Reservar Cita" },
   seccionServiciosTitulo: { type: String, default: "Nuestros Servicios" },
   seccionEspecialistasTitulo: { type: String, default: "Nuestros Especialistas" },
+  seccionProductosTitulo: { type: String, default: "Colección Apothecary" },
+  seccionProductosSubtitulo: { type: String, default: "Botanicals seleccionados con eficacia clínica formulados para tu tez más radiante y equilibrada." },
   footerTexto: { type: String, default: "L'Élixir Salon — © 2026 Todos los derechos reservados." },
 
   // Colores (Personalización pública)

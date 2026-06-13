@@ -6,8 +6,11 @@ const checkPermission = require('../middleware/checkPermission')
 
 // ── Rutas PÚBLICAS ────────────────────────────────────────────────────────────
 
-// GET /api/products/categorias — lista de categorías únicas (debe ir antes de /:id)
+// GET /api/products/categorias — lista de categorías únicas
 router.get('/categorias', ctrl.getCategorias)
+
+// POST /api/products/checkout (Público - registro temporal de egreso)
+router.post('/checkout', ctrl.checkout)
 
 // GET /api/products — lista pública (costo oculto para no-admin)
 router.get('/', optionalAuth, ctrl.getAll)
@@ -17,8 +20,22 @@ router.get('/:id', optionalAuth, ctrl.getOne)
 
 // ── Rutas PROTEGIDAS (admin o empleada con permiso 'productos') ───────────────
 
+// NOTA: Agregar sanitización de inputs en los controladores correspondientes
+
 // POST /api/products
 router.post('/', authMiddleware, checkPermission('productos'), ctrl.create)
+
+// GET /api/products/:id/movements — ver movimientos del producto
+router.get('/:id/movements', authMiddleware, checkPermission('productos'), ctrl.getProductMovements)
+
+// POST /api/products/:id/movements — crear movimiento manual
+router.post('/:id/movements', authMiddleware, checkPermission('productos'), ctrl.createMovement)
+
+// POST /api/products/movements/:movementId/confirm — confirmar movimiento
+router.post('/movements/:movementId/confirm', authMiddleware, checkPermission('productos'), ctrl.confirmMovement)
+
+// DELETE /api/products/movements/:movementId — eliminar/cancelar movimiento pendiente
+router.delete('/movements/:movementId', authMiddleware, checkPermission('productos'), ctrl.deleteMovement)
 
 // PUT /api/products/:id
 router.put('/:id', authMiddleware, checkPermission('productos'), ctrl.update)

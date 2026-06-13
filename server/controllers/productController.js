@@ -1,4 +1,22 @@
 const Product = require('../models/Product')
+const ProductMovement = require('../models/ProductMovement')
+
+// Normaliza las categorías buscando coincidencias sin importar mayúsculas/minúsculas para evitar duplicados
+const normalizeCategory = async (categoria) => {
+  if (!categoria) return categoria
+  const trimmed = categoria.trim()
+  const existing = await Product.findOne({
+    categoria: { $regex: new RegExp(`^${trimmed.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i') }
+  })
+  if (existing) {
+    return existing.categoria
+  }
+  // Si no existe, capitalizar cada palabra
+  return trimmed
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
+}
 
 // ─── Campos públicos (nunca exponer costo ni precioOferta a no-admins) ─────────
 const PUBLIC_FIELDS = '-costo'
@@ -76,6 +94,9 @@ const create = async (req, res, next) => {
       })
     }
 
+    // Normalizar categoría para evitar duplicados
+    req.body.categoria = await normalizeCategory(categoria)
+
     // Verificar unicidad de SKU
     const exists = await Product.findOne({ sku: sku.toUpperCase().trim() })
     if (exists) {
@@ -98,6 +119,10 @@ const update = async (req, res, next) => {
     // ── Seguridad: el SKU no puede cambiarse (previene conflictos de unicidad) ──
     // eslint-disable-next-line no-unused-vars
     const { sku, _id, createdAt, updatedAt, ...safeFields } = req.body
+
+    if (safeFields.categoria) {
+      safeFields.categoria = await normalizeCategory(safeFields.categoria)
+    }
 
     // Si el body intentó cambiar el SKU, verificar si ya existe (opcional, protección doble)
     if (sku) {
@@ -178,4 +203,189 @@ const getCategorias = async (req, res, next) => {
   }
 }
 
-module.exports = { getAll, getOne, create, update, deactivate, reactivate, getCategorias }
+// ─── ENDPOINTS DE MOVIMIENTOS DE PRODUCTOS (CONTROL DE INVENTARIO) ────────────
+
+// POST /api/products/checkout (Público - desde el carrito)
+// Registra movimientos de tipo "egreso" no confirmados.
+// ── Seguridad básica de abuso ──────────────────────────────────────────────────
+const MAX_CART_ITEMS = 20  // Máximo de líneas distintas de producto en un pedido
+const MAX_QTY_PER_ITEM = 99 // Máximo de unidades por producto en un pedido
+const mongoose = require('mongoose')
+
+const checkout = async (req, res, next) => {
+  try {
+    const { items } = req.body
+
+    // ── Validación de estructura ────────────────────────────────────────────
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Los items del carrito son requeridos' })
+    }
+
+    if (items.length > MAX_CART_ITEMS) {
+      return res.status(400).json({ success: false, message: `El pedido no puede tener más de ${MAX_CART_ITEMS} productos distintos` })
+    }
+
+    for (const item of items) {
+      // Validar que el ID sea un ObjectId válido antes de consultar DB (previene inyección)
+      if (!item.productId || !mongoose.Types.ObjectId.isValid(item.productId)) {
+        return res.status(400).json({ success: false, message: 'ID de producto inválido en el carrito' })
+      }
+      // Validar y limitar la cantidad
+      if (!Number.isInteger(item.qty) || item.qty < 1) {
+        return res.status(400).json({ success: false, message: 'La cantidad debe ser un número entero positivo' })
+      }
+      if (item.qty > MAX_QTY_PER_ITEM) {
+        return res.status(400).json({ success: false, message: `La cantidad máxima por producto es ${MAX_QTY_PER_ITEM} unidades` })
+      }
+    }
+
+    const movements = []
+    for (const item of items) {
+      const product = await Product.findById(item.productId)
+      if (!product || !product.isActive) {
+        return res.status(404).json({ success: false, message: `Producto no encontrado o inactivo` })
+      }
+
+      const mov = await ProductMovement.create({
+        product: item.productId,
+        tipo: 'egreso',
+        cantidad: item.qty,
+        motivo: 'Venta (WhatsApp)',
+        confirmado: false
+      })
+      movements.push(mov)
+    }
+
+    res.status(201).json({ success: true, data: movements, message: 'Movimientos de venta pendientes registrados' })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// GET /api/products/:id/movements (Protegido - ver movimientos de un producto)
+const getProductMovements = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const movements = await ProductMovement.find({ product: id }).sort({ createdAt: -1 })
+    res.json({ success: true, data: movements })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// POST /api/products/:id/movements (Protegido - agregar movimiento manual)
+const createMovement = async (req, res, next) => {
+  try {
+    const { id } = req.params
+    const { tipo, cantidad, motivo, confirmado } = req.body
+
+    if (!tipo || !cantidad) {
+      return res.status(400).json({ success: false, message: 'Tipo y cantidad son requeridos' })
+    }
+
+    const product = await Product.findById(id)
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado' })
+    }
+
+    const isConfirm = confirmado !== undefined ? confirmado : true
+
+    if (isConfirm) {
+      if (tipo === 'egreso') {
+        if (product.rastrearStock && product.stock < cantidad) {
+          return res.status(400).json({ success: false, message: 'Stock insuficiente para esta operación' });
+        }
+        if (product.rastrearStock) product.stock -= cantidad
+      } else {
+        if (product.rastrearStock) product.stock += cantidad
+      }
+      await product.save()
+    }
+
+    const movement = await ProductMovement.create({
+      product: id,
+      tipo,
+      cantidad,
+      motivo: motivo || (tipo === 'ingreso' ? 'Ingreso manual' : 'Egreso manual'),
+      confirmado: isConfirm
+    })
+
+    res.status(201).json({ success: true, data: movement })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// POST /api/products/movements/:movementId/confirm (Protegido - confirmar movimiento pendiente)
+const confirmMovement = async (req, res, next) => {
+  try {
+    const { movementId } = req.params
+    const movement = await ProductMovement.findById(movementId)
+    if (!movement) {
+      return res.status(404).json({ success: false, message: 'Movimiento no encontrado' })
+    }
+
+    if (movement.confirmado) {
+      return res.status(400).json({ success: false, message: 'Este movimiento ya ha sido confirmado' })
+    }
+
+    const product = await Product.findById(movement.product)
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Producto asociado no encontrado' })
+    }
+
+    if (movement.tipo === 'egreso') {
+      if (product.rastrearStock && product.stock < movement.cantidad) {
+        return res.status(400).json({
+          success: false,
+          message: `Stock insuficiente: solo quedan ${product.stock} unidades de "${product.nombre}"`
+        })
+      }
+      if (product.rastrearStock) product.stock -= movement.cantidad
+    } else {
+      if (product.rastrearStock) product.stock += movement.cantidad
+    }
+
+    movement.confirmado = true
+    await Promise.all([product.save(), movement.save()])
+
+    res.json({ success: true, message: 'Movimiento confirmado e inventario actualizado', data: movement })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// DELETE /api/products/movements/:movementId (Protegido - eliminar/cancelar movimiento pendiente)
+const deleteMovement = async (req, res, next) => {
+  try {
+    const { movementId } = req.params
+    const movement = await ProductMovement.findById(movementId)
+    if (!movement) {
+      return res.status(404).json({ success: false, message: 'Movimiento no encontrado' })
+    }
+
+    if (movement.confirmado) {
+      return res.status(400).json({ success: false, message: 'No se puede eliminar un movimiento ya confirmado' })
+    }
+
+    await ProductMovement.findByIdAndDelete(movementId)
+    res.json({ success: true, message: 'Movimiento pendiente cancelado con éxito' })
+  } catch (error) {
+    next(error)
+  }
+}
+
+module.exports = {
+  getAll,
+  getOne,
+  create,
+  update,
+  deactivate,
+  reactivate,
+  getCategorias,
+  checkout,
+  getProductMovements,
+  createMovement,
+  confirmMovement,
+  deleteMovement
+}

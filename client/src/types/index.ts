@@ -114,6 +114,8 @@ export interface SiteConfig {
   heroBotonTexto: string
   seccionServiciosTitulo: string
   seccionEspecialistasTitulo: string
+  seccionProductosTitulo?: string
+  seccionProductosSubtitulo?: string
   footerTexto: string
   colorPrimario: string
   colorSecundario: string
@@ -129,6 +131,17 @@ export interface SiteConfig {
   horaAperturaAgendamiento: string
   horaCierreAgendamiento: string
   duracionSlot: number
+}
+
+export interface ProductMovement {
+  _id: string
+  product: string
+  tipo: 'ingreso' | 'egreso'
+  cantidad: number
+  motivo: string
+  confirmado: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Product {

@@ -114,6 +114,8 @@ export default function AdminSettingsPage() {
     heroBotonTexto: '',
     seccionServiciosTitulo: '',
     seccionEspecialistasTitulo: '',
+    seccionProductosTitulo: '',
+    seccionProductosSubtitulo: '',
     footerTexto: '',
     colorPrimario: '#944555',
     colorSecundario: '#3e0215',
@@ -530,9 +532,19 @@ export default function AdminSettingsPage() {
                       <UnderlineInput value={siteConfig.seccionServiciosTitulo} onChange={(v) => handleCmsChange('seccionServiciosTitulo', v)} />
                     </div>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <FieldLabel>Título Sección Especialistas</FieldLabel>
+                      <UnderlineInput value={siteConfig.seccionEspecialistasTitulo} onChange={(v) => handleCmsChange('seccionEspecialistasTitulo', v)} />
+                    </div>
+                    <div>
+                      <FieldLabel>Título Sección Productos</FieldLabel>
+                      <UnderlineInput value={siteConfig.seccionProductosTitulo || ''} onChange={(v) => handleCmsChange('seccionProductosTitulo', v)} />
+                    </div>
+                  </div>
                   <div>
-                    <FieldLabel>Título Sección Especialistas</FieldLabel>
-                    <UnderlineInput value={siteConfig.seccionEspecialistasTitulo} onChange={(v) => handleCmsChange('seccionEspecialistasTitulo', v)} />
+                    <FieldLabel>Subtítulo Sección Productos</FieldLabel>
+                    <UnderlineTextarea value={siteConfig.seccionProductosSubtitulo || ''} onChange={(v) => handleCmsChange('seccionProductosSubtitulo', v)} rows={2} />
                   </div>
                   <div>
                     <FieldLabel>Texto Footer / Copyright</FieldLabel>

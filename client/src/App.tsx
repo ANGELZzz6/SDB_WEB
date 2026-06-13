@@ -20,6 +20,7 @@ import AdminItineraryPage from './pages/AdminItineraryPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import ProtectedRoute from './components/ProtectedRoute';
 import GlobalWakeUp from './components/GlobalWakeUp';
+import CookieConsent from './components/CookieConsent';
 import ProductsPage from './pages/ProductsPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import AdminProductsPage from './pages/AdminProductsPage';
@@ -31,6 +32,7 @@ function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <GlobalWakeUp />
+      <CookieConsent />
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />

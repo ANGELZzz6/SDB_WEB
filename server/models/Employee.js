@@ -36,6 +36,7 @@ const employeeSchema = new mongoose.Schema({
       galeria:       false,
       configuracion: false,
       liquidaciones: false,
+      productos:     false,
     }
   },
   disponibleHoy: { type: Boolean, default: true },

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { productService, siteConfigService } from '../services/api';
 import type { Product, SiteConfig } from '../types';
 import { getCart, saveCart } from './ProductsPage';
-import CartDrawer from '../components/CartDrawer';
+import CartModal from '../components/CartModal';
 
 const T = {
   fontHeadline: "'Noto Serif', serif",
@@ -328,7 +328,7 @@ export default function ProductDetailPage() {
         </div>
       </main>
 
-      <CartDrawer 
+      <CartModal 
         isOpen={isCartOpen} 
         onClose={() => setIsCartOpen(false)} 
         config={config} 
