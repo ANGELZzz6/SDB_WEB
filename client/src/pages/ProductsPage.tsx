@@ -180,6 +180,26 @@ export default function ProductsPage() {
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
         }
+        .cat-container {
+          display: flex;
+          gap: 10px;
+          overflow-x: auto;
+          padding-left: 16px;
+          padding-right: 16px;
+          padding-bottom: 8px;
+          width: 100%;
+        }
+        @media (min-width: 768px) {
+          .cat-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding-left: 16px;
+            padding-right: 16px;
+            padding-bottom: 0;
+            flex-wrap: wrap;
+            overflow-x: visible;
+          }
+        }
       `}</style>
 
       {/* ── NAVBAR ── */}
@@ -310,7 +330,7 @@ export default function ProductsPage() {
 
       {/* ── CATEGORÍAS ── */}
       <section style={{ paddingBottom: '24px', paddingTop: '4px' }}>
-        <div className="hide-scrollbar" style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingLeft: '16px', paddingRight: '16px', paddingBottom: '8px' }}>
+        <div className="cat-container hide-scrollbar">
           {['Todos', ...categorias].map(cat => (
             <button
               key={cat}
