@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const ctrl = require('../controllers/productController')
-const { authMiddleware, optionalAuth } = require('../middleware/auth')
+const { authMiddleware, optionalAuth, requireRole } = require('../middleware/auth')
 const checkPermission = require('../middleware/checkPermission')
 
 // ── Rutas PÚBLICAS ────────────────────────────────────────────────────────────
@@ -40,7 +40,14 @@ router.delete('/movements/:movementId', authMiddleware, checkPermission('product
 // PUT /api/products/:id
 router.put('/:id', authMiddleware, checkPermission('productos'), ctrl.update)
 
-// DELETE /api/products/:id — soft-delete
+// DELETE /api/products/categorias/:nombre — eliminar categoría y reasignar productos (solo admin)
+// IMPORTANTE: debe ir ANTES de /:id para que Express no lo confunda
+router.delete('/categorias/:nombre', authMiddleware, requireRole('admin'), ctrl.deleteCategoria)
+
+// DELETE /api/products/:id/permanent — hard-delete (eliminación permanente, solo admin)
+router.delete('/:id/permanent', authMiddleware, requireRole('admin'), ctrl.hardDelete)
+
+// DELETE /api/products/:id — soft-delete (desactivar)
 router.delete('/:id', authMiddleware, checkPermission('productos'), ctrl.deactivate)
 
 // PATCH /api/products/:id/reactivate

@@ -246,11 +246,13 @@ export const productService = {
   create: (data: Partial<Product>) => api.post<ApiResponse<Product>>('/products', data),
   update: (id: string, data: Partial<Product>) => api.put<ApiResponse<Product>>(`/products/${id}`, data),
   deactivate: (id: string) => api.delete<ApiResponse<Product>>(`/products/${id}`),
+  hardDelete: (id: string) => api.delete<ApiResponse<null>>(`/products/${id}/permanent`),
   reactivate: (id: string) => api.patch<ApiResponse<Product>>(`/products/${id}/reactivate`, {}),
   checkout: (items: { productId: string; qty: number }[]) => api.post<ApiResponse<any>>('/products/checkout', { items }),
   getMovements: (productId: string) => api.get<ApiResponse<ProductMovement[]>>(`/products/${productId}/movements`),
   createMovement: (productId: string, data: { tipo: 'ingreso' | 'egreso'; cantidad: number; motivo?: string; confirmado?: boolean }) => api.post<ApiResponse<ProductMovement>>(`/products/${productId}/movements`, data),
   confirmMovement: (movementId: string) => api.post<ApiResponse<ProductMovement>>(`/products/movements/${movementId}/confirm`, {}),
   deleteMovement: (movementId: string) => api.delete<ApiResponse<null>>(`/products/movements/${movementId}`),
+  deleteCategoria: (nombre: string) => api.delete<ApiResponse<{ productosAfectados: number }>>(`/products/categorias/${encodeURIComponent(nombre)}`),
 };
 

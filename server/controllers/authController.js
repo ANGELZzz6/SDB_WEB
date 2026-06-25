@@ -67,11 +67,16 @@ const login = async (req, res, next) => {
     }
 
     // ── Login EMPLEADA ───────────────────────────────────────────────────────
-    // identifier puede ser el nombre de la empleada o su email (buscamos por nombre o email)
+    // identifier puede ser el nombre de la empleada o su email
+    // Sanitizamos el input para prevenir ReDoS antes de usar en regex
+    if (identifier.length > 200) {
+      return res.status(400).json({ success: false, message: 'Identificador demasiado largo' })
+    }
+    const safeIdentifier = identifier.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
     const employee = await Employee.findOne({
       $or: [
-        { nombre: { $regex: new RegExp(`^${identifier}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${identifier}$`, 'i') } }
+        { nombre: { $regex: new RegExp(`^${safeIdentifier}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${safeIdentifier}$`, 'i') } }
       ],
       isActive: true,
     }).select('+password +tokenVersion')

@@ -175,6 +175,77 @@ const deactivate = async (req, res, next) => {
   }
 }
 
+// ─── DELETE /api/products/:id/permanent (hard-delete, solo admin) ─────────────
+// Elimina permanentemente el producto y todos sus movimientos de inventario.
+const hardDelete = async (req, res, next) => {
+  try {
+    // Doble verificación: solo el rol admin puede hacer hard-delete
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Solo el administrador puede eliminar productos permanentemente' })
+    }
+
+    // Validar que el ID sea un ObjectId válido antes de consultar la DB
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'ID de producto inválido' })
+    }
+
+    const product = await Product.findById(req.params.id)
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado' })
+    }
+
+    const nombreProducto = product.nombre
+
+    // Eliminar todos los movimientos asociados primero
+    const { deletedCount } = await ProductMovement.deleteMany({ product: req.params.id })
+
+    // Eliminar el producto
+    await Product.findByIdAndDelete(req.params.id)
+
+    res.json({
+      success: true,
+      message: `Producto "${nombreProducto}" eliminado permanentemente junto con ${deletedCount} movimiento(s) de inventario.`
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+// ─── DELETE /api/products/categorias/:nombre (eliminar categoría, solo admin) ──
+// Reasigna todos los productos de esa categoría a "Sin Categoría"
+const deleteCategoria = async (req, res, next) => {
+  try {
+    // Doble verificación: solo el rol admin puede eliminar categorías
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Solo el administrador puede eliminar categorías' })
+    }
+
+    const nombre = decodeURIComponent(req.params.nombre).trim()
+    if (!nombre || nombre.length > 100) {
+      return res.status(400).json({ success: false, message: 'Nombre de categoría requerido y debe tener menos de 100 caracteres' })
+    }
+
+    // Buscar coincidencia exacta (exactitud sin RegEx para prevenir ReDoS)
+    const count = await Product.countDocuments({ categoria: nombre })
+
+    // Reasignar todos los productos de esta categoría a "Sin Categoría"
+    if (count > 0) {
+      await Product.updateMany(
+        { categoria: nombre },
+        { $set: { categoria: 'Sin Categoría' } }
+      )
+    }
+
+    res.json({
+      success: true,
+      message: `Categoría "${nombre}" eliminada. ${count} producto(s) reasignado(s) a "Sin Categoría".`,
+      productosAfectados: count
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 // ─── PATCH /api/products/:id/reactivate ──────────────────────────────────────
 const reactivate = async (req, res, next) => {
   try {
@@ -381,6 +452,8 @@ module.exports = {
   create,
   update,
   deactivate,
+  hardDelete,
+  deleteCategoria,
   reactivate,
   getCategorias,
   checkout,
