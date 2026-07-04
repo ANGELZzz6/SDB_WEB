@@ -191,23 +191,25 @@ export default function LandingPage() {
           min-width: 100%;
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 0 16px;
+          height: 100%;
           cursor: pointer;
-        }
-        @media (min-width: 640px) {
-          .featured-carousel-slide { padding: 0 24px; gap: 16px; }
+          box-sizing: border-box;
         }
         .featured-img-wrap {
           width: 48px;
           height: 48px;
-          border-radius: 10px;
+          border-radius: 8px;
           overflow: hidden;
           flex-shrink: 0;
           border: 1px solid ${T.outlineVariant}30;
+          background-color: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2px;
         }
         @media (min-width: 640px) {
-          .featured-img-wrap { width: 52px; height: 52px; }
+          .featured-img-wrap { width: 52px; height: 52px; padding: 3px; }
         }
         .featured-dots {
           display: flex;
@@ -465,103 +467,108 @@ export default function LandingPage() {
         const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
         return (
           <div className="featured-carousel-bar" role="banner" aria-label="Productos destacados">
-            <div
-              className="featured-carousel-track"
-              style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
-            >
-              {featuredProducts.map((p, i) => {
-                const pHasDiscount = !!(p.precioOferta && p.precioOferta > 0);
-                const pPct = pHasDiscount
-                  ? Math.round(((p.precio - p.precioOferta!) / p.precio) * 100)
-                  : 0;
-                return (
-                  <div
-                    key={p._id}
-                    className="featured-carousel-slide"
-                    onClick={() => navigate(`/productos/${p._id}`)}
-                    aria-hidden={i !== carouselIndex}
-                  >
-                    {/* Imagen */}
-                    <div className="featured-img-wrap">
-                      <img
-                        src={p.imagenes?.[0] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=200&h=200&fit=crop'}
-                        alt={p.nombre}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                        loading="lazy"
-                      />
-                    </div>
-
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
-                        {pHasDiscount && (
-                          <span style={{
-                            backgroundColor: T.primary, color: '#fff',
-                            fontSize: '9px', fontWeight: 700, fontFamily: T.fontBody,
-                            textTransform: 'uppercase', letterSpacing: '0.08em',
-                            padding: '2px 7px', borderRadius: '9999px', flexShrink: 0,
-                          }}>-{pPct}%</span>
-                        )}
-                        {!pHasDiscount && (
-                          <span style={{
-                            backgroundColor: T.primaryFixed, color: T.primary,
-                            fontSize: '9px', fontWeight: 700, fontFamily: T.fontBody,
-                            textTransform: 'uppercase', letterSpacing: '0.08em',
-                            padding: '2px 7px', borderRadius: '9999px', flexShrink: 0,
-                          }}>⭐ Estrella</span>
-                        )}
-                        <span style={{
-                          fontFamily: T.fontBody, fontSize: '10px',
-                          color: T.onSurfaceVariant, textTransform: 'uppercase',
-                          letterSpacing: '0.1em', whiteSpace: 'nowrap',
-                          overflow: 'hidden', textOverflow: 'ellipsis',
-                        }}>{p.marca}</span>
-                      </div>
-                      <p style={{
-                        fontFamily: T.fontHeadline, fontStyle: 'italic',
-                        fontSize: 'clamp(13px, 3.5vw, 15px)', color: T.onSurface,
-                        fontWeight: 600, margin: 0, lineHeight: 1.2,
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      }}>{p.nombre}</p>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
-                        <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>
-                          {fmt.format(pHasDiscount ? p.precioOferta! : p.precio)}
-                        </span>
-                        {pHasDiscount && (
-                          <span style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, textDecoration: 'line-through' }}>
-                            {fmt.format(p.precio)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Puntos de navegación */}
-                    {featuredProducts.length > 1 && (
-                      <div className="featured-dots">
-                        {featuredProducts.map((_, di) => (
-                          <span
-                            key={di}
-                            onClick={e => { e.stopPropagation(); setCarouselIndex(di); }}
-                            style={{
-                              width: di === carouselIndex ? '16px' : '5px',
-                              height: '5px',
-                              borderRadius: '9999px',
-                              backgroundColor: di === carouselIndex ? T.primary : T.outlineVariant,
-                              transition: 'all 0.3s ease',
-                              cursor: 'pointer',
-                              display: 'inline-block',
-                            }}
+            <div style={{ ...wrap, height: '100%', overflow: 'hidden', position: 'relative' }}>
+              <div
+                className="featured-carousel-track"
+                style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
+              >
+                {featuredProducts.map((p, i) => {
+                  const pHasDiscount = !!(p.precioOferta && p.precioOferta > 0);
+                  const pPct = pHasDiscount
+                    ? Math.round(((p.precio - p.precioOferta!) / p.precio) * 100)
+                    : 0;
+                  return (
+                    <div
+                      key={p._id}
+                      className="featured-carousel-slide"
+                      onClick={() => navigate(`/productos/${p._id}`)}
+                      aria-hidden={i !== carouselIndex}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '960px', margin: '0 auto', gap: '14px', height: '100%' }}>
+                        {/* Imagen */}
+                        <div className="featured-img-wrap">
+                          <img
+                            src={p.imagenes?.[0] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=200&h=200&fit=crop'}
+                            alt={p.nombre}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                            loading="lazy"
                           />
-                        ))}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                            {pHasDiscount && (
+                              <span style={{
+                                backgroundColor: T.primary, color: '#fff',
+                                fontSize: '9px', fontWeight: 700, fontFamily: T.fontBody,
+                                textTransform: 'uppercase', letterSpacing: '0.08em',
+                                padding: '2px 7px', borderRadius: '9999px', flexShrink: 0,
+                              }}>-{pPct}%</span>
+                            )}
+                            {!pHasDiscount && (
+                              <span style={{
+                                backgroundColor: T.primaryFixed, color: T.primary,
+                                fontSize: '9px', fontWeight: 700, fontFamily: T.fontBody,
+                                textTransform: 'uppercase', letterSpacing: '0.08em',
+                                padding: '2px 7px', borderRadius: '9999px', flexShrink: 0,
+                              }}>⭐ Estrella</span>
+                            )}
+                            <span style={{
+                              fontFamily: T.fontBody, fontSize: '10px',
+                              color: T.onSurfaceVariant, textTransform: 'uppercase',
+                              letterSpacing: '0.1em', whiteSpace: 'nowrap',
+                              overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>{p.marca}</span>
+                          </div>
+                          <p style={{
+                            fontFamily: T.fontHeadline, fontStyle: 'italic',
+                            fontSize: 'clamp(13px, 3.5vw, 15px)', color: T.onSurface,
+                            fontWeight: 600, margin: 0, lineHeight: 1.2,
+                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                          }}>{p.nombre}</p>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
+                            <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>
+                              {fmt.format(pHasDiscount ? p.precioOferta! : p.precio)}
+                            </span>
+                            {pHasDiscount && (
+                              <span style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, textDecoration: 'line-through' }}>
+                                {fmt.format(p.precio)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Puntos de navegación */}
+                        {featuredProducts.length > 1 && (
+                          <div className="featured-dots">
+                            {featuredProducts.map((_, di) => (
+                              <span
+                                key={di}
+                                onClick={e => { e.stopPropagation(); setCarouselIndex(di); }}
+                                style={{
+                                  width: di === carouselIndex ? '16px' : '5px',
+                                  height: '5px',
+                                  borderRadius: '9999px',
+                                  backgroundColor: di === carouselIndex ? T.primary : T.outlineVariant,
+                                  transition: 'all 0.3s ease',
+                                  cursor: 'pointer',
+                                  display: 'inline-block',
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         );
       })()}
+
 
       {/* ══════════════════════════════
           2. HERO
