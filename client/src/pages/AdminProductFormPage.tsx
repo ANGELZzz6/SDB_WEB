@@ -14,8 +14,8 @@ export default function AdminProductFormPage() {
   const [formData, setFormData] = useState<Partial<Product>>({
     nombre: '', marca: 'Velvet & Bloom', sku: '', descripcion: '', categoria: '',
     imagenes: [], ingredientes: [], beneficios: [],
-    precio: 0, precioOferta: 0, costo: 0,
-    stock: 0, stockMinimo: 15, rastrearStock: true,
+    precio: undefined, precioOferta: undefined, costo: undefined,
+    stock: undefined, stockMinimo: 15, rastrearStock: true,
     seoTitle: '', seoDesc: '', destacadoEnHome: false,
   });
 
@@ -51,7 +51,9 @@ export default function AdminProductFormPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     let finalValue: any = value;
-    if (type === 'number') finalValue = Number(value);
+    if (type === 'number') {
+      finalValue = value === '' ? undefined : Number(value);
+    }
     if (type === 'checkbox') finalValue = (e.target as HTMLInputElement).checked;
     
     setFormData(prev => ({ ...prev, [name]: finalValue }));
@@ -59,20 +61,54 @@ export default function AdminProductFormPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validar campos requeridos
+    const missingFields: string[] = [];
+    if (!formData.nombre || !formData.nombre.trim()) {
+      missingFields.push('Nombre del Producto');
+    }
+    if (!formData.sku || !formData.sku.trim()) {
+      missingFields.push('SKU');
+    }
+    if (!formData.categoria || !formData.categoria.trim()) {
+      missingFields.push('Categoría');
+    }
+    if (formData.precio === undefined || formData.precio === null || (formData.precio as any) === '') {
+      missingFields.push('Precio Regular');
+    }
+    if (formData.rastrearStock) {
+      if (formData.stock === undefined || formData.stock === null || (formData.stock as any) === '') {
+        missingFields.push('Stock Inicial');
+      }
+    }
+
+    if (missingFields.length > 0) {
+      alert(`Por favor, complete los siguientes campos obligatorios:\n- ${missingFields.join('\n- ')}`);
+      return;
+    }
+
     setSaving(true);
     try {
+      const cleanNumber = (val: any) => {
+        if (val === undefined || val === null || val === '' || val === 0) return null;
+        return Number(val);
+      };
+
       const dataToSave = {
         ...formData,
         ingredientes: ingredientesStr.split(',').map(s => s.trim()).filter(Boolean),
         beneficios: beneficiosStr.split(',').map(s => s.trim()).filter(Boolean),
-        precioOferta: formData.precioOferta === 0 ? undefined : formData.precioOferta,
-        costo: formData.costo === 0 ? undefined : formData.costo,
+        precio: formData.precio !== undefined && (formData.precio as any) !== '' ? Number(formData.precio) : undefined,
+        precioOferta: cleanNumber(formData.precioOferta),
+        costo: cleanNumber(formData.costo),
+        stock: formData.rastrearStock && formData.stock !== undefined && (formData.stock as any) !== '' ? Number(formData.stock) : 0,
+        stockMinimo: formData.rastrearStock ? cleanNumber(formData.stockMinimo) : null,
       };
 
       if (id) {
-        await productService.update(id, dataToSave);
+        await productService.update(id, dataToSave as any);
       } else {
-        await productService.create(dataToSave);
+        await productService.create(dataToSave as any);
       }
       navigate('/admin/productos');
     } catch (err: any) {
@@ -361,15 +397,15 @@ export default function AdminProductFormPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Precio Regular ($) *</label>
-                    <input required type="number" name="precio" min="0" value={formData.precio} onChange={handleChange} className="ghost-input" />
+                    <input required type="number" name="precio" min="0" value={formData.precio ?? ''} onChange={handleChange} className="ghost-input" />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Precio de Oferta ($) <span style={{ textTransform: 'lowercase', fontWeight: 400, color: T.onSurfaceVariant }}>(0 para omitir)</span></label>
-                    <input type="number" name="precioOferta" min="0" value={formData.precioOferta || 0} onChange={handleChange} className="ghost-input" />
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Precio de Oferta ($) <span style={{ textTransform: 'lowercase', fontWeight: 400, color: T.onSurfaceVariant }}>(vacío para omitir)</span></label>
+                    <input type="number" name="precioOferta" min="0" value={formData.precioOferta ?? ''} onChange={handleChange} className="ghost-input" />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Costo Base ($) <span style={{ textTransform: 'lowercase', fontWeight: 400, color: T.onSurfaceVariant }}>(Privado para admin)</span></label>
-                    <input type="number" name="costo" min="0" value={formData.costo || 0} onChange={handleChange} className="ghost-input" />
+                    <input type="number" name="costo" min="0" value={formData.costo ?? ''} onChange={handleChange} className="ghost-input" />
                   </div>
                 </div>
               </div>
@@ -387,11 +423,11 @@ export default function AdminProductFormPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Stock Inicial *</label>
-                        <input required type="number" name="stock" min="0" value={formData.stock || 0} onChange={handleChange} className="ghost-input" />
+                        <input required type="number" name="stock" min="0" value={formData.stock ?? ''} onChange={handleChange} className="ghost-input" />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Mínimo Crítico</label>
-                        <input type="number" name="stockMinimo" min="0" value={formData.stockMinimo || 15} onChange={handleChange} className="ghost-input" />
+                        <input type="number" name="stockMinimo" min="0" value={formData.stockMinimo ?? ''} onChange={handleChange} className="ghost-input" />
                       </div>
                     </div>
                   )}
