@@ -9,6 +9,9 @@ const checkPermission = require('../middleware/checkPermission')
 // GET /api/products/categorias — lista de categorías únicas
 router.get('/categorias', ctrl.getCategorias)
 
+// GET /api/products/featured — productos destacados para el carrusel del landing (público)
+router.get('/featured', ctrl.getFeatured)
+
 // POST /api/products/checkout (Público - registro temporal de egreso)
 router.post('/checkout', ctrl.checkout)
 

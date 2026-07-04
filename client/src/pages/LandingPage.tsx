@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { serviceService, galleryService, employeeService, siteConfigService, settingsService } from '../services/api';
-import type { Employee, Service, SiteConfig } from '../types';
+import { useState, useEffect, useRef } from 'react';
+import { serviceService, galleryService, employeeService, siteConfigService, settingsService, productService } from '../services/api';
+import type { Employee, Service, SiteConfig, Product } from '../types';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -71,6 +71,9 @@ export default function LandingPage() {
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [businessHours, setBusinessHours] = useState<{ inicio: string; fin: string } | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Cargar configuración CMS
@@ -113,7 +116,24 @@ export default function LandingPage() {
         setGallery(res.data.map(i => i.url).slice(0, 6));
       }
     });
+    // Cargar productos destacados para el carrusel
+    productService.getFeatured().then(res => {
+      if (res.success && res.data && res.data.length > 0) {
+        setFeaturedProducts(res.data);
+      }
+    }).catch(() => { /* Silencioso */ });
   }, []);
+
+  // Auto-rotación del carrusel
+  useEffect(() => {
+    if (featuredProducts.length <= 1) return;
+    carouselTimer.current = setInterval(() => {
+      setCarouselIndex(prev => (prev + 1) % featuredProducts.length);
+    }, 3500);
+    return () => {
+      if (carouselTimer.current) clearInterval(carouselTimer.current);
+    };
+  }, [featuredProducts]);
 
   const renderPriceInfo = (svc: any) => {
     const formatter = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' });
@@ -146,6 +166,57 @@ export default function LandingPage() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         ::selection { background: #ffd9de; color: #944555; }
+
+        /* Featured products carousel */
+        .featured-carousel-bar {
+          position: fixed;
+          top: 72px;
+          left: 0;
+          width: 100%;
+          z-index: 49;
+          background: rgba(253,248,245,0.82);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          border-bottom: 1px solid ${T.outlineVariant}25;
+          overflow: hidden;
+          height: 68px;
+        }
+        .featured-carousel-track {
+          display: flex;
+          align-items: center;
+          height: 100%;
+          transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .featured-carousel-slide {
+          min-width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 0 16px;
+          cursor: pointer;
+        }
+        @media (min-width: 640px) {
+          .featured-carousel-slide { padding: 0 24px; gap: 16px; }
+        }
+        .featured-img-wrap {
+          width: 48px;
+          height: 48px;
+          border-radius: 10px;
+          overflow: hidden;
+          flex-shrink: 0;
+          border: 1px solid ${T.outlineVariant}30;
+        }
+        @media (min-width: 640px) {
+          .featured-img-wrap { width: 52px; height: 52px; }
+        }
+        .featured-dots {
+          display: flex;
+          gap: 5px;
+          align-items: center;
+          margin-left: auto;
+          padding-right: 4px;
+          flex-shrink: 0;
+        }
 
         /* Navbar responsive */
         .nav-links { display: none; }
@@ -386,6 +457,111 @@ export default function LandingPage() {
         </div>
       </nav>
 
+      {/* ══════════════════════════════
+          1b. CARRUSEL PRODUCTOS DESTACADOS
+          Solo se renderiza si hay productos marcados como destacadoEnHome.
+      ══════════════════════════════ */}
+      {featuredProducts.length > 0 && (() => {
+        const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
+        return (
+          <div className="featured-carousel-bar" role="banner" aria-label="Productos destacados">
+            <div
+              className="featured-carousel-track"
+              style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
+            >
+              {featuredProducts.map((p, i) => {
+                const pHasDiscount = !!(p.precioOferta && p.precioOferta > 0);
+                const pPct = pHasDiscount
+                  ? Math.round(((p.precio - p.precioOferta!) / p.precio) * 100)
+                  : 0;
+                return (
+                  <div
+                    key={p._id}
+                    className="featured-carousel-slide"
+                    onClick={() => navigate(`/productos/${p._id}`)}
+                    aria-hidden={i !== carouselIndex}
+                  >
+                    {/* Imagen */}
+                    <div className="featured-img-wrap">
+                      <img
+                        src={p.imagenes?.[0] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=200&h=200&fit=crop'}
+                        alt={p.nombre}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        loading="lazy"
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                        {pHasDiscount && (
+                          <span style={{
+                            backgroundColor: T.primary, color: '#fff',
+                            fontSize: '9px', fontWeight: 700, fontFamily: T.fontBody,
+                            textTransform: 'uppercase', letterSpacing: '0.08em',
+                            padding: '2px 7px', borderRadius: '9999px', flexShrink: 0,
+                          }}>-{pPct}%</span>
+                        )}
+                        {!pHasDiscount && (
+                          <span style={{
+                            backgroundColor: T.primaryFixed, color: T.primary,
+                            fontSize: '9px', fontWeight: 700, fontFamily: T.fontBody,
+                            textTransform: 'uppercase', letterSpacing: '0.08em',
+                            padding: '2px 7px', borderRadius: '9999px', flexShrink: 0,
+                          }}>⭐ Estrella</span>
+                        )}
+                        <span style={{
+                          fontFamily: T.fontBody, fontSize: '10px',
+                          color: T.onSurfaceVariant, textTransform: 'uppercase',
+                          letterSpacing: '0.1em', whiteSpace: 'nowrap',
+                          overflow: 'hidden', textOverflow: 'ellipsis',
+                        }}>{p.marca}</span>
+                      </div>
+                      <p style={{
+                        fontFamily: T.fontHeadline, fontStyle: 'italic',
+                        fontSize: 'clamp(13px, 3.5vw, 15px)', color: T.onSurface,
+                        fontWeight: 600, margin: 0, lineHeight: 1.2,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>{p.nombre}</p>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700, color: T.primary }}>
+                          {fmt.format(pHasDiscount ? p.precioOferta! : p.precio)}
+                        </span>
+                        {pHasDiscount && (
+                          <span style={{ fontFamily: T.fontBody, fontSize: '11px', color: T.onSurfaceVariant, textDecoration: 'line-through' }}>
+                            {fmt.format(p.precio)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Puntos de navegación */}
+                    {featuredProducts.length > 1 && (
+                      <div className="featured-dots">
+                        {featuredProducts.map((_, di) => (
+                          <span
+                            key={di}
+                            onClick={e => { e.stopPropagation(); setCarouselIndex(di); }}
+                            style={{
+                              width: di === carouselIndex ? '16px' : '5px',
+                              height: '5px',
+                              borderRadius: '9999px',
+                              backgroundColor: di === carouselIndex ? T.primary : T.outlineVariant,
+                              transition: 'all 0.3s ease',
+                              cursor: 'pointer',
+                              display: 'inline-block',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ══════════════════════════════
           2. HERO
@@ -406,7 +582,7 @@ export default function LandingPage() {
         <div className="hero-bg-blob" style={{ position: 'absolute', top: '25%', right: '-80px', width: '384px', height: '384px', backgroundColor: '#ffd9de', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
         <div className="hero-bg-blob" style={{ position: 'absolute', bottom: '25%', left: '-80px', width: '320px', height: '320px', backgroundColor: '#ece7e4', borderRadius: '9999px', filter: 'blur(60px)', opacity: 0.4, zIndex: 0 }} />
 
-        <div style={{ ...wrap, paddingTop: '140px', paddingBottom: '80px', position: 'relative', zIndex: 1 }}>
+        <div style={{ ...wrap, paddingTop: featuredProducts.length > 0 ? '212px' : '140px', paddingBottom: '80px', position: 'relative', zIndex: 1 }}>
           <div className="hero-layout">
 
             {/* Left: Editorial Text */}

@@ -16,7 +16,7 @@ export default function AdminProductFormPage() {
     imagenes: [], ingredientes: [], beneficios: [],
     precio: 0, precioOferta: 0, costo: 0,
     stock: 0, stockMinimo: 15, rastrearStock: true,
-    seoTitle: '', seoDesc: ''
+    seoTitle: '', seoDesc: '', destacadoEnHome: false,
   });
 
   const [categorias, setCategorias] = useState<string[]>([]);
@@ -395,6 +395,32 @@ export default function AdminProductFormPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Destacar en página principal */}
+                  <div style={{
+                    padding: '16px', borderRadius: '16px',
+                    border: `1.5px solid ${formData.destacadoEnHome ? T.primary : T.outlineVariant}30`,
+                    backgroundColor: formData.destacadoEnHome ? `${T.primaryFixed}60` : 'transparent',
+                    transition: 'all 0.25s ease',
+                  }}>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        name="destacadoEnHome"
+                        checked={!!formData.destacadoEnHome}
+                        onChange={handleChange}
+                        style={{ width: '18px', height: '18px', accentColor: T.primary, flexShrink: 0, marginTop: '2px' }}
+                      />
+                      <div>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '14px', fontWeight: 600, color: T.onSurface, display: 'block' }}>
+                          ⭐ Destacar en página principal
+                        </span>
+                        <span style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant, lineHeight: 1.5, display: 'block', marginTop: '2px' }}>
+                          Este producto aparecerá en el carrusel de destacados del inicio. Ideal para productos en oferta o productos estrella.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               </div>
 

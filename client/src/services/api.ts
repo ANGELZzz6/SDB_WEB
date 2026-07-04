@@ -240,6 +240,8 @@ export const productService = {
     const query = params.toString() ? `?${params.toString()}` : '';
     return api.get<ApiResponse<Product[]> & { stats?: any }>(`/products${query}`);
   },
+  /** Productos destacados en home para el carrusel del landing. */
+  getFeatured: () => api.get<ApiResponse<Product[]>>('/products/featured'),
   /** Categorías únicas de productos activos. */
   getCategorias: () => api.get<ApiResponse<string[]>>('/products/categorias'),
   getById: (id: string) => api.get<ApiResponse<Product>>(`/products/${id}`),

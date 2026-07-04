@@ -22,8 +22,9 @@ const productSchema = new mongoose.Schema({
   isActive:      { type: Boolean, default: true },
   seoTitle:      { type: String, trim: true, default: '' },
   seoDesc:       { type: String, trim: true, default: '' },
-  likesCount:    { type: Number, default: 0 },
-  rating:        { type: Number, default: 5.0, min: 0, max: 5 },
+  likesCount:      { type: Number, default: 0 },
+  rating:          { type: Number, default: 5.0, min: 0, max: 5 },
+  destacadoEnHome: { type: Boolean, default: false }, // Aparece en carrusel del landing
 }, {
   timestamps: true,
 })

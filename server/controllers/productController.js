@@ -66,6 +66,21 @@ const getAll = async (req, res, next) => {
   }
 }
 
+// ─── GET /api/products/featured ───────────────────────────────────────────────
+// Devuelve productos marcados como destacadoEnHome para el carrusel del landing.
+// Ruta pública — nunca expone el costo.
+const getFeatured = async (req, res, next) => {
+  try {
+    const products = await Product
+      .find({ isActive: true, destacadoEnHome: true }, PUBLIC_FIELDS)
+      .sort({ updatedAt: -1 })
+      .limit(10)
+    res.json({ success: true, data: products })
+  } catch (error) {
+    next(error)
+  }
+}
+
 // ─── GET /api/products/:id ────────────────────────────────────────────────────
 const getOne = async (req, res, next) => {
   try {
@@ -448,6 +463,7 @@ const deleteMovement = async (req, res, next) => {
 
 module.exports = {
   getAll,
+  getFeatured,
   getOne,
   create,
   update,

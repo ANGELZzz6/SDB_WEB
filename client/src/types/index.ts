@@ -165,6 +165,7 @@ export interface Product {
   seoDesc?: string
   likesCount: number
   rating: number
+  destacadoEnHome?: boolean  // Aparece en carrusel del landing
   createdAt?: string
   updatedAt?: string
 }

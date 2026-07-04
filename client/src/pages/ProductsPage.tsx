@@ -373,18 +373,6 @@ export default function ProductsPage() {
                       className="prod-img"
                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
-                    {/* Botón favorito */}
-                    <button
-                      aria-label="Agregar a favoritos"
-                      style={{
-                        position: 'absolute', top: '10px', right: '10px',
-                        width: '32px', height: '32px', borderRadius: '9999px',
-                        background: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(10px)',
-                        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '14px',
-                      }}
-                      onClick={e => { e.stopPropagation(); }}
-                    >🤍</button>
                     {/* Badge oferta */}
                     {product.precioOferta && product.precioOferta > 0 && (
                       <div style={{
