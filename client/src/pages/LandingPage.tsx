@@ -467,7 +467,7 @@ export default function LandingPage() {
         const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
         return (
           <div className="featured-carousel-bar" role="banner" aria-label="Productos destacados">
-            <div style={{ ...wrap, height: '100%', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
               <div
                 className="featured-carousel-track"
                 style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
@@ -484,7 +484,7 @@ export default function LandingPage() {
                       onClick={() => navigate(`/productos/${p._id}`)}
                       aria-hidden={i !== carouselIndex}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '960px', margin: '0 auto', gap: '14px', height: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', width: '100%', maxWidth: '960px', margin: '0 auto', gap: '14px', height: '100%', paddingLeft: '16px', paddingRight: '16px' }}>
                         {/* Imagen */}
                         <div className="featured-img-wrap">
                           <img
