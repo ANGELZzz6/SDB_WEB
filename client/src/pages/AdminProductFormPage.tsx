@@ -337,7 +337,10 @@ export default function AdminProductFormPage() {
 
               {/* Multimedia */}
               <div className="form-section" style={{ backgroundColor: T.surfaceContainerLowest }}>
-                <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, marginTop: 0, marginBottom: '24px' }}>Multimedia</h3>
+                <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, marginTop: 0, marginBottom: '8px' }}>Multimedia</h3>
+                <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant, marginBottom: '24px', lineHeight: 1.5 }}>
+                  💡 <strong>Tamaño recomendado:</strong> Para que la imagen se muestre correctamente en la tienda (sin recortar o deformar), usa una relación de aspecto de <strong>4:5</strong> (por ejemplo: 800 x 1000 px, o mínimo 400 x 500 px).
+                </p>
                 <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div
                     onClick={openCloudinary}
