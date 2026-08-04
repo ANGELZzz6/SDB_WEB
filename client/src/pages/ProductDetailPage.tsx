@@ -192,11 +192,34 @@ export default function ProductDetailPage() {
         <div className="detail-layout">
           {/* GALERÍA */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
-            <div style={{ width: '100%', aspectRatio: '4/5', backgroundColor: T.surfaceContainerLow, borderRadius: '24px', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', backgroundColor: T.surfaceContainerLow, borderRadius: '24px', overflow: 'hidden' }}>
+              {/* Imagen de fondo difuminada */}
+              <img
+                src={product.imagenes?.[activeImg] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=800&h=1000&fit=crop'}
+                alt=""
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  filter: 'blur(20px) brightness(0.95)',
+                  transform: 'scale(1.1)',
+                  opacity: 0.65,
+                }}
+              />
+              {/* Imagen frontal nítida */}
               <img
                 src={product.imagenes?.[activeImg] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=800&h=1000&fit=crop'}
                 alt={product.nombre}
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  zIndex: 1,
+                }}
               />
             </div>
             {product.imagenes && product.imagenes.length > 1 && (
