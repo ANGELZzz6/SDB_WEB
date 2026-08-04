@@ -196,7 +196,7 @@ export default function ProductDetailPage() {
               <img
                 src={product.imagenes?.[activeImg] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=800&h=1000&fit=crop'}
                 alt={product.nombre}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             </div>
             {product.imagenes && product.imagenes.length > 1 && (

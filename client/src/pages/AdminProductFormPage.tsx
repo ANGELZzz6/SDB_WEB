@@ -55,7 +55,7 @@ export default function AdminProductFormPage() {
       finalValue = value === '' ? undefined : Number(value);
     }
     if (type === 'checkbox') finalValue = (e.target as HTMLInputElement).checked;
-    
+
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
@@ -197,7 +197,7 @@ export default function AdminProductFormPage() {
       `}</style>
 
       <div className="admin-form-container" style={{ padding: '40px 24px', maxWidth: '1200px', margin: '0 auto' }}>
-        
+
         {/* Header con acciones */}
         <form onSubmit={handleSave}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px', flexWrap: 'wrap', gap: '20px' }}>
@@ -248,14 +248,14 @@ export default function AdminProductFormPage() {
           </div>
 
           <div className="form-grid">
-            
+
             {/* Columna Izquierda (Datos Básicos, Imágenes, Ingredientes) */}
             <div>
               {/* Información básica */}
               <div className="form-section">
                 <h3 style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.onSurface, marginTop: 0, marginBottom: '24px' }}>Información Básica</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  
+
                   <div className="form-grid-row">
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, fontFamily: T.fontBody, color: T.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>Nombre del Producto *</label>
@@ -268,7 +268,7 @@ export default function AdminProductFormPage() {
                   </div>
 
                   <div className="form-grid-row">
-                    
+
                     {/* Category Selector with Prevent Duplicates logic */}
                     <div>
                       {isNewCategory ? (

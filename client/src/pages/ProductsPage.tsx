@@ -371,7 +371,7 @@ export default function ProductsPage() {
                       src={product.imagenes?.[0] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=500&fit=crop'}
                       alt={product.nombre}
                       className="prod-img"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                     />
                     {/* Badge oferta */}
                     {product.precioOferta && product.precioOferta > 0 && (
