@@ -367,35 +367,11 @@ export default function ProductsPage() {
                 <article key={product._id} className="prod-card" onClick={() => navigate(`/productos/${product._id}`)}>
                   {/* Imagen */}
                   <div style={{ position: 'relative', width: '100%', aspectRatio: '4/5', borderRadius: '16px', overflow: 'hidden', backgroundColor: T.surfaceContainerLow, marginBottom: '14px' }}>
-                    {/* Imagen de fondo difuminada */}
-                    <img
-                      src={product.imagenes?.[0] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=500&fit=crop'}
-                      alt=""
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        filter: 'blur(20px) brightness(0.95)',
-                        transform: 'scale(1.1)',
-                        opacity: 0.65,
-                      }}
-                    />
-                    {/* Imagen frontal nítida */}
                     <img
                       src={product.imagenes?.[0] || 'https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=500&fit=crop'}
                       alt={product.nombre}
                       className="prod-img"
-                      style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain',
-                        display: 'block',
-                        zIndex: 1,
-                      }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
                     {/* Badge oferta */}
                     {product.precioOferta && product.precioOferta > 0 && (
