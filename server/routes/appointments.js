@@ -4,15 +4,18 @@ const apptCtrl = require('../controllers/appointmentController')
 const availCtrl = require('../controllers/availabilityController')
 const { authMiddleware, optionalAuth, requireRole } = require('../middleware/auth')
 const checkPermission = require('../middleware/checkPermission')
+const checkPageEnabled = require('../middleware/checkPageEnabled')
 
-// ── Disponibilidad — PÚBLICA (chatbot la necesita sin login) ─────────────────
+// ── Disponibilidad — PÚBLICA pero protegida por visibilidad ──────────────────
+// Si el chatbot está deshabilitado, no servimos slots (CAPA 1 de seguridad)
 // GET /api/appointments/availability/:employeeId/:date?serviceId=...
 router.get(
   '/availability/:employeeId/:date',
+  checkPageEnabled('chatbot'),
   availCtrl.getAvailability
 )
 
-// ── Estadísticas y Clientes — solo admin o especialista con permiso ────────────────────────────────────────────────
+// ── Estadísticas y Clientes — solo admin o especialista con permiso ───────────
 router.get('/stats', authMiddleware, checkPermission('citas'), apptCtrl.getStats)
 
 // GET /api/appointments/clients
@@ -29,16 +32,18 @@ router.get('/itinerary/:employeeId/:date', authMiddleware, apptCtrl.getItinerary
 // GET /api/appointments/:id
 router.get('/:id', authMiddleware, apptCtrl.getOne)
 
-// POST /api/appointments/bulk — PÚBLICO (clientes agendan múltiples servicios)
-router.post('/bulk', apptCtrl.createBulk)
+// POST /api/appointments/bulk — PÚBLICO pero protegida (chatbot usa esta ruta)
+// checkPageEnabled bloquea si el chatbot está deshabilitado (CAPA 1 de seguridad)
+router.post('/bulk', checkPageEnabled('chatbot'), apptCtrl.createBulk)
 
-// POST /api/appointments — PÚBLICO (clientes agendan desde chatbot)
-router.post('/', apptCtrl.create)
+// POST /api/appointments — PÚBLICO pero protegida (chatbot usa esta ruta)
+// checkPageEnabled bloquea si el chatbot está deshabilitado (CAPA 1 de seguridad)
+router.post('/', checkPageEnabled('chatbot'), apptCtrl.create)
 
 // PUT /api/appointments/:id — admin o empleada dueña
 router.put('/:id', authMiddleware, apptCtrl.update)
 
-// PATCH /api/appointments/:id/complete — admin o empleada dueña 
+// PATCH /api/appointments/:id/complete — admin o empleada dueña
 router.patch('/:id/complete', authMiddleware, apptCtrl.complete)
 
 // PATCH /api/appointments/:id/reschedule — admin O la empleada dueña de la cita

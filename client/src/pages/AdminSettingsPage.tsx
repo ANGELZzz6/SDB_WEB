@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { T } from '../lib/adminTokens';
 import { settingsService, siteConfigService } from '../services/api';
-import type { Settings, SiteConfig } from '../types';
+import type { Settings, SiteConfig, PageButtonConfig } from '../types';
 import { WA_MESSAGES } from '../utils/whatsappMessages';
 
 /* ─────────────────────────────────────────────────
@@ -130,7 +130,18 @@ export default function AdminSettingsPage() {
     mensajeCompletada: '',
     horaAperturaAgendamiento: '08:00',
     horaCierreAgendamiento: '19:00',
-    duracionSlot: 30
+    duracionSlot: 30,
+    paginasOcultas: {
+      chatbot: {
+        habilitada: true,
+        mensajeTitulo: 'Agendamiento no disponible',
+        mensajeCuerpo: 'El agendamiento en línea no está disponible en este momento. Por favor, contáctanos directamente por WhatsApp o visítanos en el salón.',
+        botones: [
+          { texto: 'Ver Productos', ruta: '/productos', tipo: 'interno' },
+          { texto: 'Volver al Inicio', ruta: '/', tipo: 'interno' },
+        ]
+      }
+    }
   });
 
   const [hasChanges, setHasChanges] = useState(false);
@@ -152,8 +163,25 @@ export default function AdminSettingsPage() {
           setOriginalSettings(resSettings.data);
         }
         if (resConfig.success && resConfig.data) {
-          setSiteConfig(resConfig.data);
-          setOriginalCms(resConfig.data);
+          const loadedConfig = resConfig.data;
+          const mergedConfig: SiteConfig = {
+            ...loadedConfig,
+            paginasOcultas: {
+              chatbot: {
+                habilitada: loadedConfig.paginasOcultas?.chatbot?.habilitada ?? true,
+                mensajeTitulo: loadedConfig.paginasOcultas?.chatbot?.mensajeTitulo || 'Agendamiento no disponible',
+                mensajeCuerpo: loadedConfig.paginasOcultas?.chatbot?.mensajeCuerpo || 'El agendamiento en línea no está disponible en este momento. Por favor, contáctanos directamente por WhatsApp o visítanos en el salón.',
+                botones: loadedConfig.paginasOcultas?.chatbot?.botones?.length
+                  ? loadedConfig.paginasOcultas.chatbot.botones
+                  : [
+                      { texto: 'Ver Productos', ruta: '/productos', tipo: 'interno' },
+                      { texto: 'Volver al Inicio', ruta: '/', tipo: 'interno' },
+                    ]
+              }
+            }
+          };
+          setSiteConfig(mergedConfig);
+          setOriginalCms(mergedConfig);
         }
       } catch (error) {
         console.error(error);
@@ -218,7 +246,10 @@ export default function AdminSettingsPage() {
         }
         setHasChanges(false);
         setHasCmsChanges(false);
+        // Invalidar caché de visibilidad para que los cambios surtan efecto inmediatamente
+        try { sessionStorage.removeItem('sdb_page_visibility'); } catch { /* ignorar */ }
         alert('Cambios guardados correctamente');
+
       }
     } catch (error) {
       console.error(error);
@@ -721,8 +752,285 @@ export default function AdminSettingsPage() {
 
             </div>
           </SectionCard>
+
+          {/* ── SECCIÓN: VISIBILIDAD DE PÁGINAS ─────────────────────────────────────── */}
+          <SectionCard style={{ marginTop: '8px' }}>
+            <SectionTitle icon="🔒" title="Visibilidad de Páginas" />
+            <p style={{ fontFamily: T.fontBody, fontSize: '13px', color: T.onSurfaceVariant, marginTop: '-16px', marginBottom: '28px', lineHeight: 1.6 }}>
+              Oculta páginas públicas del sitio. Cuando una página está deshabilitada, los usuarios verán un mensaje personalizable en lugar del contenido.
+            </p>
+
+            <style>{`
+              @keyframes visibilityCollapse {
+                from { opacity: 1; max-height: 600px; }
+                to { opacity: 0; max-height: 0; }
+              }
+              @keyframes visibilityExpand {
+                from { opacity: 0; max-height: 0; }
+                to { opacity: 1; max-height: 600px; }
+              }
+              .vis-config-panel {
+                overflow: hidden;
+                transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+              }
+              .vis-config-panel.hidden { max-height: 0; opacity: 0; pointer-events: none; }
+              .vis-config-panel.visible { max-height: 800px; opacity: 1; }
+              .vis-toggle-btn { transition: all 0.2s !important; }
+              .vis-toggle-btn:hover { opacity: 0.85 !important; transform: scale(1.02) !important; }
+              .vis-btn-row { transition: background 0.15s; }
+              .vis-btn-row:hover { background: rgba(148,69,85,0.04) !important; }
+              .vis-add-btn:hover { background: rgba(148,69,85,0.08) !important; }
+              .vis-delete-btn:hover { color: #d32f2f !important; }
+            `}</style>
+
+            {/* ── Chatbot de Agendamiento ─────────────────────────────────────────────── */}
+            <div style={{ border: `1px solid ${T.outlineVariant}30`, borderRadius: '16px', overflow: 'hidden' }}>
+
+              {/* Header de la fila */}
+              <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '18px' }}>📅</span>
+                    <p style={{ fontFamily: T.fontBody, fontSize: '15px', fontWeight: 600, color: T.onSurface }}>
+                      Chatbot de Agendamiento
+                    </p>
+                    <span style={{
+                      fontFamily: T.fontBody, fontSize: '10px', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.12em',
+                      padding: '2px 8px', borderRadius: '9999px',
+                      backgroundColor: siteConfig.paginasOcultas?.chatbot?.habilitada !== false
+                        ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                      color: siteConfig.paginasOcultas?.chatbot?.habilitada !== false ? '#16a34a' : '#dc2626',
+                    }}>
+                      {siteConfig.paginasOcultas?.chatbot?.habilitada !== false ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+                  <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant }}>
+                    Ruta: <code style={{ backgroundColor: T.surfaceContainerHigh, padding: '1px 6px', borderRadius: '4px', fontSize: '11px' }}>/chatbot</code>
+                  </p>
+                </div>
+
+                {/* Toggle ON/OFF */}
+                <button
+                  type="button"
+                  className="vis-toggle-btn"
+                  onClick={() => {
+                    const current = siteConfig.paginasOcultas?.chatbot?.habilitada !== false;
+                    setSiteConfig(prev => ({
+                      ...prev,
+                      paginasOcultas: {
+                        ...prev.paginasOcultas,
+                        chatbot: {
+                          habilitada: !current,
+                          mensajeTitulo: prev.paginasOcultas?.chatbot?.mensajeTitulo ?? 'Agendamiento no disponible',
+                          mensajeCuerpo: prev.paginasOcultas?.chatbot?.mensajeCuerpo ?? 'El agendamiento en línea no está disponible en este momento.',
+                          botones: prev.paginasOcultas?.chatbot?.botones ?? [
+                            { texto: 'Ver Productos', ruta: '/productos', tipo: 'interno' },
+                            { texto: 'Volver al Inicio', ruta: '/', tipo: 'interno' },
+                          ],
+                        }
+                      }
+                    }));
+                    setHasCmsChanges(true);
+                  }}
+                  style={{
+                    padding: '10px 20px', borderRadius: '9999px', border: 'none', cursor: 'pointer',
+                    fontFamily: T.fontBody, fontSize: '13px', fontWeight: 700,
+                    backgroundColor: siteConfig.paginasOcultas?.chatbot?.habilitada !== false
+                      ? T.primary : T.surfaceContainerHigh,
+                    color: siteConfig.paginasOcultas?.chatbot?.habilitada !== false
+                      ? '#fff' : T.onSurfaceVariant,
+                    boxShadow: siteConfig.paginasOcultas?.chatbot?.habilitada !== false
+                      ? '0 4px 14px rgba(148,69,85,0.25)' : 'none',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                  }}
+                >
+                  <span style={{ fontSize: '14px' }}>
+                    {siteConfig.paginasOcultas?.chatbot?.habilitada !== false ? '✅' : '🚫'}
+                  </span>
+                  {siteConfig.paginasOcultas?.chatbot?.habilitada !== false ? 'Habilitado' : 'Deshabilitado'}
+                </button>
+              </div>
+
+              {/* Panel de configuración — solo visible cuando está DESHABILITADO */}
+              <div className={`vis-config-panel ${siteConfig.paginasOcultas?.chatbot?.habilitada !== false ? 'hidden' : 'visible'}`}>
+                <div style={{ padding: '0 24px 24px', borderTop: `1px solid ${T.outlineVariant}20` }}>
+
+                  <p style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.15em', marginTop: '20px', marginBottom: '16px' }}>
+                    Mensaje que verán los usuarios
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                    {/* Título del aviso */}
+                    <div>
+                      <FieldLabel>Título del aviso</FieldLabel>
+                      <UnderlineInput
+                        value={siteConfig.paginasOcultas?.chatbot?.mensajeTitulo ?? ''}
+                        onChange={(v) => {
+                          setSiteConfig(prev => ({
+                            ...prev,
+                            paginasOcultas: {
+                              ...prev.paginasOcultas,
+                              chatbot: { ...prev.paginasOcultas?.chatbot, habilitada: false, mensajeTitulo: v, mensajeCuerpo: prev.paginasOcultas?.chatbot?.mensajeCuerpo ?? '', botones: prev.paginasOcultas?.chatbot?.botones ?? [] }
+                            }
+                          }));
+                          setHasCmsChanges(true);
+                        }}
+                        placeholder="Agendamiento no disponible"
+                      />
+                    </div>
+
+                    {/* Cuerpo del mensaje */}
+                    <div>
+                      <FieldLabel>Mensaje al usuario</FieldLabel>
+                      <UnderlineTextarea
+                        value={siteConfig.paginasOcultas?.chatbot?.mensajeCuerpo ?? ''}
+                        onChange={(v) => {
+                          setSiteConfig(prev => ({
+                            ...prev,
+                            paginasOcultas: {
+                              ...prev.paginasOcultas,
+                              chatbot: { ...prev.paginasOcultas?.chatbot, habilitada: false, mensajeTitulo: prev.paginasOcultas?.chatbot?.mensajeTitulo ?? '', mensajeCuerpo: v, botones: prev.paginasOcultas?.chatbot?.botones ?? [] }
+                            }
+                          }));
+                          setHasCmsChanges(true);
+                        }}
+                        rows={3}
+                        placeholder="El agendamiento en línea no está disponible en este momento..."
+                      />
+                    </div>
+
+                    {/* Botones de navegación */}
+                    <div>
+                      <p style={{ fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px' }}>
+                        Botones de navegación
+                      </p>
+                      <p style={{ fontFamily: T.fontBody, fontSize: '12px', color: T.onSurfaceVariant, marginBottom: '16px', lineHeight: 1.5 }}>
+                        Estos botones aparecen en la página de "no disponible" para guiar al usuario a otras secciones.
+                      </p>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {(siteConfig.paginasOcultas?.chatbot?.botones ?? []).map((btn, idx) => (
+                          <div
+                            key={idx}
+                            className="vis-btn-row"
+                            style={{
+                              display: 'grid', gridTemplateColumns: '1fr 1fr auto',
+                              gap: '12px', alignItems: 'center',
+                              padding: '12px 16px', borderRadius: '12px',
+                              backgroundColor: T.surfaceContainer,
+                            }}
+                          >
+                            {/* Texto del botón */}
+                            <div>
+                              <FieldLabel>Texto del botón</FieldLabel>
+                              <UnderlineInput
+                                value={btn.texto}
+                                onChange={(v) => {
+                                  const newBtns = [...(siteConfig.paginasOcultas?.chatbot?.botones ?? [])];
+                                  newBtns[idx] = { ...newBtns[idx], texto: v };
+                                  setSiteConfig(prev => ({
+                                    ...prev,
+                                    paginasOcultas: {
+                                      ...prev.paginasOcultas,
+                                      chatbot: { ...prev.paginasOcultas?.chatbot!, botones: newBtns }
+                                    }
+                                  }));
+                                  setHasCmsChanges(true);
+                                }}
+                                placeholder="Texto visible"
+                              />
+                            </div>
+
+                            {/* Ruta destino */}
+                            <div>
+                              <FieldLabel>Ruta destino</FieldLabel>
+                              <UnderlineInput
+                                value={btn.ruta}
+                                onChange={(v) => {
+                                  const newBtns = [...(siteConfig.paginasOcultas?.chatbot?.botones ?? [])];
+                                  newBtns[idx] = { ...newBtns[idx], ruta: v };
+                                  setSiteConfig(prev => ({
+                                    ...prev,
+                                    paginasOcultas: {
+                                      ...prev.paginasOcultas,
+                                      chatbot: { ...prev.paginasOcultas?.chatbot!, botones: newBtns }
+                                    }
+                                  }));
+                                  setHasCmsChanges(true);
+                                }}
+                                placeholder="/productos"
+                              />
+                            </div>
+
+                            {/* Eliminar botón */}
+                            <button
+                              type="button"
+                              className="vis-delete-btn"
+                              onClick={() => {
+                                const newBtns = (siteConfig.paginasOcultas?.chatbot?.botones ?? []).filter((_, i) => i !== idx);
+                                setSiteConfig(prev => ({
+                                  ...prev,
+                                  paginasOcultas: {
+                                    ...prev.paginasOcultas,
+                                    chatbot: { ...prev.paginasOcultas?.chatbot!, botones: newBtns }
+                                  }
+                                }));
+                                setHasCmsChanges(true);
+                              }}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: '18px', color: T.onSurfaceVariant,
+                                padding: '4px', marginTop: '18px', borderRadius: '8px',
+                              }}
+                              title="Eliminar botón"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Botón: Agregar nuevo botón */}
+                        {(siteConfig.paginasOcultas?.chatbot?.botones ?? []).length < 4 && (
+                          <button
+                            type="button"
+                            className="vis-add-btn"
+                            onClick={() => {
+                              const newBtn: PageButtonConfig = { texto: '', ruta: '/', tipo: 'interno' };
+                              const newBtns = [...(siteConfig.paginasOcultas?.chatbot?.botones ?? []), newBtn];
+                              setSiteConfig(prev => ({
+                                ...prev,
+                                paginasOcultas: {
+                                  ...prev.paginasOcultas,
+                                  chatbot: { ...prev.paginasOcultas?.chatbot!, botones: newBtns }
+                                }
+                              }));
+                              setHasCmsChanges(true);
+                            }}
+                            style={{
+                              padding: '12px', borderRadius: '12px',
+                              border: `1.5px dashed ${T.outlineVariant}`,
+                              background: 'none', cursor: 'pointer',
+                              fontFamily: T.fontBody, fontSize: '13px', fontWeight: 600,
+                              color: T.primary, display: 'flex', alignItems: 'center',
+                              justifyContent: 'center', gap: '8px',
+                            }}
+                          >
+                            <span>+</span> Agregar botón
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+
         </div>
       </div>
+
 
       {/* Floating Save Bar */}
       {(hasChanges || hasCmsChanges) && (

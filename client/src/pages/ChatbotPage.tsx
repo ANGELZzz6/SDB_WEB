@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { T } from '../lib/adminTokens';
 import { employeeService, serviceService, availabilityService, settingsService, appointmentService } from '../services/api';
 import { formatHora12 } from '../utils/whatsappMessages';
-import type { Employee, Service, Settings } from '../types';
+import type { Employee, Service, Settings, SinglePageVisibility } from '../types';
+import PageDisabled from '../components/PageDisabled';
 
 function formatGoogleCalendarDate(dateStr: string, timeStr: string, durationMin: number) {
   if (!dateStr || !timeStr) return ''; // Defensive check for flexible flow
@@ -45,6 +46,9 @@ export default function ChatbotPage() {
   const [submitting, setSubmitting] = useState(false);
   const [blockMessage, setBlockMessage] = useState('');
 
+  // CAPA 3 — Visibilidad: si el chatbot está deshabilitado, mostramos PageDisabled
+  const [pageDisabledConfig, setPageDisabledConfig] = useState<SinglePageVisibility | null>(null);
+
   // Wizard States
   const [step, setStep] = useState(0); // Start at flow selection
   const [employeeId, setEmployeeId] = useState('');
@@ -73,12 +77,25 @@ export default function ChatbotPage() {
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
 
-  // 1. Initial Load
+  // 1. Initial Load — incluye verificación de visibilidad (CAPA 3 de seguridad)
   useEffect(() => {
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
     Promise.all([
       employeeService.getAll(),
-      settingsService.get()
-    ]).then(([empRes, setRes]) => {
+      settingsService.get(),
+      // Verificar visibilidad directamente desde el servidor
+      fetch(`${apiBase}/config`, { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+    ]).then(([empRes, setRes, configRes]) => {
+      // Verificar si el chatbot está deshabilitado
+      const chatbotConfig = configRes?.data?.paginasOcultas?.chatbot;
+      if (chatbotConfig && chatbotConfig.habilitada === false) {
+        setPageDisabledConfig(chatbotConfig);
+        return; // No cargar datos si está deshabilitado
+      }
+
       if (empRes.success && empRes.data) {
         setEmployees(empRes.data.filter(e => e.isActive));
       }
@@ -333,9 +350,15 @@ export default function ChatbotPage() {
     }
   };
 
+  // CAPA 3 — Si el chatbot está deshabilitado, mostramos la pantalla de no disponible
+  if (pageDisabledConfig) {
+    return <PageDisabled config={pageDisabledConfig} icon="📅" />;
+  }
+
   if (loadingInitial) {
     return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.fontBody }}>Cargando asistente...</div>;
   }
+
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fdfbfb', display: 'flex', flexDirection: 'column' }}>

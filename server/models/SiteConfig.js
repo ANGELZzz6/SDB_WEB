@@ -49,6 +49,30 @@ const SiteConfigSchema = new mongoose.Schema({
   horaCierreAgendamiento: { type: String, default: '19:00' },
   duracionSlot: { type: Number, default: 30 },
 
+  // ── Control de Visibilidad de Páginas ─────────────────────────────────────
+  // Permite al admin ocultar páginas públicas mostrando un mensaje personalizable.
+  // La verificación ocurre también en el middleware del servidor (checkPageEnabled).
+  paginasOcultas: {
+    chatbot: {
+      habilitada: { type: Boolean, default: true },
+      mensajeTitulo: { type: String, default: 'Agendamiento no disponible' },
+      mensajeCuerpo: { type: String, default: 'El agendamiento en línea no está disponible en este momento. Por favor, contáctanos directamente por WhatsApp o visítanos en el salón.' },
+      botones: {
+        type: [
+          {
+            texto: { type: String, required: true },
+            ruta: { type: String, required: true },
+            tipo: { type: String, enum: ['interno', 'externo'], default: 'interno' }
+          }
+        ],
+        default: [
+          { texto: 'Ver Productos', ruta: '/productos', tipo: 'interno' },
+          { texto: 'Volver al Inicio', ruta: '/', tipo: 'interno' }
+        ]
+      }
+    }
+  },
+
   // Metadata
   updatedAt: { type: Date, default: Date.now },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: false, default: null }

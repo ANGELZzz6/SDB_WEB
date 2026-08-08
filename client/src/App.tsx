@@ -26,7 +26,38 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminProductDetailPage from './pages/AdminProductDetailPage';
 import AdminProductFormPage from './pages/AdminProductFormPage';
+import PageDisabled from './components/PageDisabled';
+import { usePageVisibility } from './hooks/usePageVisibility';
+import type { PaginasOcultas } from './types';
 import './index.css';
+
+/**
+ * VisibilityGatedRoute — CAPA 2 de seguridad de visibilidad de páginas.
+ * Verifica si la página está habilitada antes de renderizar el componente destino.
+ * Si está deshabilitada, muestra <PageDisabled> con el mensaje y botones configurados.
+ * 
+ * Complementa la CAPA 1 (middleware de servidor) y la CAPA 3 (componente propio).
+ */
+function VisibilityGatedRoute({
+  pageName,
+  children,
+  icon,
+}: {
+  pageName: keyof PaginasOcultas;
+  children: React.ReactNode;
+  icon?: string;
+}) {
+  const { isEnabled, getPageConfig, loading } = usePageVisibility();
+
+  // Mientras carga la configuración, mostramos nada (evita flash de contenido)
+  if (loading) return null;
+
+  if (!isEnabled(pageName)) {
+    return <PageDisabled config={getPageConfig(pageName)} icon={icon} />;
+  }
+
+  return <>{children}</>;
+}
 
 function App() {
   return (
@@ -39,7 +70,14 @@ function App() {
         <Route path="/servicios" element={<ServicesPage />} />
         <Route path="/especialistas" element={<SpecialistsPage />} />
         <Route path="/galeria" element={<GalleryPage />} />
-        <Route path="/chatbot" element={<ChatbotPage />} />
+        <Route
+          path="/chatbot"
+          element={
+            <VisibilityGatedRoute pageName="chatbot" icon="📅">
+              <ChatbotPage />
+            </VisibilityGatedRoute>
+          }
+        />
         <Route path="/productos" element={<ProductsPage />} />
         <Route path="/productos/:id" element={<ProductDetailPage />} />
 

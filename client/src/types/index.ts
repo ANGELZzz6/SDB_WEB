@@ -131,6 +131,28 @@ export interface SiteConfig {
   horaAperturaAgendamiento: string
   horaCierreAgendamiento: string
   duracionSlot: number
+  // Control de visibilidad de páginas públicas
+  paginasOcultas?: PaginasOcultas
+}
+
+// ── Visibilidad de Páginas ────────────────────────────────────────────────────
+
+export interface PageButtonConfig {
+  _id?: string
+  texto: string
+  ruta: string
+  tipo: 'interno' | 'externo'
+}
+
+export interface SinglePageVisibility {
+  habilitada: boolean
+  mensajeTitulo: string
+  mensajeCuerpo: string
+  botones: PageButtonConfig[]
+}
+
+export interface PaginasOcultas {
+  chatbot: SinglePageVisibility
 }
 
 export interface ProductMovement {
