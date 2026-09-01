@@ -4,6 +4,8 @@ import { employeeService, serviceService, availabilityService, settingsService, 
 import { formatHora12 } from '../utils/whatsappMessages';
 import type { Employee, Service, Settings, SinglePageVisibility } from '../types';
 import PageDisabled from '../components/PageDisabled';
+import SEOHead from '../components/SEOHead';
+import { useToast } from '../components/Toast';
 
 function formatGoogleCalendarDate(dateStr: string, timeStr: string, durationMin: number) {
   if (!dateStr || !timeStr) return ''; // Defensive check for flexible flow
@@ -32,6 +34,7 @@ function formatGoogleCalendarDate(dateStr: string, timeStr: string, durationMin:
 }
 
 export default function ChatbotPage() {
+  const { showToast } = useToast();
   
   // Data States
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -199,7 +202,7 @@ export default function ChatbotPage() {
     });
 
     if (overlap) {
-      alert(`Este horario se cruza con tu servicio de "${overlap.serviceName}". Por favor selecciona otra hora.`);
+      showToast(`Este horario se cruza con tu servicio de "${overlap.serviceName}". Por favor selecciona otra hora.`, 'error');
       return;
     }
 
@@ -278,14 +281,15 @@ export default function ChatbotPage() {
         flexibleAvailabilities: flowType === 'flexible' ? flexibleAvailabilities : []
       });
       if (res.success) {
+        showToast('\u00a1Cita agendada con éxito! Te contactaremos para confirmar.', 'success');
         setStep(6);
       }
     } catch (err: any) {
       console.error(err);
       if (err.message?.includes('429')) {
-        alert('Has alcanzado el límite de citas permitidas (4 cada 30 min).');
+        showToast('Has alcanzado el límite de citas permitidas (4 cada 30 min). Intenta más tarde.', 'error');
       } else {
-        alert(err.message || 'Error al agendar. Es posible que el horario ya esté ocupado.');
+        showToast(err.message || 'Error al agendar. Es posible que el horario ya esté ocupado.', 'error');
       }
       setStep(4.5); // Regresar al carrito para ajustar
     } finally {
@@ -362,6 +366,7 @@ export default function ChatbotPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fdfbfb', display: 'flex', flexDirection: 'column' }}>
+      <SEOHead title="Agendar Cita — Asistente Virtual" description="Reserva tu cita en línea en L'Élixir Salon de manera fácil, rápida e interactiva." />
       
       {/* Top Header */}
       <header style={{ 

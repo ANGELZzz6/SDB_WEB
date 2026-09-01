@@ -3,6 +3,9 @@ import { MapPin, Clock } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { serviceService, galleryService, employeeService, siteConfigService, settingsService, productService } from '../services/api';
 import type { Employee, Service, SiteConfig, Product } from '../types';
+import SEOHead from '../components/SEOHead';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -67,7 +70,6 @@ export default function LandingPage() {
   const [totalServicesCount, setTotalServicesCount] = useState<number | null>(null);
   const [totalEmployeesCount, setTotalEmployeesCount] = useState<number | null>(null);
   const [gallery, setGallery] = useState<string[]>([]);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [businessHours, setBusinessHours] = useState<{ inicio: string; fin: string } | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -158,6 +160,7 @@ export default function LandingPage() {
 
   return (
     <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, overflowX: 'hidden' }}>
+      <SEOHead title="Inicio" description={config?.heroSubtitulo} />
 
       {/* ══════════════════
           GLOBAL STYLES
@@ -374,90 +377,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════
           1. NAVBAR
       ══════════════════════════════ */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 50,
-        backgroundColor: 'rgba(253,248,245,0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: `1px solid ${T.outlineVariant}30`,
-      }}>
-        <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px', paddingLeft: '24px', paddingRight: '24px' }}>
-          {/* Logo */}
-          <span
-            onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setIsMenuOpen(false); }}
-            style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none', letterSpacing: '-0.01em' }}
-          >
-            {config?.nombreSalon || "L'Élixir Salon"}
-          </span>
-
-          {/* Nav links (Desktop) */}
-          <div className="nav-links" style={{ alignItems: 'center', gap: '40px' }}>
-            {[
-              { label: 'Servicios', path: '/servicios' },
-              { label: 'Productos', path: '/productos' },
-              { label: 'Especialistas', path: '/especialistas' },
-              { label: 'Galería', path: '/galeria' },
-            ].map(({ label, path }) => (
-              <button
-                key={label}
-                onClick={() => navigate(path)}
-                style={{
-                  fontFamily: T.fontHeadline, fontSize: '16px', letterSpacing: '-0.02em',
-                  color: T.onSurfaceVariant, background: 'none', border: 'none',
-                  cursor: 'pointer', transition: 'color 0.3s', padding: 0,
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = T.primary)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = T.onSurfaceVariant)}
-              >
-                {label}
-              </button>
-            ))}
-            <button
-              onClick={() => navigate('/chatbot')}
-              style={{
-                fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
-                textTransform: 'uppercase', letterSpacing: '0.12em',
-                backgroundColor: T.primary, color: T.onPrimary,
-                padding: '12px 24px', borderRadius: '9999px', border: 'none',
-                cursor: 'pointer', transition: 'transform 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            >
-              Agendar Cita
-            </button>
-          </div>
-
-          {/* Hamburger button (Mobile) */}
-          <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'flex', flexDirection: 'column', gap: '5px', cursor: 'pointer', zIndex: 100, padding: '8px' }}>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(7px) rotate(45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, opacity: isMenuOpen ? 0 : 1, transition: 'all 0.3s ease' }}></div>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
-          </div>
-        </div>
-
-        {/* Mobile menu overlay */}
-        <div className={`mobile-menu ${isMenuOpen ? 'open' : ''}`}>
-           {[
-              { label: 'Servicios', path: '/servicios' },
-              { label: 'Productos', path: '/productos' },
-              { label: 'Especialistas', path: '/especialistas' },
-              { label: 'Galería', path: '/galeria' },
-              { label: 'Agendar Cita', path: '/chatbot' },
-            ].map(({ label, path }) => (
-              <button
-                key={label}
-                onClick={() => { navigate(path); setIsMenuOpen(false); }}
-                style={{ fontSize: '28px', fontFamily: T.fontHeadline, fontStyle: 'italic', color: T.primary, background: 'none', border: 'none', cursor: 'pointer', transition: 'transform 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-              >
-                {label}
-              </button>
-            ))}
-            <button onClick={() => setIsMenuOpen(false)} style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', marginTop: '60px', opacity: 0.5, color: T.onSurfaceVariant, background: 'none', border: 'none', cursor: 'pointer' }}>CERRAR</button>
-        </div>
-      </nav>
+      <Navbar salonName={config?.nombreSalon} />
 
       {/* ══════════════════════════════
           1b. CARRUSEL PRODUCTOS DESTACADOS
@@ -1079,40 +999,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════
           7. FOOTER
       ══════════════════════════════ */}
-      <footer style={{ backgroundColor: '#2f1314', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '40px', paddingBottom: '28px' }}>
-        <div style={wrap}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center' }}>
-
-            <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primaryContainer }}>{config?.nombreSalon || "L'Élixir Salon"}</span>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '24px' }}>
-              {[
-                { label: 'Instagram', url: config?.instagram ? `https://instagram.com/${config.instagram.replace('@', '')}` : '#' },
-                { label: 'Facebook', url: config?.facebook ? (config.facebook.startsWith('http') ? config.facebook : `https://facebook.com/${config.facebook}`) : '#' },
-                { label: 'WhatsApp', url: config?.whatsappLink || `https://wa.me/57${config?.whatsapp.replace(/\D/g, '') || "3000000000"}` },
-              ].map((link) => (
-                <a
-                  key={link.label}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontFamily: T.fontBody, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.45)', textDecoration: 'none', transition: 'opacity 0.3s' }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '1')}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.6')}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
-
-            <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.06)', margin: '8px 0' }} />
-
-            <p style={{ fontFamily: T.fontBody, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: 'rgba(255,255,255,0.3)' }}>
-              {config?.footerTexto || `© ${new Date().getFullYear()} L'Élixir Salon. El Arte de Cuidarte.`}
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer config={config} dark={true} />
 
 
       {/* ══════════════════════════════

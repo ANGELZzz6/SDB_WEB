@@ -26,6 +26,8 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminProductDetailPage from './pages/AdminProductDetailPage';
 import AdminProductFormPage from './pages/AdminProductFormPage';
+import NotFoundPage from './pages/NotFoundPage';
+import { ToastProvider } from './components/Toast';
 import PageDisabled from './components/PageDisabled';
 import { usePageVisibility } from './hooks/usePageVisibility';
 import type { PaginasOcultas } from './types';
@@ -61,74 +63,79 @@ function VisibilityGatedRoute({
 
 function App() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <GlobalWakeUp />
-      <CookieConsent />
-      <Routes>
-        {/* Public */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/servicios" element={<ServicesPage />} />
-        <Route path="/especialistas" element={<SpecialistsPage />} />
-        <Route path="/galeria" element={<GalleryPage />} />
-        <Route
-          path="/chatbot"
-          element={
-            <VisibilityGatedRoute pageName="chatbot" icon="📅">
-              <ChatbotPage />
-            </VisibilityGatedRoute>
-          }
-        />
-        <Route path="/productos" element={<ProductsPage />} />
-        <Route path="/productos/:id" element={<ProductDetailPage />} />
+    <ToastProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <GlobalWakeUp />
+        <CookieConsent />
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/servicios" element={<ServicesPage />} />
+          <Route path="/especialistas" element={<SpecialistsPage />} />
+          <Route path="/galeria" element={<GalleryPage />} />
+          <Route
+            path="/chatbot"
+            element={
+              <VisibilityGatedRoute pageName="chatbot" icon="📅">
+                <ChatbotPage />
+              </VisibilityGatedRoute>
+            }
+          />
+          <Route path="/productos" element={<ProductsPage />} />
+          <Route path="/productos/:id" element={<ProductDetailPage />} />
 
-        {/* Admin Login */}
-        <Route path="/admin/login" element={<AdminLogin />} />
+          {/* Admin Login */}
+          <Route path="/admin/login" element={<AdminLogin />} />
 
-        {/* Protected Admin Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/itinerario" element={<AdminItineraryPage />} />
-          <Route path="/admin/calendario" element={<AdminCalendarPage />} />
-          <Route path="/admin/perfil" element={<AdminProfilePage />} />
-        </Route>
+          {/* Protected Admin Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/itinerario" element={<AdminItineraryPage />} />
+            <Route path="/admin/calendario" element={<AdminCalendarPage />} />
+            <Route path="/admin/perfil" element={<AdminProfilePage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="servicios" />}>
-          <Route path="/admin/servicios" element={<AdminServicesPage />} />
-        </Route>
+          <Route element={<ProtectedRoute requiredPermission="servicios" />}>
+            <Route path="/admin/servicios" element={<AdminServicesPage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="especialistas" />}>
-          <Route path="/admin/especialistas" element={<AdminSpecialistsPage />} />
-        </Route>
+          <Route element={<ProtectedRoute requiredPermission="especialistas" />}>
+            <Route path="/admin/especialistas" element={<AdminSpecialistsPage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="clientes" />}>
-          <Route path="/admin/clientes" element={<AdminClientsPage />} />
-          <Route path="/admin/clientes/:phone" element={<AdminClientDetailPage />} />
-        </Route>
+          <Route element={<ProtectedRoute requiredPermission="clientes" />}>
+            <Route path="/admin/clientes" element={<AdminClientsPage />} />
+            <Route path="/admin/clientes/:phone" element={<AdminClientDetailPage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="galeria" />}>
-          <Route path="/admin/galeria" element={<AdminGalleryPage />} />
-        </Route>
+          <Route element={<ProtectedRoute requiredPermission="galeria" />}>
+            <Route path="/admin/galeria" element={<AdminGalleryPage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="accesos" />}>
-          <Route path="/admin/accesos" element={<AdminAccessPage />} />
-        </Route>
+          <Route element={<ProtectedRoute requiredPermission="accesos" />}>
+            <Route path="/admin/accesos" element={<AdminAccessPage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="configuracion" />}>
-          <Route path="/admin/configuracion" element={<AdminSettingsPage />} />
-        </Route>
+          <Route element={<ProtectedRoute requiredPermission="configuracion" />}>
+            <Route path="/admin/configuracion" element={<AdminSettingsPage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="liquidaciones" />}>
-          <Route path="/admin/liquidaciones" element={<AdminLiquidacionesPage />} />
-        </Route>
+          <Route element={<ProtectedRoute requiredPermission="liquidaciones" />}>
+            <Route path="/admin/liquidaciones" element={<AdminLiquidacionesPage />} />
+          </Route>
 
-        <Route element={<ProtectedRoute requiredPermission="productos" />}>
-          <Route path="/admin/productos" element={<AdminProductsPage />} />
-          <Route path="/admin/productos/nuevo" element={<AdminProductFormPage />} />
-          <Route path="/admin/productos/editar/:id" element={<AdminProductFormPage />} />
-          <Route path="/admin/productos/:id" element={<AdminProductDetailPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+          <Route element={<ProtectedRoute requiredPermission="productos" />}>
+            <Route path="/admin/productos" element={<AdminProductsPage />} />
+            <Route path="/admin/productos/nuevo" element={<AdminProductFormPage />} />
+            <Route path="/admin/productos/editar/:id" element={<AdminProductFormPage />} />
+            <Route path="/admin/productos/:id" element={<AdminProductDetailPage />} />
+          </Route>
+
+          {/* Custom 404 Route */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 

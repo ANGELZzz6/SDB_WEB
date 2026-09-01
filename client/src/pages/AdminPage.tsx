@@ -5,6 +5,7 @@ import { appointmentService, employeeService, availabilityService, siteConfigSer
 import FlexibleConfirmationModal from '../components/FlexibleConfirmationModal';
 import type { Employee, SiteConfig } from '../types';
 import { waLink, WA_MESSAGES, formatFecha, formatHora12, buildMessage } from '../utils/whatsappMessages';
+import SEOHead from '../components/SEOHead';
 
 /* ─────────────────────────────────────────────────
    Data
@@ -351,6 +352,7 @@ export default function AdminPage() {
 
   return (
     <AdminLayout searchPlaceholder="Buscar cliente o servicio...">
+      <SEOHead title="Panel de Administración" description="Gestión de citas, agenda, clientes y servicios de L'Élixir Salon." />
       {/* Notification Toast */}
       {notification && (
         <div style={{

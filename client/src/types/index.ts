@@ -102,6 +102,7 @@ export interface SiteConfig {
   _id?: string
   nombreSalon: string
   telefono: string
+  email?: string
   whatsapp: string
   direccion: string
   horario: string

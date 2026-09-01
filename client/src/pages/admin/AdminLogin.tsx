@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { T } from '../../lib/adminTokens';
 import { authService } from '../../services/api';
+import SEOHead from '../../components/SEOHead';
 
 export default function AdminLogin() {
   const [identifier, setIdentifier] = useState('');
@@ -52,6 +53,7 @@ export default function AdminLogin() {
       fontFamily: T.fontBody,
       padding: '24px'
     }}>
+      <SEOHead title="Iniciar Sesión Administrador" description="Acceso al sistema administrativo de L'Élixir Salon." />
       <div style={{
         maxWidth: '400px',
         width: '100%',

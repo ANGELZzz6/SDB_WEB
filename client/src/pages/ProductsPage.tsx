@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { productService, siteConfigService } from '../services/api';
 import type { Product, SiteConfig } from '../types';
 import CartModal from '../components/CartModal';
+import SEOHead from '../components/SEOHead';
+import Footer from '../components/Footer';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -134,7 +136,8 @@ export default function ProductsPage() {
   };
 
   return (
-    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, overflowX: 'hidden', minHeight: '100vh' }}>
+    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, minHeight: '100vh', overflowX: 'hidden' }}>
+      <SEOHead title="Catálogo de Productos" description="Descubre nuestra tienda de belleza profesional: tratamientos capilares, cuidado facial, manicure y accesorios exclusivos." />
       <style>{`
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
@@ -428,6 +431,8 @@ export default function ProductsPage() {
           )}
         </div>
       </main>
+
+      <Footer config={config} dark={false} />
 
       {/* ── Botón Flotante Circular del Carrito (Sigue al usuario en la página de productos) ── */}
       {cartCount > 0 && (

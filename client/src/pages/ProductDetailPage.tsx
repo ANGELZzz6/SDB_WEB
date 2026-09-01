@@ -4,6 +4,9 @@ import { productService, siteConfigService } from '../services/api';
 import type { Product, SiteConfig } from '../types';
 import { getCart, saveCart } from './ProductsPage';
 import CartModal from '../components/CartModal';
+import SEOHead from '../components/SEOHead';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const T = {
   fontHeadline: "'Noto Serif', serif",
@@ -115,7 +118,9 @@ export default function ProductDetailPage() {
   const isOutOfStock = product.stock <= 0 && product.rastrearStock;
 
   return (
-    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, overflowX: 'hidden', minHeight: '100vh' }}>
+    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, minHeight: '100vh', overflowX: 'hidden' }}>
+      <SEOHead title={product?.nombre || "Detalle de Producto"} description={product?.descripcion} />
+      <Navbar salonName={config?.nombreSalon} />
       <style>{`
         * { box-sizing: border-box; }
         .nav-links { display: none; }
@@ -327,6 +332,8 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </main>
+
+      <Footer config={config} dark={false} />
 
       <CartModal 
         isOpen={isCartOpen} 

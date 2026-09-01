@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { galleryService, siteConfigService } from '../services/api';
 import type { GalleryCategory, GalleryItem, SiteConfig } from '../types';
+import SEOHead from '../components/SEOHead';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -37,117 +40,10 @@ const wrap: React.CSSProperties = {
 // Ya no hardcodeado, dependemos del servidor
 
 /* ─────────────────────────────────────────────────
-   Shared Navbar
-───────────────────────────────────────────────── */
-function Navbar({ navigate, location, salonName }: { navigate: ReturnType<typeof useNavigate>; location: ReturnType<typeof useLocation>; salonName: string }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const links = [
-    { label: 'Servicios', path: '/servicios' },
-    { label: 'Productos', path: '/productos' },
-    { label: 'Especialistas', path: '/especialistas' },
-    { label: 'Galería', path: '/galeria' },
-  ];
-  return (
-    <nav style={{
-      position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 50,
-      backgroundColor: 'rgba(253,248,245,0.75)',
-      backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-      borderBottom: `1px solid ${T.outlineVariant}20`,
-    }}>
-      <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}>
-        <span onClick={() => navigate('/')} style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none' }}>
-          {salonName}
-        </span>
-        <div className="nav-links" style={{ alignItems: 'center', gap: '40px' }}>
-          {links.map(({ label, path }) => {
-            const active = location.pathname === path;
-            return (
-              <button key={label} onClick={() => navigate(path)} style={{
-                fontFamily: T.fontHeadline, fontSize: '16px', letterSpacing: '-0.02em',
-                color: active ? T.primary : T.onSurfaceVariant,
-                fontWeight: active ? 600 : 400,
-                background: 'none', border: 'none',
-                borderBottom: active ? `1px solid ${T.primary}35` : 'none',
-                paddingBottom: active ? '2px' : 0,
-                cursor: 'pointer', transition: 'color 0.3s',
-              }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = T.primary)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = active ? T.primary : T.onSurfaceVariant)}
-              >{label}</button>
-            );
-          })}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button onClick={() => navigate('/chatbot')} style={{
-            fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.12em',
-            backgroundColor: T.primary, color: '#FFFFFF',
-            padding: '12px 24px', borderRadius: '9999px', border: 'none',
-            cursor: 'pointer', transition: 'transform 0.2s',
-          }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-          >
-            Agendar Cita
-          </button>
-          
-          <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'flex', flexDirection: 'column', gap: '5px', cursor: 'pointer', zIndex: 100, padding: '8px' }}>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(7px) rotate(45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, opacity: isMenuOpen ? 0 : 1, transition: 'all 0.3s ease' }}></div>
-            <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{
-        position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh',
-        background: T.surface, zIndex: 90,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: '32px', transition: 'transform 0.4s ease-in-out',
-        transform: isMenuOpen ? 'translateY(0)' : 'translateY(-100%)',
-      }}>
-        {[...links, { label: 'Agendar Cita', path: '/chatbot' }].map(({ label, path }) => (
-          <button key={label} onClick={() => { navigate(path); setIsMenuOpen(false); }} style={{ fontSize: '28px', fontFamily: T.fontHeadline, fontStyle: 'italic', color: T.primary, background: 'none', border: 'none', cursor: 'pointer' }}>
-            {label}
-          </button>
-        ))}
-        <button onClick={() => setIsMenuOpen(false)} style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', marginTop: '60px', opacity: 0.5, color: T.onSurfaceVariant, background: 'none', border: 'none', cursor: 'pointer' }}>CERRAR</button>
-      </div>
-    </nav>
-  );
-}
-
-/* ─────────────────────────────────────────────────
-   Shared Footer
-───────────────────────────────────────────────── */
-function Footer({ salonName }: { salonName: string }) {
-  return (
-    <footer style={{ backgroundColor: T.surfaceContainer, paddingTop: '64px', paddingBottom: '32px' }}>
-      <div style={{ ...wrap, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center' }}>
-        <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primary }}>{salonName}</span>
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px' }}>
-          {['Instagram', 'WhatsApp', 'Contacto', 'Privacidad'].map((l) => (
-            <a key={l} href="#" style={{ fontFamily: T.fontBody, fontSize: '11px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.15em', color: T.onSurfaceVariant, textDecoration: 'none', opacity: 0.8, transition: 'opacity 0.3s' }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.4')}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.8')}
-            >{l}</a>
-          ))}
-        </div>
-        <div style={{ width: '100%', height: '1px', backgroundColor: `${T.outlineVariant}30`, margin: '8px 0' }} />
-        <p style={{ fontFamily: T.fontBody, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}80` }}>
-          © {new Date().getFullYear()} {salonName}. El Arte de Cuidarte.
-        </p>
-      </div>
-    </footer>
-  );
-}
-
-/* ─────────────────────────────────────────────────
    GALLERY PAGE
 ───────────────────────────────────────────────── */
 export default function GalleryPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [activeFilter, setActiveFilter] = useState('Todas');
 
   const [categories, setCategories] = useState<GalleryCategory[]>([]);
@@ -177,17 +73,18 @@ export default function GalleryPage() {
     fetchData();
   }, []);
 
-  const CATEGORIES = ['Todas', ...categories.map(c => c.name)];
+  const CATEGORIES = ['Todas', ...categories.map((c: any) => c.name)];
 
   const filtered = activeFilter === 'Todas'
     ? items
-    : items.filter((i) => {
+    : items.filter((i: any) => {
         const catName = typeof i.categoryId === 'string' ? '' : (i.categoryId as any).name;
         return catName === activeFilter;
       });
 
   return (
-    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, overflowX: 'hidden' }}>
+    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, minHeight: '100vh', overflowX: 'hidden' }}>
+      <SEOHead title="Galería de Trabajos" description="Explora nuestro portafolio de resultados reales: cortes, tinte, mechas balayage, extensión de pestañas y uñas artísticas." />
       <style>{`
         * { box-sizing: border-box; }
         ::selection { background: #ffd9de; color: #944555; }
@@ -288,7 +185,7 @@ export default function GalleryPage() {
         }
       `}</style>
 
-      <Navbar navigate={navigate} location={location} salonName={salonName} />
+      <Navbar salonName={salonName} />
 
       <main style={{ paddingTop: '128px', paddingBottom: '80px' }}>
         <div style={wrap}>
@@ -331,7 +228,7 @@ export default function GalleryPage() {
             ) : filtered.length === 0 ? (
               <p style={{ fontFamily: T.fontBody, color: T.onSurfaceVariant, textAlign: 'center', gridColumn: '1 / -1', padding: '64px' }}>No hay imágenes en esta categoría aún.</p>
             ) : (
-              filtered.map(({ _id, url, caption, categoryId }) => (
+              filtered.map(({ _id, url, caption, categoryId }: any) => (
                 <div key={_id} className="masonry-item">
                   <img src={url} alt={caption || 'Galería'} />
                   <div className="overlay">
@@ -376,7 +273,7 @@ export default function GalleryPage() {
         </div>
       </main>
 
-      <Footer salonName={salonName} />
+      <Footer config={siteConfig} dark={false} />
 
       {/* Floating Booking Bar */}
       <div className="floating-bar">

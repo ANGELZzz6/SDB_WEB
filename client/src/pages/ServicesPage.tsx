@@ -1,8 +1,11 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { serviceService, siteConfigService, employeeService, settingsService } from '../services/api';
 import type { Service, SiteConfig } from '../types';
+import SEOHead from '../components/SEOHead';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 /* ─────────────────────────────────────────────────
    Design Tokens
@@ -42,14 +45,12 @@ const wrap: React.CSSProperties = {
  ───────────────────────────────────────────────── */
 export default function ServicesPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [services, setServices] = useState<Service[]>([]);
   const [totalServicesCount, setTotalServicesCount] = useState<number | null>(null);
   const [totalEmployeesCount, setTotalEmployeesCount] = useState<number | null>(null);
   const [businessHours, setBusinessHours] = useState<{ inicio: string; fin: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<SiteConfig | null>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     // Cargar configuración CMS
@@ -105,15 +106,9 @@ export default function ServicesPage() {
     return diff > 0 ? `${diff}h` : '12h';
   };
 
-  const navLinks = [
-    { label: 'Servicios', path: '/servicios' },
-    { label: 'Productos', path: '/productos' },
-    { label: 'Especialistas', path: '/especialistas' },
-    { label: 'Galería', path: '/galeria' },
-  ];
-
   return (
-    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, overflowX: 'hidden' }}>
+    <div style={{ fontFamily: T.fontBody, color: T.onSurface, backgroundColor: T.surface, minHeight: '100vh', overflowX: 'hidden' }}>
+      <SEOHead title="Servicios & Experiencias" description="Descubre nuestra carta exclusiva de servicios de belleza: tintes, balayage, keratina, manicure softgel, extensión de pestañas y más en Bogotá." />
 
       <style>{`
         * { box-sizing: border-box; }
@@ -187,89 +182,7 @@ export default function ServicesPage() {
       {/* ══════════════════════════════
           NAVBAR
       ══════════════════════════════ */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 50,
-        backgroundColor: 'rgba(253,248,245,0.75)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        borderBottom: `1px solid ${T.outlineVariant}25`,
-      }}>
-        <div style={{ ...wrap, display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '72px' }}>
-          <span
-            onClick={() => navigate('/')}
-            style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '22px', color: T.primary, cursor: 'pointer', userSelect: 'none' }}
-          >
-            {config?.nombreSalon || "L'Élixir Salon"}
-          </span>
-
-          <div className="nav-links" style={{ alignItems: 'center', gap: '32px' }}>
-            {navLinks.map(({ label, path }) => {
-              const isActive = location.pathname === path;
-              const isHashLink = path.startsWith('/#');
-              return (
-                <a
-                  key={label}
-                  href={isHashLink ? path : undefined}
-                  onClick={!isHashLink ? (e) => { e.preventDefault(); navigate(path); } : undefined}
-                  style={{
-                    fontFamily: T.fontHeadline,
-                    fontSize: '16px',
-                    letterSpacing: '-0.02em',
-                    color: isActive ? T.primary : T.onSurfaceVariant,
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    borderBottom: isActive ? `1px solid ${T.primary}40` : 'none',
-                    paddingBottom: '2px',
-                    transition: 'color 0.3s',
-                    fontWeight: isActive ? 600 : 400,
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = T.primary)}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = isActive ? T.primary : T.onSurfaceVariant)}
-                >
-                  {label}
-                </a>
-              );
-            })}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button
-              onClick={() => navigate('/chatbot')}
-              style={{
-                fontFamily: T.fontBody, fontSize: '12px', fontWeight: 700,
-                textTransform: 'uppercase', letterSpacing: '0.12em',
-                backgroundColor: T.primary, color: '#FFFFFF',
-                padding: '12px 24px', borderRadius: '9999px', border: 'none',
-                cursor: 'pointer', transition: 'transform 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            >
-              Agendar Cita
-            </button>
-            <div className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'flex', flexDirection: 'column', gap: '5px', cursor: 'pointer', zIndex: 100, padding: '8px' }}>
-              <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(7px) rotate(45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
-              <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, opacity: isMenuOpen ? 0 : 1, transition: 'all 0.3s ease' }}></div>
-              <div style={{ width: '24px', height: '2px', backgroundColor: T.primary, transform: isMenuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none', transition: 'all 0.3s ease' }}></div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh',
-          background: T.surface, zIndex: 90,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: '32px', transition: 'transform 0.4s ease-in-out',
-          transform: isMenuOpen ? 'translateY(0)' : 'translateY(-100%)',
-        }}>
-          {[...navLinks, { label: 'Agendar Cita', path: '/chatbot' }].map(({ label, path }) => (
-            <button key={label} onClick={() => { navigate(path); setIsMenuOpen(false); }} style={{ fontSize: '28px', fontFamily: T.fontHeadline, fontStyle: 'italic', color: T.primary, background: 'none', border: 'none', cursor: 'pointer' }}>
-              {label}
-            </button>
-          ))}
-          <button onClick={() => setIsMenuOpen(false)} style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.2em', marginTop: '60px', opacity: 0.5, color: T.onSurfaceVariant, background: 'none', border: 'none', cursor: 'pointer' }}>CERRAR</button>
-        </div>
-      </nav>
+      <Navbar salonName={config?.nombreSalon} />
 
       {/* ══════════════════════════════
           MAIN CONTENT
@@ -493,44 +406,7 @@ export default function ServicesPage() {
       {/* ══════════════════════════════
           FOOTER
       ══════════════════════════════ */}
-      <footer style={{ backgroundColor: T.surfaceContainer, paddingTop: '64px', paddingBottom: '32px' }}>
-        <div style={{ ...wrap, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', textAlign: 'center' }}>
-          <span style={{ fontFamily: T.fontHeadline, fontStyle: 'italic', fontSize: '20px', color: T.primary }}>
-            {config?.nombreSalon || "L'Élixir Salon"}
-          </span>
-
-          <div className="footer-links">
-            {[
-              { label: 'Instagram', url: config?.instagram ? `https://instagram.com/${config.instagram.replace('@', '')}` : '#' },
-              { label: 'Facebook', url: config?.facebook ? (config.facebook.startsWith('http') ? config.facebook : `https://facebook.com/${config.facebook}`) : '#' },
-              { label: 'WhatsApp', url: config?.whatsappLink || `https://wa.me/57${config?.whatsapp.replace(/\D/g, '') || "3000000000"}` },
-            ].map((link) => (
-              <a
-                key={link.label}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontFamily: T.fontBody, fontSize: '11px', fontWeight: 500,
-                  textTransform: 'uppercase', letterSpacing: '0.15em',
-                  color: T.onSurfaceVariant, textDecoration: 'none',
-                  transition: 'opacity 0.3s', opacity: 0.8,
-                }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.4')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.8')}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-
-          <div style={{ width: '100%', height: '1px', backgroundColor: `${T.outlineVariant}30`, margin: '8px 0' }} />
-
-          <p style={{ fontFamily: T.fontBody, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.15em', color: `${T.onSurfaceVariant}80` }}>
-            {config?.footerTexto || `© ${new Date().getFullYear()} L'Élixir Salon. El Arte de Cuidarte.`}
-          </p>
-        </div>
-      </footer>
+      <Footer config={config} dark={false} />
 
       {/* ══════════════════════════════
           FLOATING BOOKING BAR
